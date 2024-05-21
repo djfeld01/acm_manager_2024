@@ -25,32 +25,26 @@ export default function TopMenu() {
           className="flex items-center gap-2 text-lg font-semibold md:text-base"
         >
           <Package2 className="h-6 w-6" />
-          <span className="sr-only">PariBet</span>
+          <span className="sr-only">ACM Dashboard</span>
         </Link>
         <Link
-          href="/competitions"
+          href="/locations"
           className="text-foreground transition-colors hover:text-foreground"
         >
-          Competitions
+          Locations
         </Link>
         <Link
-          href="/events"
+          href="/activity"
           className="text-muted-foreground transition-colors hover:text-foreground"
         >
-          Events
+          Activity
         </Link>
 
         <Link
-          href="/bets"
+          href="/employees"
           className="text-muted-foreground transition-colors hover:text-foreground"
         >
-          Bets
-        </Link>
-        <Link
-          href="/privatepools"
-          className="text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Private Pools
+          Employees
         </Link>
       </nav>
       <Sheet>
@@ -67,22 +61,16 @@ export default function TopMenu() {
               className="flex items-center gap-2 text-lg font-semibold"
             >
               <Package2 className="h-6 w-6" />
-              <span className="sr-only">PariBet</span>
+              <span className="sr-only">ACM Dashboard</span>
             </Link>
-            <Link href="/competitions" className="hover:text-foreground">
-              Competitions
-            </Link>
-            <Link
-              href="/events"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Events
+            <Link href="/locations" className="hover:text-foreground">
+              Locations
             </Link>
             <Link
-              href="/privatepools"
+              href="/activity"
               className="text-muted-foreground hover:text-foreground"
             >
-              Private Pools
+              Activity
             </Link>
           </nav>
         </SheetContent>
