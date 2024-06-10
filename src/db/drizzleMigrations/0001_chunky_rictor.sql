@@ -1,0 +1,1 @@
+ALTER TABLE "daily_payment" DROP COLUMN IF EXISTS "going_to_delete";

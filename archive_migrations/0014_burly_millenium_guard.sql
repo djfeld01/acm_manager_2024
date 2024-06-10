@@ -1,0 +1,1 @@
+ALTER TABLE "tenant_activity" DROP COLUMN IF EXISTS "going_to_delete";

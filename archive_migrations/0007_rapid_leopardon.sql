@@ -1,0 +1,1 @@
+ALTER TABLE "storage_facility" ADD COLUMN "state" varchar NOT NULL;

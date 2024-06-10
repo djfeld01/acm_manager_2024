@@ -1,0 +1,1 @@
+ALTER TABLE "storage_facility" RENAME COLUMN "siteAbbreviation" TO "site_abbreviation";

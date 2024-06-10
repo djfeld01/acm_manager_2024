@@ -1,0 +1,1 @@
+ALTER TABLE "tenant_activity" DROP CONSTRAINT "tenant_activity_tenant_activity_id_unique";

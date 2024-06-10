@@ -1,0 +1,1 @@
+ALTER TABLE "daily_payment" DROP CONSTRAINT "daily_payment_daily_payment_id_unique";

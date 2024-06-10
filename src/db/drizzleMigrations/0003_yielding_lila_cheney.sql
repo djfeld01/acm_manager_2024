@@ -1,0 +1,1 @@
+ALTER TABLE "tenant_activity" ADD COLUMN "lead_source" varchar;

@@ -39,27 +39,45 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { auth } from "@/auth";
+import ActivityCard from "@/components/ActivityCard";
+import { getFacilities } from "@/lib/controllers/facilityController";
 
-export default function Dashboard() {
+async function getDashboardData(userId: string) {
+  const res = fetch(`http://localhost:3000/api/facilities`, {
+    headers: { userId: userId },
+  });
+  const dashboardData = (await res).json();
+  return dashboardData;
+}
+
+export default async function Dashboard() {
+  const session = await auth();
+  const results = await getFacilities(session?.user?.id || "");
+  //const results = await getDashboardData(session?.user?.id || "");
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-          <Card x-chunk="dashboard-01-chunk-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Revenue
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">$45,231.89</div>
-              <p className="text-xs text-muted-foreground">
-                +20.1% from last month
-              </p>
-            </CardContent>
-          </Card>
-          <Card x-chunk="dashboard-01-chunk-1">
+        <div className="grid gap-2 md:grid-cols-2 md:gap-2 lg:grid-cols-6">
+          {/* {data.map((location)=>{
+            return(
+              <Card key=location
+            )
+          )}} */}
+          {results.map((result) => {
+            return (
+              <ActivityCard
+                facilityAbbreviation={
+                  result?.storageFacility?.facilityAbbreviation || ""
+                }
+                totalRentals={result?.totalRentals || 0}
+                key={result?.storageFacilityId}
+              />
+            );
+          })}
+
+          {/* <Card x-chunk="dashboard-01-chunk-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Subscriptions
@@ -96,10 +114,10 @@ export default function Dashboard() {
                 +201 since last hour
               </p>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
         <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
-          <Card className="xl:col-span-2" x-chunk="dashboard-01-chunk-4">
+          {/* <Card className="xl:col-span-2" x-chunk="dashboard-01-chunk-4">
             <CardHeader className="flex flex-row items-center">
               <div className="grid gap-2">
                 <CardTitle>Transactions</CardTitle>
@@ -235,12 +253,12 @@ export default function Dashboard() {
                 </TableBody>
               </Table>
             </CardContent>
-          </Card>
+          </Card> */}
           <Card x-chunk="dashboard-01-chunk-5">
             <CardHeader>
               <CardTitle>Recent Sales</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-8">
+            {/* <CardContent className="grid gap-8">
               <div className="flex items-center gap-4">
                 <Avatar className="hidden h-9 w-9 sm:flex">
                   <AvatarImage src="/avatars/01.png" alt="Avatar" />
@@ -316,7 +334,7 @@ export default function Dashboard() {
                 </div>
                 <div className="ml-auto font-medium">+$39.00</div>
               </div>
-            </CardContent>
+            </CardContent> */}
           </Card>
         </div>
       </main>
