@@ -1,6 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
-export default function ActivityCard({ facilityAbbreviation, totalRentals }) {
+interface activityProps {
+  facilityAbbreviation: string;
+  totalRentals: number;
+}
+
+export default function ActivityCard({
+  facilityAbbreviation,
+  totalRentals,
+}: activityProps) {
   return (
     <Card x-chunk="dashboard-01-chunk-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

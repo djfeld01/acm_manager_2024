@@ -2,7 +2,7 @@ import {
   createFacility,
   getFacilities,
 } from "@/lib/controllers/facilityController";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 
 export async function POST(req: NextRequest) {
@@ -12,5 +12,6 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const userId = headers().get("userId");
   //console.log(userId);
-  return getFacilities(userId || "");
+  return NextResponse.json(getFacilities(userId || ""));
+  //return getFacilities(userId || "");
 }
