@@ -42,6 +42,10 @@ import {
 import { auth } from "@/auth";
 import ActivityCard from "@/components/ActivityCard";
 import { getFacilities } from "@/lib/controllers/facilityController";
+import {
+  getActivitiesByDates,
+  getActivitiesByEmployee,
+} from "@/lib/controllers/activityController";
 
 async function getDashboardData(userId: string) {
   const res = fetch(`http://localhost:3000/api/facilities`, {
@@ -53,13 +57,16 @@ async function getDashboardData(userId: string) {
 
 export default async function Dashboard() {
   const session = await auth();
-  const results = await getFacilities(session?.user?.id || "");
-  //const results = await getDashboardData(session?.user?.id || "");
-
+  const results = await getActivitiesByDates(
+    session?.user?.id || "",
+    "2024-01-01",
+    "2024-05-31",
+    "TW"
+  );
   return (
     <div className="flex min-h-screen w-full flex-col">
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <div className="grid gap-2 md:grid-cols-2 md:gap-2 lg:grid-cols-6">
+        <div className="grid gap-2 md:grid-cols-2 md:gap-2 lg:grid-cols-9">
           {/* {data.map((location)=>{
             return(
               <Card key=location

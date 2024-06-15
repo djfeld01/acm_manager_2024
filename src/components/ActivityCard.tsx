@@ -1,3 +1,5 @@
+"use client";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 interface activityProps {
@@ -9,8 +11,12 @@ export default function ActivityCard({
   facilityAbbreviation,
   totalRentals,
 }: activityProps) {
+  const [selectedFacility, setSelectedFacility] = useState("");
   return (
-    <Card x-chunk="dashboard-01-chunk-0">
+    <Card
+      x-chunk="dashboard-01-chunk-0"
+      onClick={() => setSelectedFacility(facilityAbbreviation)}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">
           {facilityAbbreviation}
