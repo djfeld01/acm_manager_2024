@@ -1,1 +1,13 @@
-{"version":"6","dialect":"postgresql","entries":[{"idx":0,"version":"6","when":1717610485818,"tag":"0000_amused_mystique","breakpoints":true},{"idx":1,"version":"6","when":1717610530366,"tag":"0001_chunky_rictor","breakpoints":true},{"idx":2,"version":"6","when":1717614671603,"tag":"0002_conscious_cassandra_nova","breakpoints":true},{"idx":3,"version":"6","when":1717615094862,"tag":"0003_yielding_lila_cheney","breakpoints":true},{"idx":4,"version":"6","when":1717618862685,"tag":"0004_nice_pete_wisdom","breakpoints":true},{"idx":5,"version":"6","when":1717619293574,"tag":"0005_unique_bill_hollister","breakpoints":true},{"idx":6,"version":"6","when":1717644547954,"tag":"0006_bored_absorbing_man","breakpoints":true},{"idx":7,"version":"6","when":1717687365027,"tag":"0007_soft_lockjaw","breakpoints":true},{"idx":8,"version":"6","when":1717687457494,"tag":"0008_lonely_cammi","breakpoints":true},{"idx":9,"version":"6","when":1717695649426,"tag":"0009_robust_hitman","breakpoints":true}]}
+{
+  "version": "6",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1724942797014,
+      "tag": "0000_plain_umar",
+      "breakpoints": true
+    }
+  ]
+}

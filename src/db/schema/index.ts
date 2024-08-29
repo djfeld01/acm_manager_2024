@@ -22,3 +22,13 @@ export {
   tenantActivitiesRelations,
   activityTypeEnum,
 } from "@/db/schema/tenantActivities";
+
+export {
+  default as monthlyGoals,
+  monthlyGoalsRelations,
+} from "@/db/schema/monthlyGoals";
+
+export {
+  default as quickbooksBalance,
+  quickbooksBalanceRelations,
+} from "@/db/schema/quickbooksBalance";

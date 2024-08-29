@@ -32,12 +32,12 @@ export const usersToFacilities = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id),
-    storageFacilityId: bigint("storage_facility_id", { mode: "number" })
+    storageFacilityId: varchar("storage_facility_id")
       .notNull()
       .references(() => storageFacilities.sitelinkId),
   },
   (t) => ({
-    pk: primaryKey({ columns: [t.userId, t.storageFacilityId] }),
+    pk: primaryKey({ columns: [t.storageFacilityId, t.userId] }),
   })
 );
 

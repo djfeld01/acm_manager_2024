@@ -71,13 +71,19 @@ export async function getFacilities(userId: string) {
 }
 
 export async function getFacilityConnections(userId: string) {
-  const res = db.query.usersToFacilities.findMany({
+  const res = await db.query.usersToFacilities.findMany({
     where: (userRelation, { eq }) => eq(userRelation.userId, userId),
+    columns: {},
     with: {
       storageFacility: {
-        columns: { facilityAbbreviation: true },
+        columns: {
+          facilityAbbreviation: true,
+          facilityName: true,
+          sitelinkId: true,
+        },
       },
     },
   });
-  return res;
+  const result = res.map((facility) => facility.storageFacility);
+  return result;
 }

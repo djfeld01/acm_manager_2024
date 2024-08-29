@@ -17,7 +17,7 @@ const dailyPayments = pgTable(
   "daily_payment",
   {
     Id: serial("daily_payment_id").notNull().primaryKey(),
-    facilityId: bigint("facility_id", { mode: "number" }).notNull(),
+    facilityId: varchar("facility_id").notNull(),
     date: date("date").notNull(),
     cash: numeric("cash"),
     check: numeric("checks"),

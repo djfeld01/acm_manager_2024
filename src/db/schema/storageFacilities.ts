@@ -12,13 +12,13 @@ import {
 import { usersToFacilities } from "./user";
 import dailyPayments from "./dailyPayments";
 import tenantActivities from "./tenantActivities";
+import quickbooksBalance from "./quickbooksBalance";
+import monthlyGoals from "./monthlyGoals";
 
 const storageFacilities = pgTable(
   "storage_facility",
   {
-    sitelinkId: bigint("sitelink_id", { mode: "number" })
-      .primaryKey()
-      .notNull(),
+    sitelinkId: varchar("sitelink_id").primaryKey().notNull(),
     sitelinkSiteCode: varchar("sitelink_site_code", { length: 4 }).notNull(),
     paycorNumber: integer("paycor_number").notNull(),
     facilityName: varchar("facility_name", { length: 255 }).notNull(),
@@ -42,6 +42,8 @@ export const storageFacilitiesRelations = relations(
     usersToFacilities: many(usersToFacilities),
     dailyPayments: many(dailyPayments),
     tenantActivities: many(tenantActivities),
+    quickbooksBalance: many(quickbooksBalance),
+    monthlyGoals: many(monthlyGoals),
   })
 );
 

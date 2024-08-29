@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "next-themes";
 import TopMenu from "@/components/navigation/TopMenu";
+import { Toaster } from "@/components/ui/toaster";
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -37,6 +38,7 @@ export default function RootLayout({
           <TopMenu />
           {children}
         </ThemeProvider>
+        <Toaster />
       </body>
     </html>
   );

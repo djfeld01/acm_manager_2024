@@ -1,1 +1,0 @@
-ALTER TABLE "tenant_activity" ALTER COLUMN "employee_id" DROP NOT NULL;

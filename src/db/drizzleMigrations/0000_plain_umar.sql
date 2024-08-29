@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS "account" (
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "daily_payment" (
 	"daily_payment_id" serial PRIMARY KEY NOT NULL,
-	"facility_id" bigint NOT NULL,
+	"facility_id" varchar NOT NULL,
 	"date" date NOT NULL,
 	"cash" numeric,
 	"checks" numeric,
@@ -30,8 +30,24 @@ CREATE TABLE IF NOT EXISTS "daily_payment" (
 	"american_express" numeric,
 	"discover" numeric,
 	"ach" numeric,
-	"dinersClub" numeric,
-	"going_to_delete" varchar
+	"dinersClub" numeric
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "monthly_goal" (
+	"month" date DEFAULT now() NOT NULL,
+	"sitelink_id" varchar NOT NULL,
+	"collections_goal" numeric,
+	"retail_goal" numeric,
+	"rental_goal" integer,
+	"name" varchar,
+	CONSTRAINT "monthly_goal_month_sitelink_id_pk" PRIMARY KEY("month","sitelink_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "quickbooks_balance" (
+	"sitelink_id" varchar NOT NULL,
+	"date" date DEFAULT now() NOT NULL,
+	"balance" numeric NOT NULL,
+	CONSTRAINT "quickbooks_balance_sitelink_id_date_pk" PRIMARY KEY("sitelink_id","date")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "session" (
@@ -41,45 +57,47 @@ CREATE TABLE IF NOT EXISTS "session" (
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "storage_facility" (
-	"sitelink_id" bigint PRIMARY KEY NOT NULL,
+	"sitelink_id" varchar PRIMARY KEY NOT NULL,
 	"sitelink_site_code" varchar(4) NOT NULL,
 	"paycor_number" integer NOT NULL,
-	"store_name" varchar(255) NOT NULL,
+	"facility_name" varchar(255) NOT NULL,
 	"street_address" varchar(255) NOT NULL,
 	"zip_code" varchar(16) NOT NULL,
 	"city" varchar NOT NULL,
 	"state" varchar NOT NULL,
 	"email" varchar NOT NULL,
-	"siteAbbreviation" varchar NOT NULL,
+	"facility_abbreviation" varchar NOT NULL,
 	"phone_number" varchar NOT NULL,
 	"twilio_number" varchar NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "tenant_activity" (
 	"tenant_activity_id" serial PRIMARY KEY NOT NULL,
-	"facility_id" bigint NOT NULL,
+	"facility_id" varchar NOT NULL,
 	"date" date NOT NULL,
 	"activity_type" "activity_type" NOT NULL,
 	"tenant_name" varchar NOT NULL,
 	"unit_name" varchar NOT NULL,
-	"unit_width" integer NOT NULL,
-	"unit_length" integer NOT NULL,
+	"unit_width" numeric NOT NULL,
+	"unit_length" numeric NOT NULL,
 	"unit_size" varchar NOT NULL,
 	"unit_type" varchar NOT NULL,
-	"moved_in_rental_rate" numeric,
-	"moved_in_variance" numeric,
+	"unit_area" varchar NOT NULL,
+	"move_in_rental_rate" numeric,
+	"move_in_variance" numeric,
 	"tenant_sitelink_id" bigint NOT NULL,
-	"tenant_address" varchar NOT NULL,
-	"tenant_city" varchar NOT NULL,
-	"tenant_state" varchar NOT NULL,
-	"tenant_zip_code" varchar NOT NULL,
+	"tenant_address" varchar,
+	"tenant_city" varchar,
+	"tenant_state" varchar,
+	"tenant_zip_code" varchar,
 	"tenant_email" varchar,
-	"move_in_discount_plan" varchar NOT NULL,
-	"move_out_days_rented" integer NOT NULL,
-	"employee_id" varchar NOT NULL,
+	"move_in_discount_plan" varchar,
+	"move_out_days_rented" integer,
+	"employee_id" varchar,
 	"employee_initials" varchar NOT NULL,
 	"has_insurance" boolean NOT NULL,
-	"insurance_amount" numeric
+	"insurance_amount" numeric,
+	"lead_source" varchar
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "user" (
@@ -93,8 +111,8 @@ CREATE TABLE IF NOT EXISTS "user" (
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "user_to_facilities" (
 	"user_id" text NOT NULL,
-	"storage_facility_id" bigint NOT NULL,
-	CONSTRAINT "user_to_facilities_user_id_storage_facility_id_pk" PRIMARY KEY("user_id","storage_facility_id")
+	"storage_facility_id" varchar NOT NULL,
+	CONSTRAINT "user_to_facilities_storage_facility_id_user_id_pk" PRIMARY KEY("storage_facility_id","user_id")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "verificationToken" (
@@ -106,6 +124,18 @@ CREATE TABLE IF NOT EXISTS "verificationToken" (
 --> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "account" ADD CONSTRAINT "account_userId_user_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "monthly_goal" ADD CONSTRAINT "monthly_goal_sitelink_id_storage_facility_sitelink_id_fk" FOREIGN KEY ("sitelink_id") REFERENCES "public"."storage_facility"("sitelink_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "quickbooks_balance" ADD CONSTRAINT "quickbooks_balance_sitelink_id_storage_facility_sitelink_id_fk" FOREIGN KEY ("sitelink_id") REFERENCES "public"."storage_facility"("sitelink_id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -129,5 +159,5 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "daily_payment_date_index" ON "daily_payment" ("date");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "storage_facility_store_name_index" ON "storage_facility" ("store_name");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "storage_facility_facility_name_index" ON "storage_facility" ("facility_name");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "tenant_activity_date_index" ON "tenant_activity" ("date");

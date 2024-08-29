@@ -98,6 +98,7 @@ export default async function TopMenu() {
                   width={100}
                   height={100}
                   className="rounded-full"
+                  priority={true}
                 />
               </Button>
             </DropdownMenuTrigger>

@@ -1,5 +1,5 @@
 {
-  "id": "8af275e7-6b20-4c48-a907-ba0b22c0ce55",
+  "id": "38944de5-6710-4ff0-92f1-1bfabfe33872",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "6",
   "dialect": "postgresql",
@@ -114,7 +114,7 @@
         },
         "facility_id": {
           "name": "facility_id",
-          "type": "bigint",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": true
         },
@@ -171,12 +171,6 @@
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
-        },
-        "going_to_delete": {
-          "name": "going_to_delete",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -190,6 +184,126 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.monthly_goal": {
+      "name": "monthly_goal",
+      "schema": "",
+      "columns": {
+        "month": {
+          "name": "month",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "sitelink_id": {
+          "name": "sitelink_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "collections_goal": {
+          "name": "collections_goal",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retail_goal": {
+          "name": "retail_goal",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rental_goal": {
+          "name": "rental_goal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "monthly_goal_sitelink_id_storage_facility_sitelink_id_fk": {
+          "name": "monthly_goal_sitelink_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "monthly_goal",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "sitelink_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "monthly_goal_month_sitelink_id_pk": {
+          "name": "monthly_goal_month_sitelink_id_pk",
+          "columns": [
+            "month",
+            "sitelink_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {}
+    },
+    "public.quickbooks_balance": {
+      "name": "quickbooks_balance",
+      "schema": "",
+      "columns": {
+        "sitelink_id": {
+          "name": "sitelink_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "balance": {
+          "name": "balance",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "quickbooks_balance_sitelink_id_storage_facility_sitelink_id_fk": {
+          "name": "quickbooks_balance_sitelink_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "quickbooks_balance",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "sitelink_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "quickbooks_balance_sitelink_id_date_pk": {
+          "name": "quickbooks_balance_sitelink_id_date_pk",
+          "columns": [
+            "sitelink_id",
+            "date"
+          ]
+        }
+      },
       "uniqueConstraints": {}
     },
     "public.session": {
@@ -240,7 +354,7 @@
       "columns": {
         "sitelink_id": {
           "name": "sitelink_id",
-          "type": "bigint",
+          "type": "varchar",
           "primaryKey": true,
           "notNull": true
         },
@@ -256,8 +370,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "store_name": {
-          "name": "store_name",
+        "facility_name": {
+          "name": "facility_name",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
@@ -292,8 +406,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "siteAbbreviation": {
-          "name": "siteAbbreviation",
+        "facility_abbreviation": {
+          "name": "facility_abbreviation",
           "type": "varchar",
           "primaryKey": false,
           "notNull": true
@@ -312,10 +426,10 @@
         }
       },
       "indexes": {
-        "storage_facility_store_name_index": {
-          "name": "storage_facility_store_name_index",
+        "storage_facility_facility_name_index": {
+          "name": "storage_facility_facility_name_index",
           "columns": [
-            "store_name"
+            "facility_name"
           ],
           "isUnique": false
         }
@@ -336,7 +450,7 @@
         },
         "facility_id": {
           "name": "facility_id",
-          "type": "bigint",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": true
         },
@@ -367,13 +481,13 @@
         },
         "unit_width": {
           "name": "unit_width",
-          "type": "integer",
+          "type": "numeric",
           "primaryKey": false,
           "notNull": true
         },
         "unit_length": {
           "name": "unit_length",
-          "type": "integer",
+          "type": "numeric",
           "primaryKey": false,
           "notNull": true
         },
@@ -389,14 +503,20 @@
           "primaryKey": false,
           "notNull": true
         },
-        "moved_in_rental_rate": {
-          "name": "moved_in_rental_rate",
+        "unit_area": {
+          "name": "unit_area",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "move_in_rental_rate": {
+          "name": "move_in_rental_rate",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },
-        "moved_in_variance": {
-          "name": "moved_in_variance",
+        "move_in_variance": {
+          "name": "move_in_variance",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
@@ -411,25 +531,25 @@
           "name": "tenant_address",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "tenant_city": {
           "name": "tenant_city",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "tenant_state": {
           "name": "tenant_state",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "tenant_zip_code": {
           "name": "tenant_zip_code",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "tenant_email": {
           "name": "tenant_email",
@@ -441,19 +561,19 @@
           "name": "move_in_discount_plan",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "move_out_days_rented": {
           "name": "move_out_days_rented",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "employee_id": {
           "name": "employee_id",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "employee_initials": {
           "name": "employee_initials",
@@ -470,6 +590,12 @@
         "insurance_amount": {
           "name": "insurance_amount",
           "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lead_source": {
+          "name": "lead_source",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": false
         }
@@ -545,7 +671,7 @@
         },
         "storage_facility_id": {
           "name": "storage_facility_id",
-          "type": "bigint",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": true
         }
@@ -580,11 +706,11 @@
         }
       },
       "compositePrimaryKeys": {
-        "user_to_facilities_user_id_storage_facility_id_pk": {
-          "name": "user_to_facilities_user_id_storage_facility_id_pk",
+        "user_to_facilities_storage_facility_id_user_id_pk": {
+          "name": "user_to_facilities_storage_facility_id_user_id_pk",
           "columns": [
-            "user_id",
-            "storage_facility_id"
+            "storage_facility_id",
+            "user_id"
           ]
         }
       },
