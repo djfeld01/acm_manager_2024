@@ -21,10 +21,9 @@ const monthlyGoals = pgTable(
     sitelinkId: varchar("sitelink_id")
       .references(() => storageFacilities.sitelinkId)
       .notNull(),
-    collectionsGoal: numeric("collections_goal"),
-    retailGoal: numeric("retail_goal"),
-    rentalGoal: integer("rental_goal"),
-    name: varchar("name"),
+    collectionsGoal: numeric("collections_goal").notNull(),
+    retailGoal: numeric("retail_goal").notNull(),
+    rentalGoal: integer("rental_goal").notNull(),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.month, t.sitelinkId] }),
@@ -38,7 +37,9 @@ export const monthlyGoalsRelations = relations(monthlyGoals, ({ one }) => ({
   }),
 }));
 
-export const insertMonthlyGoalsSchema = createInsertSchema(monthlyGoals, {});
+export const insertMonthlyGoalsSchema = createInsertSchema(monthlyGoals, {
+  rentalGoal: z.string().transform((val) => parseFloat(val)),
+});
 
 export type CreateMonthlyGoals = z.infer<typeof insertMonthlyGoalsSchema>;
 

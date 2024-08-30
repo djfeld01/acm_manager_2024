@@ -1,4 +1,6 @@
+"use server";
 import { db } from "@/db";
+import monthlyGoals, { CreateMonthlyGoals } from "@/db/schema/monthlyGoals";
 
 export async function getActivitiesByDates(
   loggedInUserId: string,
@@ -31,3 +33,7 @@ export async function getActivitiesByDates(
 }
 
 export async function getActivitiesByEmployee() {}
+
+export async function insertMonthlyGoals(values: CreateMonthlyGoals) {
+  return await db.insert(monthlyGoals).values(values).returning();
+}

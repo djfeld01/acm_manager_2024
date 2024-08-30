@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import Image from "next/image";
+import Image from "next/legacy/image";
 import { Package2, Menu, Search, CircleUser } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ModeToggle } from "@/components/ModeToggle";

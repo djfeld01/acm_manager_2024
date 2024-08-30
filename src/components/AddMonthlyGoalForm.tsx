@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
-import {
+import monthlyGoals, {
   CreateMonthlyGoals,
   insertMonthlyGoalsSchema,
 } from "@/db/schema/monthlyGoals";
@@ -38,6 +38,8 @@ import {
   SelectValue,
 } from "./ui/select";
 import Link from "next/link";
+import { db } from "@/db";
+import { insertMonthlyGoals } from "@/lib/controllers/activityController";
 
 interface facilityType {
   sitelinkId: string;
@@ -57,13 +59,13 @@ export function AddMonthlyGoalForm({
     defaultValues: {
       collectionsGoal: "0.0",
       month: new Date(),
-      sitelinkId: "0",
+      sitelinkId: facilities[0].sitelinkId,
       rentalGoal: 0,
       retailGoal: "0",
     },
   });
 
-  function onSubmit(values: CreateMonthlyGoals) {
+  async function onSubmit(values: CreateMonthlyGoals) {
     //set date to 1st of the month
     const pickedYear = values.month?.getFullYear() ?? 2000;
     const pickedMonth = values.month?.getMonth() ?? 0;
@@ -74,6 +76,17 @@ export function AddMonthlyGoalForm({
       description: (
         <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
           <code className="text-white">{JSON.stringify(values, null, 2)}</code>
+        </pre>
+      ),
+    });
+    const response = await insertMonthlyGoals(values);
+    toast({
+      title: "Database Response",
+      description: (
+        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+          <code className="text-white">
+            {JSON.stringify(response, null, 2)}
+          </code>
         </pre>
       ),
     });
@@ -153,6 +166,45 @@ export function AddMonthlyGoalForm({
                 You can manage email addresses in your{" "}
                 <Link href="/examples/forms">email settings</Link>.
               </FormDescription> */}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="rentalGoal"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Rental Goal</FormLabel>
+              <FormControl>
+                <Input placeholder="Rental Goal" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />{" "}
+        <FormField
+          control={form.control}
+          name="retailGoal"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Retail Goal</FormLabel>
+              <FormControl>
+                <Input placeholder="Retail Goal" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="collectionsGoal"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Collections Goal</FormLabel>
+              <FormControl>
+                <Input placeholder="Collection Goal" {...field} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
