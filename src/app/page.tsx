@@ -50,15 +50,8 @@ import { db } from "@/db";
 import { eq } from "drizzle-orm";
 import { users } from "@/db/schema";
 
-async function getDashboardData(userId: string) {
-  const res = fetch(`http://localhost:3000/api/facilities`, {
-    headers: { userId: userId },
-  });
-  const dashboardData = (await res).json();
-  return dashboardData;
-}
-
 export default async function Dashboard() {
+  const firstLocation = await db.query.storageFacilities.findFirst();
   const session = await auth();
   const userFrontend = await db.query.users.findFirst({
     where: eq(users.id, session?.user?.id || ""),
@@ -272,7 +265,9 @@ export default async function Dashboard() {
           </Card> */}
           <Card x-chunk="dashboard-01-chunk-5">
             <CardHeader>
-              <CardTitle>Recent Sales</CardTitle>
+              <CardTitle>
+                {firstLocation?.facilityName || "Didn't find anything"}
+              </CardTitle>
             </CardHeader>
             {/* <CardContent className="grid gap-8">
               <div className="flex items-center gap-4">
