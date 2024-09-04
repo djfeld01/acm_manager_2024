@@ -1,5 +1,5 @@
 {
-  "id": "38944de5-6710-4ff0-92f1-1bfabfe33872",
+  "id": "52796187-622c-4e2f-bc1c-10495aef51da",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "6",
   "dialect": "postgresql",
@@ -207,25 +207,19 @@
           "name": "collections_goal",
           "type": "numeric",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "retail_goal": {
           "name": "retail_goal",
           "type": "numeric",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "rental_goal": {
           "name": "rental_goal",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         }
       },
       "indexes": {},
@@ -649,9 +643,11 @@
         },
         "role": {
           "name": "role",
-          "type": "text",
+          "type": "role",
+          "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "'USER'"
         }
       },
       "indexes": {},
@@ -761,6 +757,14 @@
         "MoveIn",
         "MoveOut",
         "Transfer"
+      ]
+    },
+    "public.role": {
+      "name": "role",
+      "schema": "public",
+      "values": [
+        "USER",
+        "ADMIN"
       ]
     }
   },

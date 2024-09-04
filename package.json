@@ -7,11 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "drop": "npx drizzle-kit drop",
     "migrate": "npx drizzle-kit generate && npx drizzle-kit migrate"
   },
   "dependencies": {
     "@auth/core": "^0.28.2",
-    "@auth/drizzle-adapter": "^0.8.2",
+    "@auth/drizzle-adapter": "^1.4.1",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-avatar": "^1.0.4",
     "@radix-ui/react-dialog": "^1.0.5",

@@ -4,6 +4,12 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."role" AS ENUM('USER', 'ADMIN');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "account" (
 	"userId" text NOT NULL,
 	"type" text NOT NULL,
@@ -36,10 +42,9 @@ CREATE TABLE IF NOT EXISTS "daily_payment" (
 CREATE TABLE IF NOT EXISTS "monthly_goal" (
 	"month" date DEFAULT now() NOT NULL,
 	"sitelink_id" varchar NOT NULL,
-	"collections_goal" numeric,
-	"retail_goal" numeric,
-	"rental_goal" integer,
-	"name" varchar,
+	"collections_goal" numeric NOT NULL,
+	"retail_goal" numeric NOT NULL,
+	"rental_goal" integer NOT NULL,
 	CONSTRAINT "monthly_goal_month_sitelink_id_pk" PRIMARY KEY("month","sitelink_id")
 );
 --> statement-breakpoint
@@ -106,7 +111,7 @@ CREATE TABLE IF NOT EXISTS "user" (
 	"email" text NOT NULL,
 	"emailVerified" timestamp,
 	"image" text,
-	"role" text
+	"role" "role" DEFAULT 'USER' NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "user_to_facilities" (

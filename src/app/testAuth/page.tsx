@@ -1,12 +1,14 @@
 import { auth } from "@/auth";
 
-async function page() {
+export default async function Page() {
   const session = await auth();
-  return (
-    <>
-      <div>{JSON.stringify(session?.user?.id, null, 2)}</div>
-    </>
-  );
-}
 
-export default page;
+  if (session?.user?.role === "ADMIN") {
+    return <p>You are an ADMIN, welcome!</p>;
+  }
+
+  if (session?.user?.role === "USER") {
+    return <p>You are an USER, welcome!</p>;
+  }
+  return <p>You are not authorized to view this page!</p>;
+}

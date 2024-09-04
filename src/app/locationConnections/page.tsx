@@ -1,15 +1,17 @@
 import { auth } from "@/auth";
-import { getFacilityConnections } from "@/lib/controllers/facilityController";
+import {
+  getAllFacilities,
+  getFacilityConnections,
+} from "@/lib/controllers/facilityController";
 
 export default async function locationConnections() {
   const session = await auth();
-  const facilities = await getFacilityConnections(session?.user?.id || "");
-
-  return (
-    <div>
-      {facilities.map((facility, index) => (
-        <div key={index}>{facility.storageFacility.facilityAbbreviation}</div>
-      ))}
-    </div>
+  const facilities = await getAllFacilities(
+    session?.user?.role ?? "UNAUTHORIZED"
   );
+  console.dir(facilities, { depth: null });
+  if (session?.user?.role === "ADMIN") {
+    return <div>Admin Person. So fancy.</div>;
+  }
+  return <p>You are not authorized to view this page!</p>;
 }

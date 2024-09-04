@@ -5,6 +5,7 @@ export {
 
 export {
   default as users,
+  roleEnum,
   usersToFacilities,
   usersToFacilitiesRelations,
   accounts,

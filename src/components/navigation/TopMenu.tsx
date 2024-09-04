@@ -47,6 +47,12 @@ export default async function TopMenu() {
         >
           Employees
         </Link>
+        <Link
+          href="/goals"
+          className="text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Goals
+        </Link>
       </nav>
       <Sheet>
         <SheetTrigger asChild>

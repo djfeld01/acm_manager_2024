@@ -17,6 +17,13 @@ export async function createFacility(req: NextRequest) {
   return NextResponse.json(res);
 }
 
+export async function getAllFacilities(role: string) {
+  const queryResults = await db.query.storageFacilities.findMany({
+    with: { usersToFacilities: true },
+  });
+  return queryResults;
+}
+
 export async function getFacilities(userId: string) {
   const queryResults = await db.query.usersToFacilities.findMany({
     where: (userRelation, { eq }) => eq(userRelation.userId, userId),
@@ -86,4 +93,10 @@ export async function getFacilityConnections(userId: string) {
   });
   const result = res.map((facility) => facility.storageFacility);
   return result;
+}
+
+export async function connectUserToFacilities(userId: string) {
+  const res = await db.query.users.findFirst({
+    where: (users, { eq }) => eq(users.id, userId),
+  });
 }
