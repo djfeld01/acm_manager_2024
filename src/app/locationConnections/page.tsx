@@ -7,9 +7,10 @@ import {
 export default async function locationConnections() {
   const session = await auth();
   const facilities = await getAllFacilities(
-    session?.user?.role ?? "UNAUTHORIZED"
+    session?.user?.role ?? "UNAUTHORIZED",
+    session?.user?.id ?? "UNAUTHORIZED"
   );
-  console.dir(facilities, { depth: null });
+  //console.dir(facilities, { depth: null });
   if (session?.user?.role === "ADMIN") {
     return <div>Admin Person. So fancy.</div>;
   }

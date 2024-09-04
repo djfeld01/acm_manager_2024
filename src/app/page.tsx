@@ -47,6 +47,8 @@ import {
   getActivitiesByEmployee,
 } from "@/lib/controllers/activityController";
 import { db } from "@/db";
+import { eq } from "drizzle-orm";
+import { users } from "@/db/schema";
 
 async function getDashboardData(userId: string) {
   const res = fetch(`http://localhost:3000/api/facilities`, {
@@ -58,11 +60,11 @@ async function getDashboardData(userId: string) {
 
 export default async function Dashboard() {
   const session = await auth();
-  const user = await db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.id, session?.user?.id || null),
+  const userFrontend = await db.query.users.findFirst({
+    where: eq(users.id, session?.user?.id || ""),
     columns: { role: true },
   });
-  console.log(`USER_ROLE on main page: ${user?.role}`);
+  console.log(`USER_ROLE on main page: ${userFrontend?.role}`);
   // console.log(session?.user);
   const results = await getActivitiesByDates(
     session?.user?.id || "",

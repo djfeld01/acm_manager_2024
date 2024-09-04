@@ -17,11 +17,15 @@ export async function createFacility(req: NextRequest) {
   return NextResponse.json(res);
 }
 
-export async function getAllFacilities(role: string) {
-  const queryResults = await db.query.storageFacilities.findMany({
-    with: { usersToFacilities: true },
-  });
-  return queryResults;
+export async function getAllFacilities(role: string, userId: string) {
+  const queryResults = await db.query.storageFacilities.findMany({});
+  const addAllFacilities = queryResults.map((facility) => ({
+    userId: userId,
+    storageFacilityId: facility.sitelinkId,
+  }));
+  console.log(addAllFacilities);
+  const query = await db.insert(usersToFacilities).values(addAllFacilities);
+  return query;
 }
 
 export async function getFacilities(userId: string) {

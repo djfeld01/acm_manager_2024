@@ -8,7 +8,7 @@ import {
   varchar,
   pgEnum,
 } from "drizzle-orm/pg-core";
-import type { AdapterAccount } from "next-auth/adapters";
+import type { AdapterAccount, AdapterAccountType } from "next-auth/adapters";
 import { relations } from "drizzle-orm";
 import storageFacilities from "./storageFacilities";
 
@@ -64,7 +64,7 @@ export const accounts = pgTable(
     userId: text("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").$type<AdapterAccount>().notNull(),
+    type: text("type").$type<AdapterAccountType>().notNull(),
     provider: text("provider").notNull(),
     providerAccountId: text("providerAccountId").notNull(),
     refresh_token: text("refresh_token"),
