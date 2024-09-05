@@ -4,14 +4,16 @@ import {
 } from "@/lib/controllers/facilityController";
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { db } from "@/db";
 
 export async function POST(req: NextRequest) {
   return createFacility(req);
 }
 
 export async function GET() {
-  const userId = headers().get("userId");
+  // const userId = headers().get("userId");
   //console.log(userId);
-  return NextResponse.json(getFacilities(userId || ""));
+  const response = db.query.storageFacilities.findMany();
+  return NextResponse.json(response);
   //return getFacilities(userId || "");
 }
