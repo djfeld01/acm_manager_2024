@@ -14,7 +14,7 @@ export async function GET() {
   // const userId = headers().get("userId");
   //console.log(userId);
 
-  const response = db.query.storageFacilities.findMany();
+  const response = await db.query.storageFacilities.findMany();
 
   return NextResponse.json(response || "EMPTY");
   //return getFacilities(userId || "");
