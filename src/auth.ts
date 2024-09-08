@@ -44,6 +44,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // }),
   ],
   callbacks: {
+    async signIn({ user, email }) {
+      const userDetail = await db.query.userDetails.findFirst({
+        where: (userDetails, { eq }) =>
+          eq(userDetails.email, user?.email || ""),
+      });
+      if (!userDetail) {
+        return "/unauthorized";
+      }
+      if (!userDetail.userId) {
+        await db
+          .update(userDetails)
+          .set({ userId: user.id })
+          .where(eq(userDetails.email, user?.email || ""));
+        return true;
+      }
+      return true;
+    },
     async session({ session, user }) {
       console.log(`We are in the session callback: ${session.user.role}`);
       console.log(`here is a user role: ${user.role}`);

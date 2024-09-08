@@ -47,8 +47,8 @@ export const userDetails = pgTable("user_detail", {
   ),
   //connect to the user table from auth.js
   userId: text("user_id").references(() => users.id),
-  paycorEmployeeId: integer("paycor_employee_id"),
-  sitelinkEmployeeId: integer("sitelink_employee_id"),
+  paycorEmployeeId: integer("paycor_employee_id").unique(),
+  sitelinkEmployeeId: integer("sitelink_employee_id").unique(),
 });
 export const insertUserDetailsSchema = createInsertSchema(userDetails, {
   email: (schema) => schema.email.email(),
