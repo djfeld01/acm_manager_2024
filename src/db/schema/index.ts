@@ -11,6 +11,7 @@ export {
   accounts,
   sessions,
   verificationTokens,
+  userDetails,
 } from "@/db/schema/user";
 
 export {

@@ -9,8 +9,10 @@ import {
   pgEnum,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccount, AdapterAccountType } from "next-auth/adapters";
-import { relations } from "drizzle-orm";
+import { relations, sql, SQL } from "drizzle-orm";
 import storageFacilities from "./storageFacilities";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
 export const roleEnum = pgEnum("role", ["USER", "ADMIN"]);
 
@@ -25,8 +27,41 @@ export const users = pgTable("user", {
   role: roleEnum("role").notNull().default("USER"),
 });
 
-export const userRelations = relations(users, ({ many }) => ({
+export const userRelations = relations(users, ({ one }) => ({
+  userDetails: one(userDetails),
+}));
+
+export const userDetails = pgTable("user_detail", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  email: text("email").notNull().unique(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  fullName: text("full_name").generatedAlwaysAs(
+    (): SQL => sql`${userDetails.firstName} || ' ' || ${userDetails.lastName}`
+  ),
+  initials: text("initials").generatedAlwaysAs(
+    (): SQL =>
+      sql`LEFT(${userDetails.firstName},1) || LEFT(${userDetails.lastName},1)`
+  ),
+  //connect to the user table from auth.js
+  userId: text("user_id").references(() => users.id),
+  paycorEmployeeId: integer("paycor_employee_id"),
+  sitelinkEmployeeId: integer("sitelink_employee_id"),
+});
+export const insertUserDetailsSchema = createInsertSchema(userDetails, {
+  email: (schema) => schema.email.email(),
+  paycorEmployeeId: z.string().transform((val) => parseFloat(val)),
+  sitelinkEmployeeId: z.string().transform((val) => parseFloat(val)),
+});
+export type CreateUserDetails = z.infer<typeof insertUserDetailsSchema>;
+export const userDetailsRelations = relations(userDetails, ({ one, many }) => ({
   usersToFacilities: many(usersToFacilities),
+  user: one(users, {
+    fields: [userDetails.userId],
+    references: [users.id],
+  }),
 }));
 
 export const usersToFacilities = pgTable(
@@ -34,7 +69,7 @@ export const usersToFacilities = pgTable(
   {
     userId: text("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => userDetails.id),
     storageFacilityId: varchar("storage_facility_id")
       .notNull()
       .references(() => storageFacilities.sitelinkId),
@@ -51,9 +86,9 @@ export const usersToFacilitiesRelations = relations(
       fields: [usersToFacilities.storageFacilityId],
       references: [storageFacilities.sitelinkId],
     }),
-    user: one(users, {
+    user: one(userDetails, {
       fields: [usersToFacilities.userId],
-      references: [users.id],
+      references: [userDetails.id],
     }),
   })
 );

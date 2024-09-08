@@ -1,28 +1,27 @@
-import { relations } from "drizzle-orm";
+import { relations, SQL, sql } from "drizzle-orm";
 import {
   pgTable,
   serial,
   integer,
   varchar,
-  timestamp,
   index,
   bigint,
-  PgInteger,
   date,
   numeric,
   pgEnum,
-  real,
-  text,
   boolean,
 } from "drizzle-orm/pg-core";
 import storageFacilities from "./storageFacilities";
-import users from "./user";
+import { userDetails } from "@/db/schema";
+import { z } from "zod";
 
 export const activityTypeEnum = pgEnum("activity_type", [
   "MoveIn",
   "MoveOut",
   "Transfer",
 ]);
+export const ActivityType = z.enum(activityTypeEnum.enumValues).enum;
+
 const tenantActivities = pgTable(
   "tenant_activity",
   {
@@ -49,7 +48,7 @@ const tenantActivities = pgTable(
     tenantEmail: varchar("tenant_email"),
     moveInDiscountPlan: varchar("move_in_discount_plan"),
     moveOutDaysRented: integer("move_out_days_rented"),
-    employeeId: varchar("employee_id"),
+    employeeId: varchar("employee_id").references(() => userDetails.id),
     employeeInitials: varchar("employee_initials").notNull(),
     hasInsurance: boolean("has_insurance").notNull(),
     insuranceAmount: numeric("insurance_amount"),
@@ -67,9 +66,9 @@ export const tenantActivitiesRelations = relations(
       fields: [tenantActivities.facilityId],
       references: [storageFacilities.sitelinkId],
     }),
-    user: one(users, {
+    user: one(userDetails, {
       fields: [tenantActivities.employeeId],
-      references: [users.id],
+      references: [userDetails.id],
     }),
   })
 );

@@ -1,4 +1,6 @@
 {
+  "id": "e4fcad1a-f20b-44f5-9a2b-7c3c0d22a4b7",
+  "prevId": "61302da3-1d23-4701-ada6-596883900580",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -78,15 +80,15 @@
         "account_userId_user_id_fk": {
           "name": "account_userId_user_id_fk",
           "tableFrom": "account",
+          "tableTo": "user",
           "columnsFrom": [
             "userId"
           ],
-          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
@@ -173,6 +175,7 @@
       },
       "indexes": {
         "daily_payment_date_index": {
+          "name": "daily_payment_date_index",
           "columns": [
             {
               "expression": "date",
@@ -181,11 +184,10 @@
               "nulls": "last"
             }
           ],
-          "with": {},
-          "name": "daily_payment_date_index",
           "isUnique": false,
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -233,15 +235,15 @@
         "monthly_goal_sitelink_id_storage_facility_sitelink_id_fk": {
           "name": "monthly_goal_sitelink_id_storage_facility_sitelink_id_fk",
           "tableFrom": "monthly_goal",
+          "tableTo": "storage_facility",
           "columnsFrom": [
             "sitelink_id"
           ],
-          "tableTo": "storage_facility",
           "columnsTo": [
             "sitelink_id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
@@ -284,15 +286,15 @@
         "quickbooks_balance_sitelink_id_storage_facility_sitelink_id_fk": {
           "name": "quickbooks_balance_sitelink_id_storage_facility_sitelink_id_fk",
           "tableFrom": "quickbooks_balance",
+          "tableTo": "storage_facility",
           "columnsFrom": [
             "sitelink_id"
           ],
-          "tableTo": "storage_facility",
           "columnsTo": [
             "sitelink_id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
@@ -334,15 +336,15 @@
         "session_userId_user_id_fk": {
           "name": "session_userId_user_id_fk",
           "tableFrom": "session",
+          "tableTo": "user",
           "columnsFrom": [
             "userId"
           ],
-          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -427,6 +429,7 @@
       },
       "indexes": {
         "storage_facility_facility_name_index": {
+          "name": "storage_facility_facility_name_index",
           "columns": [
             {
               "expression": "facility_name",
@@ -435,11 +438,10 @@
               "nulls": "last"
             }
           ],
-          "with": {},
-          "name": "storage_facility_facility_name_index",
           "isUnique": false,
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -610,6 +612,7 @@
       },
       "indexes": {
         "tenant_activity_date_index": {
+          "name": "tenant_activity_date_index",
           "columns": [
             {
               "expression": "date",
@@ -618,14 +621,107 @@
               "nulls": "last"
             }
           ],
-          "with": {},
-          "name": "tenant_activity_date_index",
           "isUnique": false,
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "tenant_activity_employee_id_user_detail_id_fk": {
+          "name": "tenant_activity_employee_id_user_detail_id_fk",
+          "tableFrom": "tenant_activity",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.user_detail": {
+      "name": "user_detail",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_name": {
+          "name": "full_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "generated": {
+            "as": "\"user_detail\".\"first_name\" || ' ' || \"user_detail\".\"last_name\"",
+            "type": "stored"
+          }
+        },
+        "initials": {
+          "name": "initials",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "generated": {
+            "as": "LEFT(\"user_detail\".\"first_name\",1) || LEFT(\"user_detail\".\"last_name\",1)",
+            "type": "stored"
+          }
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paycor_employee_id": {
+          "name": "paycor_employee_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sitelink_employee_id": {
+          "name": "sitelink_employee_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_detail_user_id_user_id_fk": {
+          "name": "user_detail_user_id_user_id_fk",
+          "tableFrom": "user_detail",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
@@ -670,10 +766,30 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'USER'"
+        },
+        "user_detail_id": {
+          "name": "user_detail_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "user_user_detail_id_user_detail_id_fk": {
+          "name": "user_user_detail_id_user_detail_id_fk",
+          "tableFrom": "user",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "user_detail_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
@@ -696,31 +812,31 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "user_to_facilities_user_id_user_id_fk": {
-          "name": "user_to_facilities_user_id_user_id_fk",
+        "user_to_facilities_user_id_user_detail_id_fk": {
+          "name": "user_to_facilities_user_id_user_detail_id_fk",
           "tableFrom": "user_to_facilities",
+          "tableTo": "user_detail",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         },
         "user_to_facilities_storage_facility_id_storage_facility_sitelink_id_fk": {
           "name": "user_to_facilities_storage_facility_id_storage_facility_sitelink_id_fk",
           "tableFrom": "user_to_facilities",
+          "tableTo": "storage_facility",
           "columnsFrom": [
             "storage_facility_id"
           ],
-          "tableTo": "storage_facility",
           "columnsTo": [
             "sitelink_id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
@@ -791,12 +907,10 @@
     }
   },
   "schemas": {},
+  "sequences": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
-  },
-  "id": "52796187-622c-4e2f-bc1c-10495aef51da",
-  "prevId": "00000000-0000-0000-0000-000000000000",
-  "sequences": {}
+    "tables": {}
+  }
 }

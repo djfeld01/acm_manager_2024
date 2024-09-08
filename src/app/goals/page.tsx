@@ -10,7 +10,7 @@ async function AddGoal() {
 
   return <Table></Table>;
 
-  // <AddMonthlyGoalForm facilities={facilities} />;
+  // return <AddMonthlyGoalForm facilities={facilities} />;
 }
 
 export default AddGoal;

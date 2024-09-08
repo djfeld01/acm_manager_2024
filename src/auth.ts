@@ -2,7 +2,15 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/db";
 import GOOGLE from "next-auth/providers/google";
 import NextAuth from "next-auth";
-import { accounts, users, verificationTokens, sessions } from "./db/schema";
+import {
+  accounts,
+  users,
+  verificationTokens,
+  sessions,
+  userDetails,
+} from "./db/schema";
+import { eq } from "drizzle-orm";
+import { userDetailsRelations } from "./db/schema/user";
 
 declare module "next-auth" {
   interface User {
@@ -40,6 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       console.log(`We are in the session callback: ${session.user.role}`);
       console.log(`here is a user role: ${user.role}`);
       session.user.role = user.role;
+
       return session;
     },
   },
