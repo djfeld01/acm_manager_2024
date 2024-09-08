@@ -57,11 +57,11 @@ export function AddMonthlyGoalForm({
   const form = useForm<CreateMonthlyGoals>({
     resolver: zodResolver(insertMonthlyGoalsSchema),
     defaultValues: {
-      collectionsGoal: "0.0",
+      collectionsGoal: "",
       month: new Date(),
       sitelinkId: facilities[0].sitelinkId,
-      rentalGoal: 0,
-      retailGoal: "0",
+      rentalGoal: undefined,
+      retailGoal: "",
     },
   });
 

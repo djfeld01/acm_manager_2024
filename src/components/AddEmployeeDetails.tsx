@@ -90,7 +90,7 @@ export default function AddEmployeeDetails(): JSX.Element {
                   <FormMessage />
                 </FormItem>
               )}
-            />{" "}
+            />
             <FormField
               control={form.control}
               name="lastName"
@@ -116,7 +116,7 @@ export default function AddEmployeeDetails(): JSX.Element {
                   <FormMessage />
                 </FormItem>
               )}
-            />{" "}
+            />
             <FormField
               control={form.control}
               name="paycorEmployeeId"
@@ -124,12 +124,24 @@ export default function AddEmployeeDetails(): JSX.Element {
                 <FormItem>
                   <FormLabel>Paycor ID</FormLabel>
                   <FormControl>
-                    <Input placeholder="Paycor Employee Id" {...field} />
+                    <Input
+                      placeholder="Paycor Employee ID"
+                      value={
+                        field.value !== null && field.value !== undefined
+                          ? field.value
+                          : ""
+                      } // Handle null/undefined
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                      disabled={field.disabled}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
-            />{" "}
+            />
             <FormField
               control={form.control}
               name="sitelinkEmployeeId"
@@ -137,7 +149,19 @@ export default function AddEmployeeDetails(): JSX.Element {
                 <FormItem>
                   <FormLabel>Sitelink Employee Id</FormLabel>
                   <FormControl>
-                    <Input placeholder="Sitelink Employee Id" {...field} />
+                    <Input
+                      placeholder="SiteLink Employee ID"
+                      value={
+                        field.value !== null && field.value !== undefined
+                          ? field.value
+                          : ""
+                      } // Handle null/undefined
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                      disabled={field.disabled}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

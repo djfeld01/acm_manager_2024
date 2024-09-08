@@ -4,58 +4,9 @@
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1725403998486,
-      "tag": "0000_flashy_toad",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
       "version": "7",
-      "when": 1725651258808,
-      "tag": "0001_zippy_clea",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1725651916861,
-      "tag": "0002_nasty_dormammu",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1725655689480,
-      "tag": "0003_mute_pestilence",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1725656076481,
-      "tag": "0004_wooden_the_professor",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1725656645137,
-      "tag": "0005_mushy_chimera",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1725810518163,
-      "tag": "0006_nappy_veda",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1725815597430,
-      "tag": "0007_striped_stark_industries",
+      "when": 1725829549811,
+      "tag": "0000_clumsy_hellfire_club",
       "breakpoints": true
     }
   ]

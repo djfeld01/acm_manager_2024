@@ -105,6 +105,19 @@ CREATE TABLE IF NOT EXISTS "tenant_activity" (
 	"lead_source" varchar
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "user_detail" (
+	"id" text PRIMARY KEY NOT NULL,
+	"email" text NOT NULL,
+	"first_name" text NOT NULL,
+	"last_name" text NOT NULL,
+	"full_name" text GENERATED ALWAYS AS ("user_detail"."first_name" || ' ' || "user_detail"."last_name") STORED,
+	"initials" text GENERATED ALWAYS AS (LEFT("user_detail"."first_name",1) || LEFT("user_detail"."last_name",1)) STORED,
+	"user_id" text,
+	"paycor_employee_id" integer,
+	"sitelink_employee_id" integer,
+	CONSTRAINT "user_detail_email_unique" UNIQUE("email")
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "user" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text,
@@ -152,7 +165,19 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "user_to_facilities" ADD CONSTRAINT "user_to_facilities_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;
+ ALTER TABLE "tenant_activity" ADD CONSTRAINT "tenant_activity_employee_id_user_detail_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."user_detail"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_detail" ADD CONSTRAINT "user_detail_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user_to_facilities" ADD CONSTRAINT "user_to_facilities_user_id_user_detail_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user_detail"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -163,6 +188,6 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "daily_payment_date_index" ON "daily_payment" ("date");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "storage_facility_facility_name_index" ON "storage_facility" ("facility_name");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "tenant_activity_date_index" ON "tenant_activity" ("date");
+CREATE INDEX IF NOT EXISTS "daily_payment_date_index" ON "daily_payment" USING btree ("date");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "storage_facility_facility_name_index" ON "storage_facility" USING btree ("facility_name");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "tenant_activity_date_index" ON "tenant_activity" USING btree ("date");
