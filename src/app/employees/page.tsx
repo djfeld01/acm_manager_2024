@@ -2,15 +2,16 @@ import { auth } from "@/auth";
 import AddEmployeeDetails from "@/components/AddEmployeeDetails";
 import UpdateEmployeeFacilitiesForm from "@/components/UpdateEmployeeFacilities";
 import { db } from "@/db";
+import { Role } from "@/db/schema/user";
+import { getUsers } from "@/lib/controllers/userController";
 
 export default async function Page() {
   const session = await auth();
 
   if (session?.user?.role === "ADMIN" || session?.user?.role === "SUPERVISOR") {
-    const employees = await db.query.userDetails.findMany({});
-    console.log(employees);
+    const users = await getUsers();
     const facilities = await db.query.storageFacilities.findMany();
-    console.log(facilities);
+
     return (
       <div className="flex min-h-screen w-full flex-col">
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-4 md:p-4">

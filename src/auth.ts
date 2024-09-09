@@ -15,8 +15,7 @@ import { userDetailsRelations } from "./db/schema/user";
 declare module "next-auth" {
   interface User {
     role?: string | null;
-    givenName?: string | null;
-    preferLanguage?: string | null;
+    userDetailId?: string | null;
   }
 }
 
@@ -52,17 +51,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (!userDetail) {
         return "/unauthorized";
       }
-      if (!userDetail.userId) {
+      if (!user?.userDetailId) {
         await db
-          .update(userDetails)
-          .set({ userId: user.id })
-          .where(eq(userDetails.email, user?.email || ""));
+          .update(users)
+          .set({ userDetailId: userDetail.id })
+          .where(eq(users.email, userDetail?.email));
         return true;
       }
       return true;
     },
     async session({ session, user }) {
       session.user.role = user.role;
+      session.user.userDetailId = user.userDetailId;
 
       return session;
     },

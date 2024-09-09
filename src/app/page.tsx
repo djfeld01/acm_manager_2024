@@ -49,16 +49,15 @@ import {
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
 import { users } from "@/db/schema";
+import { getUsers } from "@/lib/controllers/userController";
 
 export default async function Dashboard() {
   const firstLocation = await db.query.storageFacilities.findFirst();
   const session = await auth();
-  const userFrontend = await db.query.users.findFirst({
-    where: eq(users.id, session?.user?.id || ""),
-    columns: { role: true },
-  });
-  console.log(`USER_ROLE on main page: ${userFrontend?.role}`);
-  // console.log(session?.user);
+
+  const testing = await getUsers();
+
+  console.log(testing);
   const results = await getActivitiesByDates(
     session?.user?.id || "",
     "2024-01-01",

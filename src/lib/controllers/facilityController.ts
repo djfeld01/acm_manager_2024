@@ -23,7 +23,7 @@ export async function getAllFacilities(role: string, userId: string) {
     userId: userId,
     storageFacilityId: facility.sitelinkId,
   }));
-  console.log(addAllFacilities);
+
   const query = await db.insert(usersToFacilities).values(addAllFacilities);
   return query;
 }

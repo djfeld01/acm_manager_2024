@@ -23,7 +23,14 @@ export const roleEnum = pgEnum("role", [
   "ADMIN",
   "SUPERVISOR",
 ]);
-
+export enum Role {
+  USER = "USER",
+  MANAGER = "MANAGER",
+  ASSISTANT = "ASSISTANT",
+  OWNER = "OWNER",
+  ADMIN = "ADMIN",
+  SUPERVISOR = "SUPERVISOR",
+}
 export const users = pgTable("user", {
   id: text("id")
     .primaryKey()
@@ -33,10 +40,14 @@ export const users = pgTable("user", {
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
   role: roleEnum("role").notNull().default("USER"),
+  userDetailId: text("user_detail_id").references(() => userDetails.id),
 });
 
 export const userRelations = relations(users, ({ one }) => ({
-  userDetails: one(userDetails),
+  userDetails: one(userDetails, {
+    fields: [users.userDetailId],
+    references: [userDetails.id],
+  }),
 }));
 
 export const userDetails = pgTable("user_detail", {
@@ -54,7 +65,6 @@ export const userDetails = pgTable("user_detail", {
       sql`LEFT(${userDetails.firstName},1) || LEFT(${userDetails.lastName},1)`
   ),
   //connect to the user table from auth.js
-  userId: text("user_id"),
   paycorEmployeeId: integer("paycor_employee_id").unique(),
   supervisorId: text("supervisor_id").references(
     (): AnyPgColumn => userDetails.id
@@ -71,10 +81,7 @@ export type CreateUserDetails = z.infer<typeof insertUserDetailsSchema>;
 
 export const userDetailsRelations = relations(userDetails, ({ one, many }) => ({
   usersToFacilities: many(usersToFacilities),
-  user: one(users, {
-    fields: [userDetails.userId],
-    references: [users.id],
-  }),
+  user: one(users),
   supervisor: one(userDetails, {
     fields: [userDetails.supervisorId],
     references: [userDetails.id],

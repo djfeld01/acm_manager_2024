@@ -57,6 +57,27 @@
       "when": 1725902900494,
       "tag": "0007_petite_inertia",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1725911398503,
+      "tag": "0008_faulty_captain_britain",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1725913276654,
+      "tag": "0009_goofy_vin_gonzales",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1725917509423,
+      "tag": "0010_funny_marten_broadcloak",
+      "breakpoints": true
     }
   ]
 }
