@@ -78,6 +78,18 @@ export default async function TopMenu() {
               className="text-muted-foreground hover:text-foreground"
             >
               Activity
+            </Link>{" "}
+            <Link
+              href="/employees"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Employees
+            </Link>
+            <Link
+              href="/goals"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Goals
             </Link>
           </nav>
         </SheetContent>
