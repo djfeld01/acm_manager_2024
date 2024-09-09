@@ -7,6 +7,7 @@ import {
   bigint,
   varchar,
   pgEnum,
+  AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccount, AdapterAccountType } from "next-auth/adapters";
 import { relations, sql, SQL } from "drizzle-orm";
@@ -14,7 +15,14 @@ import storageFacilities from "./storageFacilities";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const roleEnum = pgEnum("role", ["USER", "ADMIN"]);
+export const roleEnum = pgEnum("role", [
+  "USER",
+  "MANAGER",
+  "ASSISTANT",
+  "OWNER",
+  "ADMIN",
+  "SUPERVISOR",
+]);
 
 export const users = pgTable("user", {
   id: text("id")
@@ -46,21 +54,30 @@ export const userDetails = pgTable("user_detail", {
       sql`LEFT(${userDetails.firstName},1) || LEFT(${userDetails.lastName},1)`
   ),
   //connect to the user table from auth.js
-  userId: text("user_id").references(() => users.id),
+  userId: text("user_id"),
   paycorEmployeeId: integer("paycor_employee_id").unique(),
-  sitelinkEmployeeId: integer("sitelink_employee_id").unique(),
+  supervisorId: text("supervisor_id").references(
+    (): AnyPgColumn => userDetails.id
+  ),
 });
+
 export const insertUserDetailsSchema = createInsertSchema(userDetails, {
   email: (schema) => schema.email.email(),
   paycorEmployeeId: z.string().transform((val) => parseFloat(val)),
-  sitelinkEmployeeId: z.string().transform((val) => parseFloat(val)),
+  //sitelinkEmployeeId: z.string().transform((val) => parseFloat(val)),
 });
+
 export type CreateUserDetails = z.infer<typeof insertUserDetailsSchema>;
+
 export const userDetailsRelations = relations(userDetails, ({ one, many }) => ({
   usersToFacilities: many(usersToFacilities),
   user: one(users, {
     fields: [userDetails.userId],
     references: [users.id],
+  }),
+  supervisor: one(userDetails, {
+    fields: [userDetails.supervisorId],
+    references: [userDetails.id],
   }),
 }));
 
@@ -73,6 +90,7 @@ export const usersToFacilities = pgTable(
     storageFacilityId: varchar("storage_facility_id")
       .notNull()
       .references(() => storageFacilities.sitelinkId),
+    sitelinkEmployeeId: integer("sitelink_employee_id").unique(),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.storageFacilityId, t.userId] }),

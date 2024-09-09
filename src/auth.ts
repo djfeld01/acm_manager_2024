@@ -62,8 +62,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return true;
     },
     async session({ session, user }) {
-      console.log(`We are in the session callback: ${session.user.role}`);
-      console.log(`here is a user role: ${user.role}`);
       session.user.role = user.role;
 
       return session;

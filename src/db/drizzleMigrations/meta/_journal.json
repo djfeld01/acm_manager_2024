@@ -8,6 +8,55 @@
       "when": 1725829549811,
       "tag": "0000_clumsy_hellfire_club",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1725895734681,
+      "tag": "0001_stale_thanos",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1725896510158,
+      "tag": "0002_damp_random",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1725896670978,
+      "tag": "0003_ordinary_piledriver",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1725899701987,
+      "tag": "0004_modern_morbius",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1725900675041,
+      "tag": "0005_living_ben_urich",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1725901593423,
+      "tag": "0006_pretty_madelyne_pryor",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1725902900494,
+      "tag": "0007_petite_inertia",
+      "breakpoints": true
     }
   ]
 }

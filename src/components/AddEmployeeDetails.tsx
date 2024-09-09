@@ -23,13 +23,11 @@ export default function AddEmployeeDetails(): JSX.Element {
     firstName: "",
     lastName: "",
     paycorEmployeeId: undefined,
-    sitelinkEmployeeId: undefined,
   };
   const form = useForm<CreateUserDetails>({
     resolver: zodResolver(insertUserDetailsSchema),
     defaultValues,
   });
-  console.log("This is a thing: ", form.formState.errors);
   async function onSubmit(values: CreateUserDetails) {
     toast({
       title: "You submitted the following values:",
@@ -126,31 +124,6 @@ export default function AddEmployeeDetails(): JSX.Element {
                   <FormControl>
                     <Input
                       placeholder="Paycor Employee ID"
-                      value={
-                        field.value !== null && field.value !== undefined
-                          ? field.value
-                          : ""
-                      } // Handle null/undefined
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      ref={field.ref}
-                      disabled={field.disabled}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="sitelinkEmployeeId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sitelink Employee Id</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="SiteLink Employee ID"
                       value={
                         field.value !== null && field.value !== undefined
                           ? field.value

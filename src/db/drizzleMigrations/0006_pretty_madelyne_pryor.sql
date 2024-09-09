@@ -1,0 +1,1 @@
+ALTER TABLE "user_detail" DROP COLUMN IF EXISTS "role";
