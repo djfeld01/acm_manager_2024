@@ -1,3 +1,5 @@
+"use server";
+
 import { db } from "@/db";
 import {
   storageFacilities,
@@ -17,15 +19,11 @@ export async function createFacility(req: NextRequest) {
   return NextResponse.json(res);
 }
 
-export async function getAllFacilities(role: string, userId: string) {
-  const queryResults = await db.query.storageFacilities.findMany({});
-  const addAllFacilities = queryResults.map((facility) => ({
-    userId: userId,
-    storageFacilityId: facility.sitelinkId,
-  }));
-
-  const query = await db.insert(usersToFacilities).values(addAllFacilities);
-  return query;
+export async function getAllFacilities() {
+  const facilities = await db.query.storageFacilities.findMany({
+    columns: { sitelinkId: true, facilityAbbreviation: true },
+  });
+  return facilities;
 }
 
 export async function getFacilities(userId: string) {
@@ -102,5 +100,11 @@ export async function getFacilityConnections(userId: string) {
 export async function connectUserToFacilities(userId: string) {
   const res = await db.query.users.findFirst({
     where: (users, { eq }) => eq(users.id, userId),
+  });
+}
+
+export async function getConnectedFacilities(userDetailId: string) {
+  return await db.query.usersToFacilities.findMany({
+    where: eq(usersToFacilities.userId, userDetailId),
   });
 }

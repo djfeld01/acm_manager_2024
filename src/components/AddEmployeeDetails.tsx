@@ -29,6 +29,7 @@ export default function AddEmployeeDetails(): JSX.Element {
     defaultValues,
   });
   async function onSubmit(values: CreateUserDetails) {
+    console.log("🚀 ~ onSubmit ~ values:", values);
     toast({
       title: "You submitted the following values:",
       description: (
@@ -75,7 +76,12 @@ export default function AddEmployeeDetails(): JSX.Element {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form
+            onSubmit={form.handleSubmit(onSubmit, (errors) => {
+              console.log("Validation errors", errors);
+            })}
+            className="space-y-8"
+          >
             <FormField
               control={form.control}
               name="firstName"

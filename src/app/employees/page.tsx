@@ -1,16 +1,56 @@
 import { auth } from "@/auth";
 import AddEmployeeDetails from "@/components/AddEmployeeDetails";
-import UpdateEmployeeFacilitiesForm from "@/components/UpdateEmployeeFacilities";
+import UpdateEmployeeFacilitiesForm from "@/components/UpdateEmployeeFacilities2";
 import { db } from "@/db";
 import { Role } from "@/db/schema/user";
-import { getUsers } from "@/lib/controllers/userController";
+import {
+  getAllFacilities,
+  getConnectedFacilities,
+} from "@/lib/controllers/facilityController";
+import {
+  getUsers,
+  getUsersWithConnectedFacilities,
+  UserToFacility,
+} from "@/lib/controllers/userController";
+import { useState } from "react";
+
+interface Facility {
+  sitelinkId: string;
+  facilityAbbreviation: string;
+}
+interface User {
+  id?: string;
+  fullName?: string | null;
+  usersToFacilities?: { storageFacility: Facility }[];
+}
+
+// Fetch users, facilities, and user-facility associations
+const fetchUsers = async (): Promise<User[]> => {
+  const users = (await getUsersWithConnectedFacilities()) || [];
+  return users;
+};
+
+const fetchFacilities = async (): Promise<Facility[]> => {
+  const facilities = await getAllFacilities();
+  return facilities;
+};
+
+async function updatePage() {
+  const users = await fetchUsers();
+  const facilities = await fetchFacilities();
+  return { users, facilities };
+}
 
 export default async function Page() {
   const session = await auth();
+  const { users, facilities } = await updatePage();
 
   if (session?.user?.role === "ADMIN" || session?.user?.role === "SUPERVISOR") {
-    const users = await getUsers();
-    const facilities = await db.query.storageFacilities.findMany();
+    // const users = await getUsersWithConnectedFacilities();
+    // const facilities = await db.query.storageFacilities.findMany({
+    //   columns: { sitelinkId: true, facilityAbbreviation: true },
+    // });
+    // console.log("🚀 ~ Page ~ facilities:", facilities);
 
     return (
       <div className="flex min-h-screen w-full flex-col">
@@ -18,8 +58,8 @@ export default async function Page() {
           <div className="grid gap-2 md:grid-cols-2 md:gap-2 lg:grid-cols-3">
             <AddEmployeeDetails />
             <UpdateEmployeeFacilitiesForm
-            // employees={employees}
-            // facilities={facilities}
+              users={users}
+              facilities={facilities}
             />
           </div>
         </main>

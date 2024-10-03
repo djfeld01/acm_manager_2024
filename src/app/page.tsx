@@ -55,9 +55,6 @@ export default async function Dashboard() {
   const firstLocation = await db.query.storageFacilities.findFirst();
   const session = await auth();
 
-  const testing = await getUsers();
-
-  console.log(testing);
   const results = await getActivitiesByDates(
     session?.user?.id || "",
     "2024-01-01",

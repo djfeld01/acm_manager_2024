@@ -8,6 +8,7 @@ import {
   varchar,
   pgEnum,
   AnyPgColumn,
+  boolean,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccount, AdapterAccountType } from "next-auth/adapters";
 import { relations, sql, SQL } from "drizzle-orm";
@@ -97,12 +98,21 @@ export const usersToFacilities = pgTable(
     storageFacilityId: varchar("storage_facility_id")
       .notNull()
       .references(() => storageFacilities.sitelinkId),
-    sitelinkEmployeeId: integer("sitelink_employee_id").unique(),
+    // sitelinkEmployeeId: integer("sitelink_employee_id").unique(),
+    // primarySite: boolean("primary_site"),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.storageFacilityId, t.userId] }),
   })
 );
+export const insertUsersToFacilitiesSchema = createInsertSchema(
+  usersToFacilities,
+  {}
+);
+export type CreateUserToFacilities = z.infer<
+  typeof insertUsersToFacilitiesSchema
+>;
+export type CreateUserToFacilityForm = CreateUserToFacilities[];
 
 export const usersToFacilitiesRelations = relations(
   usersToFacilities,

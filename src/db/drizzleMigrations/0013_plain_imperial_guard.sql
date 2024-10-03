@@ -1,0 +1,1 @@
+ALTER TABLE "user_detail" ALTER COLUMN "full_name" DROP NOT NULL;
