@@ -28,6 +28,17 @@ export default function AddEmployeeDetails(): JSX.Element {
     resolver: zodResolver(insertUserDetailsSchema),
     defaultValues,
   });
+
+  function updateEmail() {
+    const firstNameInitial = form
+      .getValues("firstName")
+      .charAt(0)
+      .concat(".")
+      .concat(form.getValues("lastName"))
+      .concat("@advantageconsultingmanagement.com")
+      .toLowerCase();
+    form.setValue("email", firstNameInitial);
+  }
   async function onSubmit(values: CreateUserDetails) {
     console.log("🚀 ~ onSubmit ~ values:", values);
     toast({
@@ -87,7 +98,7 @@ export default function AddEmployeeDetails(): JSX.Element {
               control={form.control}
               name="firstName"
               render={({ field }) => (
-                <FormItem>
+                <FormItem onChange={() => updateEmail()}>
                   <FormLabel>First Name</FormLabel>
                   <FormControl>
                     <Input placeholder="First Name" {...field} />
@@ -100,7 +111,7 @@ export default function AddEmployeeDetails(): JSX.Element {
               control={form.control}
               name="lastName"
               render={({ field }) => (
-                <FormItem>
+                <FormItem onChange={() => updateEmail()}>
                   <FormLabel>Last Name</FormLabel>
                   <FormControl>
                     <Input placeholder="Last Name" {...field} />
