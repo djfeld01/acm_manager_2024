@@ -8,6 +8,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -30,6 +31,7 @@ import { getAllFacilities } from "@/lib/controllers/facilityController";
 import { DevTool } from "@hookform/devtools";
 import { useToast } from "./ui/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { revalidatePath } from "next/cache";
 
 // Define types for user and facility data
 interface Facility {
@@ -103,6 +105,7 @@ function UpdateEmployeeFacilitiesForm({ users, facilities }: Props) {
           </pre>
         ),
       });
+      window.location.reload();
     }
 
     // // Post updated user-facility associations to the backend
@@ -155,12 +158,18 @@ function UpdateEmployeeFacilitiesForm({ users, facilities }: Props) {
             </FormItem>
 
             {/* Facility Checkboxes */}
-            <FormLabel>Facilities</FormLabel>
+
             <FormField
               control={form.control}
               name="facilityIds"
               render={() => (
                 <FormItem>
+                  <div className="mb-4">
+                    <FormLabel className="text-base">Facilities</FormLabel>
+                    <FormDescription>
+                      Select the stores this user is associated with.
+                    </FormDescription>
+                  </div>
                   {facilities.map((facility) => (
                     <FormField
                       key={facility.sitelinkId}

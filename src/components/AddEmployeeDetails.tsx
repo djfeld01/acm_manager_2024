@@ -51,6 +51,7 @@ export default function AddEmployeeDetails(): JSX.Element {
         ),
       });
       form.reset(defaultValues);
+      window.location.reload();
     } catch (error) {
       // Handle the error
       if (error) {
