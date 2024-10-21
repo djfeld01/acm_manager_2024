@@ -28,7 +28,7 @@ const tenantActivities = pgTable(
   {
     Id: serial("tenant_activity_id").notNull().primaryKey(),
     facilityId: varchar("facility_id").notNull(),
-    date: timestamp("date").notNull(),
+    date: date("date").notNull(),
     activityType: activityTypeEnum("activity_type").notNull(),
     tenantName: varchar("tenant_name").notNull(),
     unitName: varchar("unit_name").notNull(),

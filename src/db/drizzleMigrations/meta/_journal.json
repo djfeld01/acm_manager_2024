@@ -50,6 +50,13 @@
       "when": 1729527408910,
       "tag": "0006_ambitious_mauler",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1729532832329,
+      "tag": "0007_graceful_blazing_skull",
+      "breakpoints": true
     }
   ]
 }
