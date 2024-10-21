@@ -5,7 +5,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- CREATE TYPE "public"."role" AS ENUM('USER', 'ADMIN');
+ CREATE TYPE "public"."role" AS ENUM('USER', 'MANAGER', 'ASSISTANT', 'OWNER', 'ADMIN', 'SUPERVISOR');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -61,6 +61,12 @@ CREATE TABLE IF NOT EXISTS "session" (
 	"expires" timestamp NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "sitelink_logon" (
+	"sitelink_employee_id" varchar NOT NULL,
+	"date_time" timestamp NOT NULL,
+	CONSTRAINT "sitelink_logon_date_time_sitelink_employee_id_pk" PRIMARY KEY("date_time","sitelink_employee_id")
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "storage_facility" (
 	"sitelink_id" varchar PRIMARY KEY NOT NULL,
 	"sitelink_site_code" varchar(4) NOT NULL,
@@ -112,10 +118,10 @@ CREATE TABLE IF NOT EXISTS "user_detail" (
 	"last_name" text NOT NULL,
 	"full_name" text GENERATED ALWAYS AS ("user_detail"."first_name" || ' ' || "user_detail"."last_name") STORED,
 	"initials" text GENERATED ALWAYS AS (LEFT("user_detail"."first_name",1) || LEFT("user_detail"."last_name",1)) STORED,
-	"user_id" text,
 	"paycor_employee_id" integer,
-	"sitelink_employee_id" integer,
-	CONSTRAINT "user_detail_email_unique" UNIQUE("email")
+	"supervisor_id" text,
+	CONSTRAINT "user_detail_email_unique" UNIQUE("email"),
+	CONSTRAINT "user_detail_paycor_employee_id_unique" UNIQUE("paycor_employee_id")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "user" (
@@ -124,13 +130,18 @@ CREATE TABLE IF NOT EXISTS "user" (
 	"email" text NOT NULL,
 	"emailVerified" timestamp,
 	"image" text,
-	"role" "role" DEFAULT 'USER' NOT NULL
+	"role" "role" DEFAULT 'USER' NOT NULL,
+	"user_detail_id" text
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "user_to_facilities" (
 	"user_id" text NOT NULL,
 	"storage_facility_id" varchar NOT NULL,
-	CONSTRAINT "user_to_facilities_storage_facility_id_user_id_pk" PRIMARY KEY("storage_facility_id","user_id")
+	"sitelink_employee_id" varchar,
+	"primary_site" boolean,
+	"rents_units" boolean,
+	CONSTRAINT "user_to_facilities_storage_facility_id_user_id_pk" PRIMARY KEY("storage_facility_id","user_id"),
+	CONSTRAINT "user_to_facilities_sitelink_employee_id_unique" UNIQUE("sitelink_employee_id")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "verificationToken" (
@@ -165,13 +176,25 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ ALTER TABLE "sitelink_logon" ADD CONSTRAINT "sitelink_logon_sitelink_employee_id_user_to_facilities_sitelink_employee_id_fk" FOREIGN KEY ("sitelink_employee_id") REFERENCES "public"."user_to_facilities"("sitelink_employee_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  ALTER TABLE "tenant_activity" ADD CONSTRAINT "tenant_activity_employee_id_user_detail_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."user_detail"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "user_detail" ADD CONSTRAINT "user_detail_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;
+ ALTER TABLE "user_detail" ADD CONSTRAINT "user_detail_supervisor_id_user_detail_id_fk" FOREIGN KEY ("supervisor_id") REFERENCES "public"."user_detail"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "user" ADD CONSTRAINT "user_user_detail_id_user_detail_id_fk" FOREIGN KEY ("user_detail_id") REFERENCES "public"."user_detail"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;

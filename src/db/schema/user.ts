@@ -59,7 +59,7 @@ export const userDetails = pgTable("user_detail", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   fullName: text("full_name").generatedAlwaysAs(
-    (): SQL => sql`${userDetails.firstName} || ' ' || ${userDetails.lastName}`
+    (): SQL => sql`${userDetails.lastName} || ', ' || ${userDetails.firstName}`
   ),
   initials: text("initials").generatedAlwaysAs(
     (): SQL =>
@@ -94,12 +94,13 @@ export const usersToFacilities = pgTable(
   {
     userId: text("user_id")
       .notNull()
-      .references(() => userDetails.id),
+      .references(() => userDetails.id, { onDelete: "cascade" }),
     storageFacilityId: varchar("storage_facility_id")
       .notNull()
       .references(() => storageFacilities.sitelinkId),
-    // sitelinkEmployeeId: integer("sitelink_employee_id").unique(),
-    // primarySite: boolean("primary_site"),
+    sitelinkEmployeeId: varchar("sitelink_employee_id").unique(),
+    primarySite: boolean("primary_site"),
+    rentsUnits: boolean("rents_units"),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.storageFacilityId, t.userId] }),

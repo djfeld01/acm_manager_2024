@@ -10,6 +10,7 @@ import {
   numeric,
   pgEnum,
   boolean,
+  timestamp,
 } from "drizzle-orm/pg-core";
 import storageFacilities from "./storageFacilities";
 import { userDetails } from "@/db/schema";
@@ -27,7 +28,7 @@ const tenantActivities = pgTable(
   {
     Id: serial("tenant_activity_id").notNull().primaryKey(),
     facilityId: varchar("facility_id").notNull(),
-    date: date("date").notNull(),
+    date: timestamp("date").notNull(),
     activityType: activityTypeEnum("activity_type").notNull(),
     tenantName: varchar("tenant_name").notNull(),
     unitName: varchar("unit_name").notNull(),

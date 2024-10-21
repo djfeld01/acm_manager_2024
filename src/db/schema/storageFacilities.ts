@@ -14,6 +14,7 @@ import dailyPayments from "./dailyPayments";
 import tenantActivities from "./tenantActivities";
 import quickbooksBalance from "./quickbooksBalance";
 import monthlyGoals from "./monthlyGoals";
+import sitelinkLogons from "./sitelinkLogons";
 
 const storageFacilities = pgTable(
   "storage_facility",
@@ -44,6 +45,7 @@ export const storageFacilitiesRelations = relations(
     tenantActivities: many(tenantActivities),
     quickbooksBalance: many(quickbooksBalance),
     monthlyGoals: many(monthlyGoals),
+    sitelinkLogons: many(sitelinkLogons),
   })
 );
 

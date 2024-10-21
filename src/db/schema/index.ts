@@ -36,3 +36,8 @@ export {
   default as quickbooksBalance,
   quickbooksBalanceRelations,
 } from "@/db/schema/quickbooksBalance";
+
+export {
+  default as sitelinkLogons,
+  sitelinkLogonsRelations,
+} from "@/db/schema/sitelinkLogons";

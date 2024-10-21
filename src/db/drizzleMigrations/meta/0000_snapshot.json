@@ -1,5 +1,5 @@
 {
-  "id": "c7535323-74e2-4868-9609-4a1634774598",
+  "id": "49da9d9e-f4c8-429b-855d-0210d02a8110",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -350,6 +350,50 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
+    "public.sitelink_logon": {
+      "name": "sitelink_logon",
+      "schema": "",
+      "columns": {
+        "sitelink_employee_id": {
+          "name": "sitelink_employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date_time": {
+          "name": "date_time",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "sitelink_logon_sitelink_employee_id_user_to_facilities_sitelink_employee_id_fk": {
+          "name": "sitelink_logon_sitelink_employee_id_user_to_facilities_sitelink_employee_id_fk",
+          "tableFrom": "sitelink_logon",
+          "tableTo": "user_to_facilities",
+          "columnsFrom": [
+            "sitelink_employee_id"
+          ],
+          "columnsTo": [
+            "sitelink_employee_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "sitelink_logon_date_time_sitelink_employee_id_pk": {
+          "name": "sitelink_logon_date_time_sitelink_employee_id_pk",
+          "columns": [
+            "date_time",
+            "sitelink_employee_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {}
+    },
     "public.storage_facility": {
       "name": "storage_facility",
       "schema": "",
@@ -693,33 +737,27 @@
             "type": "stored"
           }
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "paycor_employee_id": {
           "name": "paycor_employee_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "sitelink_employee_id": {
-          "name": "sitelink_employee_id",
-          "type": "integer",
+        "supervisor_id": {
+          "name": "supervisor_id",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "user_detail_user_id_user_id_fk": {
-          "name": "user_detail_user_id_user_id_fk",
+        "user_detail_supervisor_id_user_detail_id_fk": {
+          "name": "user_detail_supervisor_id_user_detail_id_fk",
           "tableFrom": "user_detail",
-          "tableTo": "user",
+          "tableTo": "user_detail",
           "columnsFrom": [
-            "user_id"
+            "supervisor_id"
           ],
           "columnsTo": [
             "id"
@@ -735,6 +773,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "email"
+          ]
+        },
+        "user_detail_paycor_employee_id_unique": {
+          "name": "user_detail_paycor_employee_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "paycor_employee_id"
           ]
         }
       }
@@ -780,10 +825,30 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'USER'"
+        },
+        "user_detail_id": {
+          "name": "user_detail_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "user_user_detail_id_user_detail_id_fk": {
+          "name": "user_user_detail_id_user_detail_id_fk",
+          "tableFrom": "user",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "user_detail_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
@@ -802,6 +867,24 @@
           "type": "varchar",
           "primaryKey": false,
           "notNull": true
+        },
+        "sitelink_employee_id": {
+          "name": "sitelink_employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "primary_site": {
+          "name": "primary_site",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rents_units": {
+          "name": "rents_units",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -842,7 +925,15 @@
           ]
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {
+        "user_to_facilities_sitelink_employee_id_unique": {
+          "name": "user_to_facilities_sitelink_employee_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "sitelink_employee_id"
+          ]
+        }
+      }
     },
     "public.verificationToken": {
       "name": "verificationToken",
@@ -896,7 +987,11 @@
       "schema": "public",
       "values": [
         "USER",
-        "ADMIN"
+        "MANAGER",
+        "ASSISTANT",
+        "OWNER",
+        "ADMIN",
+        "SUPERVISOR"
       ]
     }
   },

@@ -29,7 +29,6 @@ export async function insertUserDetails(values: CreateUserDetails) {
 
 export async function getUsers() {
   const session = await auth();
-  console.log("🚀 ~ getUsers ~ session:", session);
   const role = session?.user?.role || Role.USER;
 
   //if admin
@@ -54,7 +53,6 @@ export async function getUsers() {
 
 export async function getUsersWithConnectedFacilities() {
   const session = await auth();
-  console.log("🚀 ~ getUsers ~ session:", session);
   const role = session?.user?.role || Role.USER;
 
   //if admin
