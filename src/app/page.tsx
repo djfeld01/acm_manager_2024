@@ -57,8 +57,8 @@ export default async function Dashboard() {
 
   const results = await getActivitiesByDates(
     session?.user?.id || "",
-    "2024-01-01",
-    "2024-05-31",
+    new Date("2024-01-01"),
+    new Date("2024-05-31"),
     "TW"
   );
   return (

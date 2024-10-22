@@ -1,9 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
-import {
-  getActivitiesByMonth,
-  getActivitiesByMonth2,
-} from "@/lib/controllers/activityController";
+import { getActivitiesByMonth2 } from "@/lib/controllers/activityController";
 
 export default async function Page() {
   const session = await auth();

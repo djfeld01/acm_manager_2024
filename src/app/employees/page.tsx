@@ -50,7 +50,6 @@ export default async function Page() {
     // const facilities = await db.query.storageFacilities.findMany({
     //   columns: { sitelinkId: true, facilityAbbreviation: true },
     // });
-    // console.log("🚀 ~ Page ~ facilities:", facilities);
 
     return (
       <div className="flex min-h-screen w-full flex-col">

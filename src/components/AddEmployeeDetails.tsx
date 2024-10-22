@@ -40,8 +40,6 @@ export default function AddEmployeeDetails(): JSX.Element {
     form.setValue("email", firstNameInitial);
   }
   async function onSubmit(values: CreateUserDetails) {
-    console.log("🚀 ~ onSubmit ~ values:", values);
-
     try {
       const response = await insertUserDetails(values);
       toast({

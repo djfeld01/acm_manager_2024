@@ -1,0 +1,1 @@
+ALTER TABLE "tenant_activity" ADD CONSTRAINT "tenant_activity_date_unique" UNIQUE("date");

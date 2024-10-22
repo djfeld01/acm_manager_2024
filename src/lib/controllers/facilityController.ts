@@ -36,7 +36,7 @@ export async function getFacilities(userId: string) {
           tenantActivities: {
             where: (tenantActivity, { and, eq, gt }) =>
               and(
-                gt(tenantActivity.date, "2024-01-01"),
+                gt(tenantActivity.date, new Date("2024-01-01")),
                 eq(tenantActivity.activityType, "MoveIn")
               ),
             columns: {

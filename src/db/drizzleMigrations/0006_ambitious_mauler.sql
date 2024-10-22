@@ -1,1 +1,0 @@
-ALTER TABLE "tenant_activity" ALTER COLUMN "date" SET DATA TYPE timestamp;

@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS "session" (
 CREATE TABLE IF NOT EXISTS "sitelink_logon" (
 	"sitelink_employee_id" varchar NOT NULL,
 	"date_time" timestamp NOT NULL,
+	"computer_name" varchar NOT NULL,
+	"computer_ip" varchar NOT NULL,
 	CONSTRAINT "sitelink_logon_date_time_sitelink_employee_id_pk" PRIMARY KEY("date_time","sitelink_employee_id")
 );
 --> statement-breakpoint
@@ -85,7 +87,7 @@ CREATE TABLE IF NOT EXISTS "storage_facility" (
 CREATE TABLE IF NOT EXISTS "tenant_activity" (
 	"tenant_activity_id" serial PRIMARY KEY NOT NULL,
 	"facility_id" varchar NOT NULL,
-	"date" date NOT NULL,
+	"date" timestamp NOT NULL,
 	"activity_type" "activity_type" NOT NULL,
 	"tenant_name" varchar NOT NULL,
 	"unit_name" varchar NOT NULL,
@@ -93,7 +95,7 @@ CREATE TABLE IF NOT EXISTS "tenant_activity" (
 	"unit_length" numeric NOT NULL,
 	"unit_size" varchar NOT NULL,
 	"unit_type" varchar NOT NULL,
-	"unit_area" varchar NOT NULL,
+	"unit_area" numeric NOT NULL,
 	"move_in_rental_rate" numeric,
 	"move_in_variance" numeric,
 	"tenant_sitelink_id" bigint NOT NULL,
@@ -116,7 +118,7 @@ CREATE TABLE IF NOT EXISTS "user_detail" (
 	"email" text NOT NULL,
 	"first_name" text NOT NULL,
 	"last_name" text NOT NULL,
-	"full_name" text GENERATED ALWAYS AS ("user_detail"."first_name" || ' ' || "user_detail"."last_name") STORED,
+	"full_name" text GENERATED ALWAYS AS ("user_detail"."last_name" || ', ' || "user_detail"."first_name") STORED,
 	"initials" text GENERATED ALWAYS AS (LEFT("user_detail"."first_name",1) || LEFT("user_detail"."last_name",1)) STORED,
 	"paycor_employee_id" integer,
 	"supervisor_id" text,
@@ -200,7 +202,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "user_to_facilities" ADD CONSTRAINT "user_to_facilities_user_id_user_detail_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user_detail"("id") ON DELETE no action ON UPDATE no action;
+ ALTER TABLE "user_to_facilities" ADD CONSTRAINT "user_to_facilities_user_id_user_detail_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user_detail"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;

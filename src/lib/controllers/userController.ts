@@ -9,7 +9,7 @@ import users, {
   usersToFacilities,
 } from "@/db/schema/user";
 import { Role } from "@/db/schema/user";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 export type StorageFacility = {
   sitelinkId: string;
@@ -69,6 +69,7 @@ export async function getUsersWithConnectedFacilities() {
         },
       },
       columns: { id: true, fullName: true },
+      orderBy: [asc(userDetails.fullName)],
     });
   }
 

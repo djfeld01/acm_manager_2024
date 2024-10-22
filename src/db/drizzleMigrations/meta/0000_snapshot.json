@@ -1,5 +1,5 @@
 {
-  "id": "49da9d9e-f4c8-429b-855d-0210d02a8110",
+  "id": "7ca61a79-cf5d-4c2b-bb7e-67d3ab0c98ac",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -365,6 +365,18 @@
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
+        },
+        "computer_name": {
+          "name": "computer_name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "computer_ip": {
+          "name": "computer_ip",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},
@@ -510,7 +522,7 @@
         },
         "date": {
           "name": "date",
-          "type": "date",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
@@ -559,7 +571,7 @@
         },
         "unit_area": {
           "name": "unit_area",
-          "type": "varchar",
+          "type": "numeric",
           "primaryKey": false,
           "notNull": true
         },
@@ -723,7 +735,7 @@
           "primaryKey": false,
           "notNull": false,
           "generated": {
-            "as": "\"user_detail\".\"first_name\" || ' ' || \"user_detail\".\"last_name\"",
+            "as": "\"user_detail\".\"last_name\" || ', ' || \"user_detail\".\"first_name\"",
             "type": "stored"
           }
         },
@@ -899,7 +911,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "user_to_facilities_storage_facility_id_storage_facility_sitelink_id_fk": {

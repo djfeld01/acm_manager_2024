@@ -1,2 +1,0 @@
-ALTER TABLE "user_detail" drop column "full_name";--> statement-breakpoint
-ALTER TABLE "user_detail" ADD COLUMN "full_name" text GENERATED ALWAYS AS ("user_detail"."last_name" || ', ' || "user_detail"."first_name") STORED;

@@ -13,8 +13,8 @@ enum ActivityType {
 
 export async function getActivitiesByDates(
   loggedInUserId: string,
-  startDate: string,
-  endDate: string,
+  startDate: Date,
+  endDate: Date,
   employeeInitials: string
 ) {
   const queryResults = await db.query.usersToFacilities.findMany({
@@ -47,38 +47,37 @@ export async function insertMonthlyGoals(values: CreateMonthlyGoals) {
   return await db.insert(monthlyGoals).values(values).returning();
 }
 
-export async function getActivitiesByMonth(
-  userId: string,
-  startDate?: string,
-  endDate?: string,
-  activityType?: ActivityType
-) {
-  const result = await db.query.usersToFacilities.findMany({
-    where: (userRelation, { eq }) => eq(userRelation.userId, userId),
-    with: {
-      storageFacility: {
-        columns: {},
-        with: {
-          tenantActivities: {
-            where: (tenantActivity, { lte, eq, gte, and }) =>
-              and(
-                lte(tenantActivity.date, endDate || "2500-01-01"),
-                gte(tenantActivity.date, startDate || "1900-01-01"),
-                eq(tenantActivity.activityType, activityType || "MoveIn")
-              ),
-          },
-        },
-      },
-    },
-  });
-  console.log(result);
-  return result;
-}
+// export async function getActivitiesByMonth(
+//   userId: string,
+//   startDate?: string,
+//   endDate?: string,
+//   activityType?: ActivityType
+// ) {
+//   const result = await db.query.usersToFacilities.findMany({
+//     where: (userRelation, { eq }) => eq(userRelation.userId, userId),
+//     with: {
+//       storageFacility: {
+//         columns: {},
+//         with: {
+//           tenantActivities: {
+//             where: (tenantActivity, { lte, eq, gte, and }) =>
+//               and(
+//                 lte(tenantActivity.date, endDate || new Date("2500-01-01")),
+//                 gte(tenantActivity.date, startDate || "1900-01-01"),
+//                 eq(tenantActivity.activityType, activityType || "MoveIn")
+//               ),
+//           },
+//         },
+//       },
+//     },
+//   });
+//   return result;
+// }
 
 export async function getActivitiesByMonth2(
   userId: string,
-  startDate?: string,
-  endDate?: string
+  startDate?: Date,
+  endDate?: Date
 ) {
   const result = await db
     .select({
@@ -107,8 +106,8 @@ export async function getActivitiesByMonth2(
     )
     .where(
       and(
-        lte(tenantActivities.date, endDate || "2500-01-01"),
-        gte(tenantActivities.date, startDate || "1900-01-01")
+        lte(tenantActivities.date, endDate || new Date("2500-01-01")),
+        gte(tenantActivities.date, startDate || new Date("1900-01-01"))
       )
     );
   //console.log(result);

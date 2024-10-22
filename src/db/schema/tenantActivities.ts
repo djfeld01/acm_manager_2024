@@ -28,7 +28,7 @@ const tenantActivities = pgTable(
   {
     Id: serial("tenant_activity_id").notNull().primaryKey(),
     facilityId: varchar("facility_id").notNull(),
-    date: date("date").notNull(),
+    date: timestamp("date").notNull().unique(),
     activityType: activityTypeEnum("activity_type").notNull(),
     tenantName: varchar("tenant_name").notNull(),
     unitName: varchar("unit_name").notNull(),
@@ -36,7 +36,7 @@ const tenantActivities = pgTable(
     unitLength: numeric("unit_length").notNull(),
     unitSize: varchar("unit_size").notNull(),
     unitType: varchar("unit_type").notNull(),
-    unitArea: varchar("unit_area").notNull(),
+    unitArea: numeric("unit_area").notNull(),
     moveInRentalRate: numeric("move_in_rental_rate"),
     moveInVariance: numeric("move_in_variance"),
     tenantSitelinkId: bigint("tenant_sitelink_id", {

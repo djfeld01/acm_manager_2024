@@ -1,6 +1,6 @@
 {
-  "id": "ecb18ede-f73a-4985-9a11-952c46db6060",
-  "prevId": "8631fc17-5c80-4778-8dac-fb89b67f08fa",
+  "id": "22caf1a4-811f-4ba5-b894-ba30efc8afd8",
+  "prevId": "aebf18d9-5529-4e77-ac4e-9da9d8d1aef4",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -391,7 +391,7 @@
           "columnsTo": [
             "sitelink_employee_id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -522,7 +522,7 @@
         },
         "date": {
           "name": "date",
-          "type": "date",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
@@ -571,7 +571,7 @@
         },
         "unit_area": {
           "name": "unit_area",
-          "type": "varchar",
+          "type": "numeric",
           "primaryKey": false,
           "notNull": true
         },
@@ -699,7 +699,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {
+        "tenant_activity_date_unique": {
+          "name": "tenant_activity_date_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "date"
+          ]
+        }
+      }
     },
     "public.user_detail": {
       "name": "user_detail",
@@ -911,7 +919,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "user_to_facilities_storage_facility_id_storage_facility_sitelink_id_fk": {

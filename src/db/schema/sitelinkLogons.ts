@@ -13,7 +13,9 @@ const sitelinkLogons = pgTable(
   {
     sitelinkEmployeeId: varchar("sitelink_employee_id")
       .notNull()
-      .references(() => usersToFacilities.sitelinkEmployeeId),
+      .references(() => usersToFacilities.sitelinkEmployeeId, {
+        onDelete: "cascade",
+      }),
     dateTime: timestamp("date_time").notNull(),
     computerName: varchar("computer_name").notNull(),
     computerIP: varchar("computer_ip").notNull(),

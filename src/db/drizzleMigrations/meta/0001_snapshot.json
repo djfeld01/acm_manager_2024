@@ -1,6 +1,6 @@
 {
-  "id": "8631fc17-5c80-4778-8dac-fb89b67f08fa",
-  "prevId": "49da9d9e-f4c8-429b-855d-0210d02a8110",
+  "id": "aebf18d9-5529-4e77-ac4e-9da9d8d1aef4",
+  "prevId": "7ca61a79-cf5d-4c2b-bb7e-67d3ab0c98ac",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -522,7 +522,7 @@
         },
         "date": {
           "name": "date",
-          "type": "date",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
@@ -571,7 +571,7 @@
         },
         "unit_area": {
           "name": "unit_area",
-          "type": "varchar",
+          "type": "numeric",
           "primaryKey": false,
           "notNull": true
         },
@@ -699,7 +699,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {
+        "tenant_activity_date_unique": {
+          "name": "tenant_activity_date_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "date"
+          ]
+        }
+      }
     },
     "public.user_detail": {
       "name": "user_detail",
@@ -735,7 +743,7 @@
           "primaryKey": false,
           "notNull": false,
           "generated": {
-            "as": "\"user_detail\".\"first_name\" || ' ' || \"user_detail\".\"last_name\"",
+            "as": "\"user_detail\".\"last_name\" || ', ' || \"user_detail\".\"first_name\"",
             "type": "stored"
           }
         },
@@ -911,7 +919,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "user_to_facilities_storage_facility_id_storage_facility_sitelink_id_fk": {
