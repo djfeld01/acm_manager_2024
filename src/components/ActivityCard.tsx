@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { BarChartComponent } from "./BarChartComponent";
 
 interface activityProps {
   facilityAbbreviation: string;
@@ -28,6 +29,7 @@ export default function ActivityCard({
         <div className="text-xl">Move-Ins</div>
         <div className="text-2xl font-bold">{totalRentals}</div>
       </CardContent>
+      <BarChartComponent />
     </Card>
   );
 }

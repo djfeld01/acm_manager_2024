@@ -41,3 +41,8 @@ export {
   default as sitelinkLogons,
   sitelinkLogonsRelations,
 } from "@/db/schema/sitelinkLogons";
+
+export {
+  default as dailyManagementSummary,
+  dailyManagementSummaryRelations,
+} from "@/db/schema/dailyManagementSummary";

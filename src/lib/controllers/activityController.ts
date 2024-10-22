@@ -2,7 +2,11 @@
 import { db } from "@/db";
 import { storageFacilities, tenantActivities } from "@/db/schema";
 import monthlyGoals, { CreateMonthlyGoals } from "@/db/schema/monthlyGoals";
-import { userRelations } from "@/db/schema/user";
+import {
+  userDetailsRelations,
+  userRelations,
+  usersToFacilities,
+} from "@/db/schema/user";
 import { count, sql, eq, lte, and, gte } from "drizzle-orm";
 
 enum ActivityType {
@@ -17,15 +21,19 @@ export async function getActivitiesByDates(
   endDate: Date,
   employeeInitials: string
 ) {
+  const userDetail = await db.query.users.findFirst({
+    where: (users, { eq }) => eq(users.id, loggedInUserId),
+  });
+  const userDetailId = userDetail?.userDetailId || "";
   const queryResults = await db.query.usersToFacilities.findMany({
-    where: (userRelation, { eq }) => eq(userRelation.userId, loggedInUserId),
+    where: (userRelation, { eq }) => eq(userRelation.userId, userDetailId),
     with: {
       storageFacility: {
         with: {
           tenantActivities: {
             where: (tenantActivity, { lte, eq, gte, and }) =>
               and(
-                eq(tenantActivity.employeeInitials, employeeInitials),
+                eq(tenantActivity.activityType, "MoveIn"),
                 lte(tenantActivity.date, endDate),
                 gte(tenantActivity.date, startDate)
               ),
@@ -74,22 +82,54 @@ export async function insertMonthlyGoals(values: CreateMonthlyGoals) {
 //   return result;
 // }
 
+// type MonthGroup = { month: string; rentals: number };
+
+// type ActivityTypeGroup = {
+//   activityType: "MoveIn" | "MoveOut" | "Transfer";
+//   monthGroups: MonthGroup[];
+// };
+
+// type FacilityNameGroup = Record<string, ActivityTypeGroup>[];
+
 export async function getActivitiesByMonth2(
   userId: string,
   startDate?: Date,
   endDate?: Date
 ) {
+  const userDetail = await db.query.users.findFirst({
+    where: (users, { eq }) => eq(users.id, userId),
+  });
+  const userDetailId = userDetail?.userDetailId || "";
   const result = await db
     .select({
       facilityAbbreviation: storageFacilities.facilityAbbreviation,
+      facilityName: storageFacilities.facilityName,
+      facilityId: storageFacilities.sitelinkId,
       activityType: tenantActivities.activityType,
       total: count(),
       month: sql<number>`EXTRACT (MONTH from ${tenantActivities.date})`,
       year: sql<number>`EXTRACT (YEAR from ${tenantActivities.date})`,
     })
     .from(tenantActivities)
+    .fullJoin(
+      storageFacilities,
+      eq(tenantActivities.facilityId, storageFacilities.sitelinkId)
+    )
+    .innerJoin(
+      usersToFacilities,
+      eq(usersToFacilities.storageFacilityId, storageFacilities.sitelinkId)
+    )
+    .where(
+      and(
+        lte(tenantActivities.date, endDate || new Date("2500-01-01")),
+        gte(tenantActivities.date, startDate || new Date("1900-01-01")),
+        eq(usersToFacilities.userId, userDetailId)
+      )
+    )
     .groupBy(
       storageFacilities.facilityAbbreviation,
+      storageFacilities.facilityName,
+      storageFacilities.sitelinkId,
       tenantActivities.activityType,
       sql<number>`EXTRACT (YEAR from ${tenantActivities.date})`,
       sql<number>`EXTRACT (MONTH from ${tenantActivities.date})`
@@ -99,17 +139,34 @@ export async function getActivitiesByMonth2(
       sql<number>`EXTRACT (YEAR from ${tenantActivities.date})`,
       sql<number>`EXTRACT(MONTH from ${tenantActivities.date})`,
       tenantActivities.activityType
-    )
-    .fullJoin(
-      storageFacilities,
-      eq(tenantActivities.facilityId, storageFacilities.sitelinkId)
-    )
-    .where(
-      and(
-        lte(tenantActivities.date, endDate || new Date("2500-01-01")),
-        gte(tenantActivities.date, startDate || new Date("1900-01-01"))
-      )
     );
-  //console.log(result);
+
+  console.log(result);
+  // const formattedResult = result.reduce<FacilityNameGroup>((acc, curr,index) => {
+  //   const facilityName = curr.facilityName || "";
+  //   const activityType = curr.activityType || "MoveIn";
+  //   const month = curr.month || "";
+
+  //   // Ensure facility group exists
+  //   const facilityIndex=acc.find((facility)=>facility)
+  //   if (!acc[facilityName]) {
+  //     acc[facilityName] = {} as ActivityTypeGroup;
+  //   }
+
+  //   // Ensure activityType group exists within facility
+  //   if (!acc[facilityName][activityType]) {
+  //     acc[facilityName][activityType] = {};
+  //   }
+
+  //   // Ensure month group exists within activityType
+  //   if (!acc[facilityName][activityType][month]) {
+  //     acc[facilityName][activityType][month] = curr.total;
+  //   }
+
+  //   return acc;
+  // }, []);
+
+  // console.log(JSON.stringify(formattedResult, null, 4));
+
   return result;
 }
