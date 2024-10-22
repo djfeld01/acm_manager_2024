@@ -77,5 +77,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  return NextResponse.json({ data: "This is a Get" });
+  const res = await db.query.tenantActivities.findMany({ limit: 100 });
+  return NextResponse.json(res);
 }
