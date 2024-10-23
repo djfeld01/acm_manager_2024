@@ -141,7 +141,6 @@ export async function getActivitiesByMonth2(
       tenantActivities.activityType
     );
 
-  console.log(result);
   // const formattedResult = result.reduce<FacilityNameGroup>((acc, curr,index) => {
   //   const facilityName = curr.facilityName || "";
   //   const activityType = curr.activityType || "MoveIn";

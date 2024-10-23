@@ -1,5 +1,6 @@
 import React from "react";
 import ActivityCard from "./ActivityCard";
+import { BarChartComponent } from "./BarChartComponent";
 
 type LocationNumbersType = {
   facilityAbbreviation: string | null;
@@ -15,7 +16,7 @@ interface LocationCardsPropsType {
   locationsNumbers: LocationNumbersType[];
 }
 interface ActivityTypes {
-  [year: string]: { [month: string]: number };
+  [year: string]: { month: number; activity: number }[];
 }
 interface Location {
   facilityAbbreviation: string;
@@ -26,6 +27,8 @@ interface Location {
   };
 }
 function LocationCards({ locationsNumbers }: LocationCardsPropsType) {
+  console.log("🚀 ~ LocationCards ~ locationsNumbers:", locationsNumbers);
+
   const formattedLocationsNumbers = locationsNumbers.reduce<Location[]>(
     (acc, currResult) => {
       // Find the existing location
@@ -57,26 +60,30 @@ function LocationCards({ locationsNumbers }: LocationCardsPropsType) {
       ) {
         location.activityTypes[currResult.activityType || "MoveIn"][
           currResult.year
-        ] = {};
+        ] = [];
       }
 
       // Assign total to the correct month
       location.activityTypes[currResult.activityType || "MoveIn"][
         currResult.year
-      ][currResult.month] = currResult.total;
+      ].push({ month: currResult.month, activity: currResult.total });
 
       return acc;
     },
     []
+  );
+
+  console.log(
+    "🚀 ~ LocationCards ~ formattedLocationsNumbers:",
+    JSON.stringify(formattedLocationsNumbers, null, 4)
   );
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="grid gap-2 md:grid-cols-2 md:gap-2 lg:grid-cols-3">
         {formattedLocationsNumbers.map((locationNumbers) => {
           return (
-            <ActivityCard
-              facilityAbbreviation={locationNumbers.facilityName}
-              totalRentals={locationNumbers?.activityTypes.MoveIn[2024][10]}
+            <BarChartComponent
+              location={locationNumbers}
               key={locationNumbers?.facilityId}
             />
           );
