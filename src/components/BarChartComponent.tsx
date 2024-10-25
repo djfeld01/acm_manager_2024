@@ -46,6 +46,7 @@ interface Location {
 }
 interface ActivityProps {
   location: Location;
+  todaysRentals: number;
 }
 const chartConfig = {
   activity: {
@@ -54,7 +55,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function BarChartComponent({ location }: ActivityProps) {
+export function BarChartComponent({ location, todaysRentals }: ActivityProps) {
   const [Activity, setActivity] = useState("MoveIn");
 
   console.log(JSON.stringify(location, null, 4));
@@ -73,6 +74,7 @@ export function BarChartComponent({ location }: ActivityProps) {
       </CardHeader>
 
       <CardContent>
+        <div>Daily Rentals: {todaysRentals}</div>
         <ChartContainer config={chartConfig}>
           <BarChart
             accessibilityLayer

@@ -55,7 +55,6 @@ import { totalmem } from "os";
 import LocationCards from "@/components/LocationCards";
 
 export default async function Dashboard() {
-  const firstLocation = await db.query.storageFacilities.findFirst();
   const session = await auth();
 
   const results = await getActivitiesByMonth2(
@@ -63,18 +62,18 @@ export default async function Dashboard() {
     new Date(new Date().getFullYear(), 0, 1),
     new Date()
   );
-
+  let midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const todaysRentals = await getActivitiesByDates(
+    session?.user?.id || "",
+    midnight,
+    now
+  );
+  console.log(todaysRentals);
   return (
     <div className="flex min-h-screen w-full flex-col">
       <LocationCards locationsNumbers={results} />
     </div>
   );
-}
-function getactivitiesByMonth2(
-  arg0: string,
-  arg1: Date,
-  arg2: Date,
-  arg3: string
-) {
-  throw new Error("Function not implemented.");
 }

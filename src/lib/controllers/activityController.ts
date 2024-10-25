@@ -18,8 +18,7 @@ enum ActivityType {
 export async function getActivitiesByDates(
   loggedInUserId: string,
   startDate: Date,
-  endDate: Date,
-  employeeInitials: string
+  endDate: Date
 ) {
   const userDetail = await db.query.users.findFirst({
     where: (users, { eq }) => eq(users.id, loggedInUserId),
@@ -136,9 +135,9 @@ export async function getActivitiesByMonth2(
     )
     .orderBy(
       storageFacilities.facilityAbbreviation,
+      tenantActivities.activityType,
       sql<number>`EXTRACT (YEAR from ${tenantActivities.date})`,
-      sql<number>`EXTRACT(MONTH from ${tenantActivities.date})`,
-      tenantActivities.activityType
+      sql<number>`EXTRACT(MONTH from ${tenantActivities.date})`
     );
 
   // const formattedResult = result.reduce<FacilityNameGroup>((acc, curr,index) => {

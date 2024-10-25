@@ -14,6 +14,7 @@ type LocationNumbersType = {
 
 interface LocationCardsPropsType {
   locationsNumbers: LocationNumbersType[];
+  todaysRentals: number;
 }
 interface ActivityTypes {
   [year: string]: { month: number; activity: number }[];
@@ -26,7 +27,10 @@ interface Location {
     [activityType: string]: ActivityTypes;
   };
 }
-function LocationCards({ locationsNumbers }: LocationCardsPropsType) {
+function LocationCards({
+  locationsNumbers,
+  todaysRentals,
+}: LocationCardsPropsType) {
   console.log("🚀 ~ LocationCards ~ locationsNumbers:", locationsNumbers);
 
   const formattedLocationsNumbers = locationsNumbers.reduce<Location[]>(
@@ -73,16 +77,13 @@ function LocationCards({ locationsNumbers }: LocationCardsPropsType) {
     []
   );
 
-  console.log(
-    "🚀 ~ LocationCards ~ formattedLocationsNumbers:",
-    JSON.stringify(formattedLocationsNumbers, null, 4)
-  );
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="grid gap-2 md:grid-cols-2 md:gap-2 lg:grid-cols-3">
         {formattedLocationsNumbers.map((locationNumbers) => {
           return (
             <BarChartComponent
+              todaysRentals={todaysRentals}
               location={locationNumbers}
               key={locationNumbers?.facilityId}
             />

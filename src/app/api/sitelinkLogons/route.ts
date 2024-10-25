@@ -19,53 +19,24 @@ export type SitelinkLogonType = {
 }[];
 export async function POST(req: NextRequest) {
   const body: SitelinkLogonType = await req.json();
-  let usersToFacilitiesArray = await db.query.usersToFacilities.findMany({});
+  let usersToFacilitiesArray = await db.query.usersToFacilities.findMany({
+    // with: { user: { columns: { fullName: true } } },
+  });
   let users = await db.query.userDetails.findMany({
-    columns: { fullName: true, id: true },
+    columns: { fullName: true, id: true, email: true },
   });
 
   const toInsert = [];
 
   // Use for...of instead of map
   for (const sitelinkLogon of body) {
+    //check to see if the employeeId is already in UserToFacility
     const userToFacility = usersToFacilitiesArray.some(
       (userToFacility) =>
         sitelinkLogon.sitelinkEmployeeId === userToFacility.sitelinkEmployeeId
     );
 
     if (userToFacility) {
-      toInsert.push({
-        sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
-        dateTime: new Date(sitelinkLogon.dateTime),
-        computerName: sitelinkLogon.computerName,
-        computerIP: sitelinkLogon.computerIP,
-      });
-      continue; // Move to the next iteration
-    }
-
-    const employeeIndex = users.findIndex(
-      (user) => user.fullName === sitelinkLogon.fullName.trim()
-    );
-
-    if (employeeIndex > -1) {
-      const insertedUsertoFacility = await db
-        .insert(usersToFacilities)
-        .values({
-          userId: users[employeeIndex].id,
-          sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
-          storageFacilityId: sitelinkLogon.sitelinkId,
-        })
-        .returning({ insertedSitelinkEmployeeId: usersToFacilities.userId })
-        .onConflictDoNothing();
-
-      usersToFacilitiesArray.push({
-        userId: users[employeeIndex]?.id || "",
-        sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
-        storageFacilityId: sitelinkLogon.sitelinkId,
-        primarySite: null,
-        rentsUnits: null,
-      });
-
       toInsert.push({
         sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
         dateTime: new Date(sitelinkLogon.dateTime),
@@ -82,6 +53,45 @@ export async function POST(req: NextRequest) {
       .charAt(0)
       .toLowerCase()}.${lastName.toLowerCase()}@advantageconsultingmanagement.com`;
 
+    const employeeIndex = users.findIndex((user) => user.email === email);
+
+    if (employeeIndex > -1) {
+      const insertedUsertoFacility = await db
+        .insert(usersToFacilities)
+        .values({
+          userId: users[employeeIndex].id,
+          sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
+          storageFacilityId: sitelinkLogon.sitelinkId,
+        })
+        .returning({ insertedSitelinkEmployeeId: usersToFacilities.userId })
+        // .onConflictDoNothing();
+        .onConflictDoUpdate({
+          target: [
+            usersToFacilities.storageFacilityId,
+            usersToFacilities.userId,
+          ],
+          set: { sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId },
+        });
+
+      usersToFacilitiesArray.push({
+        userId: users[employeeIndex]?.id || "",
+        sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
+        storageFacilityId: sitelinkLogon.sitelinkId,
+        primarySite: null,
+        rentsUnits: null,
+        //user: { fullName: users[employeeIndex].fullName },
+      });
+
+      toInsert.push({
+        sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
+        dateTime: new Date(sitelinkLogon.dateTime),
+        computerName: sitelinkLogon.computerName,
+        computerIP: sitelinkLogon.computerIP,
+      });
+      continue; // Move to the next iteration
+    }
+    //console.log("about to call trim at line 85");
+
     const insertedEmployee = await db
       .insert(userDetails)
       .values({ firstName, lastName, email })
@@ -91,9 +101,11 @@ export async function POST(req: NextRequest) {
       })
       .onConflictDoNothing();
 
+    //console.log("about to call trim at line 101", sitelinkLogon.fullName);
     users.push({
       fullName: sitelinkLogon.fullName.trim(),
       id: insertedEmployee[0].insertedId,
+      email: email,
     });
 
     const insertedUserConnection = await db
@@ -112,6 +124,7 @@ export async function POST(req: NextRequest) {
       storageFacilityId: sitelinkLogon.sitelinkId,
       primarySite: null,
       rentsUnits: null,
+      //user: { fullName: users[employeeIndex].fullName },
     });
 
     toInsert.push({
