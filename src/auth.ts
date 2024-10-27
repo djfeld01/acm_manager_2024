@@ -52,10 +52,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return "/unauthorized";
       }
       if (!user?.userDetailId) {
-        await db
+        const result = await db
           .update(users)
           .set({ userDetailId: userDetail.id })
           .where(eq(users.email, userDetail?.email));
+        console.log("🚀 ~ signIn ~ result:", result);
         return true;
       }
       return true;

@@ -11,6 +11,7 @@ import {
   pgEnum,
   boolean,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
 import storageFacilities from "./storageFacilities";
 import { userDetails } from "@/db/schema";
@@ -28,7 +29,7 @@ const tenantActivities = pgTable(
   {
     Id: serial("tenant_activity_id").notNull().primaryKey(),
     facilityId: varchar("facility_id").notNull(),
-    date: timestamp("date").notNull().unique(),
+    date: timestamp("date").notNull(),
     activityType: activityTypeEnum("activity_type").notNull(),
     tenantName: varchar("tenant_name").notNull(),
     unitName: varchar("unit_name").notNull(),
@@ -57,6 +58,7 @@ const tenantActivities = pgTable(
   },
   (table) => ({
     dateIndex: index().on(table.date),
+    uniqueActivity: unique().on(table.date, table.tenantName),
   })
 );
 

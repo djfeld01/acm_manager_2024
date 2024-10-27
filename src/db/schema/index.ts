@@ -43,6 +43,6 @@ export {
 } from "@/db/schema/sitelinkLogons";
 
 export {
-  default as dailyManagementSummary,
-  dailyManagementSummaryRelations,
-} from "@/db/schema/dailyManagementSummary";
+  default as dailyManagementOccupancy,
+  dailyManagementOccupancyRelations,
+} from "@/db/schema/dailyManagementOccupancy";

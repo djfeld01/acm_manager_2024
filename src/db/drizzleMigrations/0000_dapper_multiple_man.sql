@@ -25,6 +25,25 @@ CREATE TABLE IF NOT EXISTS "account" (
 	CONSTRAINT "account_provider_providerAccountId_pk" PRIMARY KEY("provider","providerAccountId")
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "daily_management_occupancy" (
+	"facility_id" varchar NOT NULL,
+	"date" date NOT NULL,
+	"unit_occupancy" numeric,
+	"financial_occupancy" numeric,
+	"square_footage_occupancy" numeric,
+	"occupied_units" numeric,
+	"vacant_units" numeric,
+	"complimentary_units" numeric,
+	"unrentable_units" numeric,
+	"total_units" numeric,
+	"occupied_square_footage" numeric,
+	"vacant_square_footage" numeric,
+	"complimentary_square_footage" numeric,
+	"unrentable_square_footage" numeric,
+	"total_square_footage" numeric,
+	CONSTRAINT "daily_management_occupancy_facility_id_date_pk" PRIMARY KEY("facility_id","date")
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "daily_payment" (
 	"daily_payment_id" serial PRIMARY KEY NOT NULL,
 	"facility_id" varchar NOT NULL,
@@ -110,7 +129,8 @@ CREATE TABLE IF NOT EXISTS "tenant_activity" (
 	"employee_initials" varchar NOT NULL,
 	"has_insurance" boolean NOT NULL,
 	"insurance_amount" numeric,
-	"lead_source" varchar
+	"lead_source" varchar,
+	CONSTRAINT "tenant_activity_date_tenant_name_unique" UNIQUE("date","tenant_name")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "user_detail" (
@@ -160,6 +180,12 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ ALTER TABLE "daily_management_occupancy" ADD CONSTRAINT "daily_management_occupancy_facility_id_storage_facility_sitelink_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."storage_facility"("sitelink_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  ALTER TABLE "monthly_goal" ADD CONSTRAINT "monthly_goal_sitelink_id_storage_facility_sitelink_id_fk" FOREIGN KEY ("sitelink_id") REFERENCES "public"."storage_facility"("sitelink_id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -178,7 +204,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "sitelink_logon" ADD CONSTRAINT "sitelink_logon_sitelink_employee_id_user_to_facilities_sitelink_employee_id_fk" FOREIGN KEY ("sitelink_employee_id") REFERENCES "public"."user_to_facilities"("sitelink_employee_id") ON DELETE no action ON UPDATE no action;
+ ALTER TABLE "sitelink_logon" ADD CONSTRAINT "sitelink_logon_sitelink_employee_id_user_to_facilities_sitelink_employee_id_fk" FOREIGN KEY ("sitelink_employee_id") REFERENCES "public"."user_to_facilities"("sitelink_employee_id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -213,6 +239,7 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "daily_management_occupancy_date_index" ON "daily_management_occupancy" USING btree ("date");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "daily_payment_date_index" ON "daily_payment" USING btree ("date");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "storage_facility_facility_name_index" ON "storage_facility" USING btree ("facility_name");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "tenant_activity_date_index" ON "tenant_activity" USING btree ("date");

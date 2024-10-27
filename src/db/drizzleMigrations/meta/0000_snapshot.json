@@ -1,5 +1,5 @@
 {
-  "id": "7ca61a79-cf5d-4c2b-bb7e-67d3ab0c98ac",
+  "id": "6c78aebc-4a20-4748-b144-ce52aa2b406b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -97,6 +97,144 @@
           "columns": [
             "provider",
             "providerAccountId"
+          ]
+        }
+      },
+      "uniqueConstraints": {}
+    },
+    "public.daily_management_occupancy": {
+      "name": "daily_management_occupancy",
+      "schema": "",
+      "columns": {
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_occupancy": {
+          "name": "unit_occupancy",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "financial_occupancy": {
+          "name": "financial_occupancy",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "square_footage_occupancy": {
+          "name": "square_footage_occupancy",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occupied_units": {
+          "name": "occupied_units",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vacant_units": {
+          "name": "vacant_units",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "complimentary_units": {
+          "name": "complimentary_units",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unrentable_units": {
+          "name": "unrentable_units",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_units": {
+          "name": "total_units",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occupied_square_footage": {
+          "name": "occupied_square_footage",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vacant_square_footage": {
+          "name": "vacant_square_footage",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "complimentary_square_footage": {
+          "name": "complimentary_square_footage",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unrentable_square_footage": {
+          "name": "unrentable_square_footage",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_square_footage": {
+          "name": "total_square_footage",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "daily_management_occupancy_date_index": {
+          "name": "daily_management_occupancy_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "daily_management_occupancy_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "daily_management_occupancy_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "daily_management_occupancy",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "daily_management_occupancy_facility_id_date_pk": {
+          "name": "daily_management_occupancy_facility_id_date_pk",
+          "columns": [
+            "facility_id",
+            "date"
           ]
         }
       },
@@ -391,7 +529,7 @@
           "columnsTo": [
             "sitelink_employee_id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -699,7 +837,16 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {
+        "tenant_activity_date_tenant_name_unique": {
+          "name": "tenant_activity_date_tenant_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "date",
+            "tenant_name"
+          ]
+        }
+      }
     },
     "public.user_detail": {
       "name": "user_detail",
