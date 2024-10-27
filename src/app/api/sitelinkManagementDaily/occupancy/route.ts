@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export type SitelinkManagementDailyOccupancy = {
   facilityId: string;
-  Date: string;
+  date: string;
   unitOccupancy: number;
   financialOccupancy: number;
   squareFootageOccupancy: number;
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   const toInsert = body.map((facilityOccupancy) => {
     return {
       facilityId: facilityOccupancy.facilityId,
-      date: facilityOccupancy.Date,
+      date: facilityOccupancy.date,
       unitOccupancy: String(facilityOccupancy.unitOccupancy / 100),
       squareFootageOccupancy: String(
         facilityOccupancy.squareFootageOccupancy / 100
@@ -54,7 +54,6 @@ export async function POST(req: NextRequest) {
       totalSquareFootage: String(facilityOccupancy.totalSquareFootage),
     };
   });
-  console.log("🚀 ~ toInsert ~ toInsert:", JSON.stringify(toInsert, null, 4));
 
   //   const data = {
   //     ...body,
