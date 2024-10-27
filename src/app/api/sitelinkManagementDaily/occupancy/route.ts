@@ -28,16 +28,19 @@ export type SitelinkManagementDailyOccupancy = {
 }[];
 export async function POST(req: NextRequest) {
   const body: SitelinkManagementDailyOccupancy = await req.json();
+  console.log("🚀 ~ POST ~ body:", body);
 
   const toInsert = body.map((facilityOccupancy) => {
     return {
       facilityId: facilityOccupancy.facilityId,
       date: facilityOccupancy.date,
-      unitOccupancy: String(facilityOccupancy.unitOccupancy / 100),
+      unitOccupancy: String((facilityOccupancy.unitOccupancy / 100).toFixed(4)),
       squareFootageOccupancy: String(
-        facilityOccupancy.squareFootageOccupancy / 100
+        (facilityOccupancy.squareFootageOccupancy / 100).toFixed(4)
       ),
-      financialOccupancy: String(facilityOccupancy.financialOccupancy / 100),
+      financialOccupancy: String(
+        (facilityOccupancy.financialOccupancy / 100).toFixed(4)
+      ),
       occupiedUnits: String(facilityOccupancy.occupiedUnits),
       vacantUnits: String(facilityOccupancy.vacantUnits),
       complimentaryUnits: String(facilityOccupancy.complimentaryUnits),
@@ -54,6 +57,7 @@ export async function POST(req: NextRequest) {
       totalSquareFootage: String(facilityOccupancy.totalSquareFootage),
     };
   });
+  console.log("🚀 ~ toInsert ~ toInsert:", JSON.stringify(toInsert, null, 4));
 
   //   const data = {
   //     ...body,
