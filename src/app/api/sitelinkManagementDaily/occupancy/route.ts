@@ -29,7 +29,6 @@ export type SitelinkManagementDailyOccupancy = {
 }[];
 export async function POST(req: NextRequest) {
   const body: SitelinkManagementDailyOccupancy = await req.json();
-  console.log("🚀 ~ POST ~ body:", body);
 
   const toInsert = body.map((facilityOccupancy) => {
     return {
@@ -60,7 +59,6 @@ export async function POST(req: NextRequest) {
       dateUpdated: new Date(),
     };
   });
-  console.log("🚀 ~ toInsert ~ toInsert:", JSON.stringify(toInsert, null, 4));
 
   //   const data = {
   //     ...body,

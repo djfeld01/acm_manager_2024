@@ -32,8 +32,14 @@ const dailyManagementOccupancy = pgTable(
     complimentarySquareFootage: numeric("complimentary_square_footage"),
     unrentableSquareFootage: numeric("unrentable_square_footage"),
     totalSquareFootage: numeric("total_square_footage"),
-    dateCreated: timestamp("date_created"),
-    dateUpdated: timestamp("date_updated"),
+    dateCreated: timestamp("date_created", {
+      precision: 6,
+      withTimezone: true,
+    }),
+    dateUpdated: timestamp("date_updated", {
+      precision: 6,
+      withTimezone: true,
+    }),
   },
   (table) => ({
     dateIndex: index().on(table.date),

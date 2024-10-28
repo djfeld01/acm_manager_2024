@@ -56,7 +56,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .update(users)
           .set({ userDetailId: userDetail.id })
           .where(eq(users.email, userDetail?.email));
-        console.log("🚀 ~ signIn ~ result:", result);
         return true;
       }
       return true;

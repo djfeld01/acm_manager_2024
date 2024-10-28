@@ -15,6 +15,13 @@
       "when": 1730130649894,
       "tag": "0001_great_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1730136867472,
+      "tag": "0002_kind_randall_flagg",
+      "breakpoints": true
     }
   ]
 }
