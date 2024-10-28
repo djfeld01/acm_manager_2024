@@ -6,7 +6,8 @@ import {
   userDetails,
   usersToFacilities,
 } from "@/db/schema";
-import { desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
+import { interval } from "drizzle-orm/pg-core";
 import { NextRequest, NextResponse } from "next/server";
 
 export type SitelinkManagementDailyOccupancy = {
@@ -55,6 +56,8 @@ export async function POST(req: NextRequest) {
         facilityOccupancy.unrentableSquareFootage
       ),
       totalSquareFootage: String(facilityOccupancy.totalSquareFootage),
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
     };
   });
   console.log("🚀 ~ toInsert ~ toInsert:", JSON.stringify(toInsert, null, 4));
@@ -88,6 +91,7 @@ export async function POST(req: NextRequest) {
         ),
         unrentableSquareFootage: sql.raw(`excluded.unrentable_square_footage`),
         totalSquareFootage: sql.raw(`excluded.total_square_footage`),
+        dateUpdated: new Date(),
 
         // ... other fields
       },
@@ -96,9 +100,17 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const response = await db.query.dailyManagementOccupancy.findMany({
-    orderBy: [desc(dailyManagementOccupancy.date)],
-    limit: 5,
-  });
+  // const response = await db.query.dailyManagementOccupancy.findMany({
+  //   orderBy: [desc(dailyManagementOccupancy.date)],
+  //   limit: 5,
+  // });
+
+  const response =
+    await db.execute(sql`SELECT DISTINCT ON (facility_id, date_trunc('month', date)) 
+    facility_id,
+    date,
+    unit_occupancy
+FROM daily_management_occupancy
+ORDER BY facility_id, date_trunc('month', date), date DESC;`);
   return NextResponse.json({ response });
 }
