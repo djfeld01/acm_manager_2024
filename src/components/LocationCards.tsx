@@ -31,8 +31,6 @@ function LocationCards({
   locationsNumbers,
   todaysRentals,
 }: LocationCardsPropsType) {
-  console.log("🚀 ~ LocationCards ~ locationsNumbers:", locationsNumbers);
-
   const formattedLocationsNumbers = locationsNumbers.reduce<Location[]>(
     (acc, currResult) => {
       // Find the existing location
