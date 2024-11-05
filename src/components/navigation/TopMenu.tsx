@@ -14,9 +14,15 @@ import { Package2, Menu, Search, CircleUser } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ModeToggle } from "@/components/ModeToggle";
 import { auth } from "@/auth";
+import { db } from "@/db";
+import { storageFacilities, usersToFacilities } from "@/db/schema";
+import { getFacilityConnections } from "@/lib/controllers/facilityController";
 
 export default async function TopMenu() {
   const session = await auth();
+  const locations = await getFacilityConnections(
+    session?.user?.userDetailId || ""
+  );
 
   return (
     <header className="sticky z-50 top-0 flex h-16 items-center gap-4 border-b bg-background px-4 overflow-hidden md:px-6">
@@ -28,12 +34,31 @@ export default async function TopMenu() {
           <Package2 className="h-6 w-6" />
           <span className="sr-only">ACM Dashboard</span>
         </Link>
-        <Link
+        {/* <Link
           href="/locations"
           className="text-foreground transition-colors hover:text-foreground"
         >
           Locations
-        </Link>
+        </Link> */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="text-muted-foreground hover:text-foreground cursor-pointer">
+              Locations
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center">
+            {locations.map((location) => (
+              <DropdownMenuItem key={location.sitelinkId}>
+                <Link
+                  href={`/location/${location.sitelinkId}`}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {location.facilityAbbreviation}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Link
           href="/activity"
           className="text-muted-foreground transition-colors hover:text-foreground"
@@ -70,9 +95,25 @@ export default async function TopMenu() {
               <Package2 className="h-6 w-6" />
               <span className="sr-only">ACM Dashboard</span>
             </Link>
-            <Link href="/locations" className="hover:text-foreground">
-              Locations
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="text-muted-foreground hover:text-foreground cursor-pointer">
+                  Locations
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                {locations.map((location) => (
+                  <DropdownMenuItem key={location.sitelinkId}>
+                    <Link
+                      href={`/location/${location.sitelinkId}`}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      {location.facilityAbbreviation}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Link
               href="/activity"
               className="text-muted-foreground hover:text-foreground"

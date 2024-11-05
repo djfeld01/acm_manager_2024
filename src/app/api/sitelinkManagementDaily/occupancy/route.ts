@@ -107,7 +107,8 @@ export async function GET(req: NextRequest) {
     await db.execute(sql`SELECT DISTINCT ON (facility_id, date_trunc('month', date)) 
     facility_id,
     date,
-    unit_occupancy
+    unit_occupancy,
+    date_updated
 FROM daily_management_occupancy
 ORDER BY facility_id, date_trunc('month', date), date DESC;`);
   return NextResponse.json({ response });

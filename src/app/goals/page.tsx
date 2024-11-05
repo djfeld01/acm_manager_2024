@@ -5,10 +5,11 @@ import { getFacilityConnections } from "@/lib/controllers/facilityController";
 
 async function AddGoal() {
   const session = await auth();
-  console.log(session);
-  const facilities = await getFacilityConnections(session?.user?.id || "");
+  const facilities = await getFacilityConnections(
+    session?.user?.userDetailId || ""
+  );
 
-  return <Table></Table>;
+  return <AddMonthlyGoalForm facilities={facilities} />;
 
   // return <AddMonthlyGoalForm facilities={facilities} />;
 }

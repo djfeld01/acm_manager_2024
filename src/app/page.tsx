@@ -70,7 +70,6 @@ export default async function Dashboard() {
     midnight,
     now
   );
-  console.log(todaysRentals);
   return (
     <div className="flex min-h-screen w-full flex-col">
       <LocationCards todaysRentals={2} locationsNumbers={results} />

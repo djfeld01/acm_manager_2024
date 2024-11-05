@@ -94,6 +94,7 @@ export async function getFacilityConnections(userId: string) {
     },
   });
   const result = res.map((facility) => facility.storageFacility);
+
   return result;
 }
 

@@ -58,8 +58,6 @@ const chartConfig = {
 export function BarChartComponent({ location, todaysRentals }: ActivityProps) {
   const [Activity, setActivity] = useState("MoveIn");
 
-  console.log(JSON.stringify(location, null, 4));
-
   return (
     <Card>
       <CardHeader>
