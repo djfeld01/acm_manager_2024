@@ -1,0 +1,1 @@
+ALTER TABLE "storage_facility" ADD COLUMN "current_client" boolean DEFAULT true;

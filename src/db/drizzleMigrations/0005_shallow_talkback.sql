@@ -1,0 +1,1 @@
+ALTER TABLE "daily_management_occupancy" ALTER COLUMN "unit_occupancy" SET DATA TYPE real;

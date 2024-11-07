@@ -37,12 +37,10 @@ export default function GoalChart({
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="text-center">
-        <CardTitle>{facilityName}</CardTitle>
-        <CardDescription>Monthly Rentals Progress</CardDescription>
-        <CardDescription>Towards {rentalGoal} Goal</CardDescription>
+        <CardTitle>Rentals Progress</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[250px] w-full">
+        <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <RadialBarChart
               cx="50%"
@@ -84,8 +82,8 @@ export default function GoalChart({
           </ResponsiveContainer>
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col items-center gap-2 text-sm">
-        <div className="flex items-center gap-2 font-medium">
+      <CardFooter className="flex flex-col items-center gap-1 text-sm">
+        <div className="flex items-center gap-1 font-medium">
           {percentageToGoal.toFixed(1)}% of goal reached
           <TrendingUp className="h-4 w-4 text-primary" />
         </div>

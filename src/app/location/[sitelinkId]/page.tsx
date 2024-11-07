@@ -2,6 +2,7 @@ import GoalChart from "@/components/GoalChart";
 import { db } from "@/db";
 import {
   dailyManagementOccupancy,
+  monthlyGoals,
   sitelinkLogons,
   sitelinkLogonsRelations,
   storageFacilities,
@@ -13,13 +14,12 @@ async function getPageData(sitelinkId: string) {
   const date = new Date();
   const goalsDate = new Date(date.getFullYear(), date.getMonth(), 1);
   const today = new Date();
-
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(today.getDate() - 7);
-
+  const sevenDaysAgoString = sevenDaysAgo.toDateString();
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(today.getDate() - 30);
-
+  const thirtyDaysAgoString = thirtyDaysAgo.toDateString();
   const thisMonthsRentals = await db
     .select({ monthlyRentals: count() })
     .from(tenantActivities)
@@ -33,50 +33,32 @@ async function getPageData(sitelinkId: string) {
     )
     .limit(1);
 
-  const thisMonthsGoal = await db.query.monthlyGoals.findFirst({
-    where: (monthlyGoals, { and, eq, gt }) =>
-      and(
-        eq(monthlyGoals.month, goalsDate),
-        eq(monthlyGoals.sitelinkId, sitelinkId)
-      ),
+  const latestOccupancy = await db.query.dailyManagementOccupancy.findFirst({
+    where: (dailyManagementOccupancy, { eq }) =>
+      eq(dailyManagementOccupancy.facilityId, sitelinkId),
   });
 
-  // const pageData = await db.query.storageFacilities.findFirst({
-  //   where: (storageFacilities, { eq }) =>
-  //     eq(storageFacilities.sitelinkId, sitelinkId),
-  //   with: {
-  //     tenantActivities: {
-  //       where: (tenantActivity, { lte, eq, gte, and }) =>
-  //         and(
-  //           eq(tenantActivity.activityType, "MoveIn"),
-  //           lte(tenantActivity.date, today),
-  //           gte(tenantActivity.date, goalsDate)
-  //         ),
-  //     },
-  //     monthlyGoals: {
-  //       where: (monthlyGoals, { and, eq, gt }) =>
-  //         and(
-  //           eq(monthlyGoals.month, goalsDate),
-  //           eq(monthlyGoals.sitelinkId, sitelinkId)
-  //         ),
-  //     },
-  //     dailyManagementOccupancy: {
-  //       where: (dailyManagementOccupancy, { or, eq }) =>
-  //         or(
-  //           eq(dailyManagementOccupancy.date, today.toDateString()),
-  //           eq(dailyManagementOccupancy.date, sevenDaysAgo.toDateString()),
-  //           eq(dailyManagementOccupancy.date, thirtyDaysAgo.toDateString())
-  //         ),
-  //       orderBy: (dailyManagementOccupancy, { desc }) => [
-  //         desc(dailyManagementOccupancy.date),
-  //       ],
-  //     },
-  //   },
-  // });
-
+  const facilityData = await db.query.storageFacilities.findFirst({
+    where: (storageFacilities, { eq }) =>
+      eq(storageFacilities.sitelinkId, sitelinkId),
+    with: {
+      monthlyGoals: {
+        where: (monthlyGoals, { eq }) => eq(monthlyGoals.month, goalsDate),
+      },
+      dailyManagementOccupancy: {
+        where: (dailyManagementOccupancy, { eq, or }) =>
+          or(
+            eq(dailyManagementOccupancy.date, sevenDaysAgoString),
+            eq(dailyManagementOccupancy.date, thirtyDaysAgoString)
+          ),
+      },
+    },
+  });
+  const historicOccupancies = facilityData?.dailyManagementOccupancy || [];
+  const occupancies = [latestOccupancy, ...historicOccupancies];
   const monthlyRentals = thisMonthsRentals[0].monthlyRentals;
-  const rentalGoal = thisMonthsGoal?.rentalGoal || 0;
-  return { monthlyRentals, rentalGoal };
+  const rentalGoal = facilityData?.monthlyGoals[0]?.rentalGoal || 0;
+  return { facility: facilityData, monthlyRentals, rentalGoal, occupancies };
 }
 export default async function Page({
   params,
@@ -84,29 +66,71 @@ export default async function Page({
   params: Promise<{ sitelinkId: string }>;
 }) {
   const sitelinkId = (await params).sitelinkId;
-  const facility = await db.query.storageFacilities.findFirst({
-    where: (storageFacilities, { eq }) =>
-      eq(storageFacilities.sitelinkId, sitelinkId),
-  });
-  const { monthlyRentals, rentalGoal } = await getPageData(sitelinkId);
+
+  const { facility, monthlyRentals, rentalGoal, occupancies } =
+    await getPageData(sitelinkId);
 
   return (
-    <div className="">
-      {/* <GoalChart
-        facilityName={facility?.facilityName || ""}
-        monthlyRentals={monthlyRentals}
-        rentalGoal={rentalGoal}
-      /> */}
-
-      <GoalChart
-        facilityName={facility?.facilityName || ""}
-        monthlyRentals={monthlyRentals}
-        rentalGoal={rentalGoal}
-      />
-      {/* <div>{pageData?.facilityName}</div> */}
-      {/* <div>Rental Goal: {goals?.rentalGoal}</div>
-      <div>Retail Goal: ${goals?.retailGoal}</div>
-      <div>Collections Goal: ${goals?.collectionsGoal}</div> */}
+    <div className="container mx-auto p-4">
+      <div className="bg-blue-600 text-white p-6 rounded-lg mb-8 text-center">
+        <h1 className="text-2xl font-bold">{facility?.facilityName}</h1>
+        <p>{facility?.streetAddress}</p>
+        <p>{facility?.city}</p>
+        <p>{facility?.state}</p>
+        <p>
+          Email: {facility?.email} | Phone: {facility?.phoneNumber}
+        </p>
+      </div>
+      <div className="flex flex-col lg:flex-row justify-between gap-4 mb-8">
+        <div className="bg-gray-100 p-6 rounded-lg flex-1 text-center">
+          <GoalChart
+            facilityName={facility?.facilityName || ""}
+            monthlyRentals={monthlyRentals}
+            rentalGoal={rentalGoal}
+          />
+        </div>
+        <div className="bg-gray-100 p-6 rounded-lg flex-1 text-center">
+          <div>
+            Current Unit Occupancy:{" "}
+            {(occupancies[0]?.unitOccupancy
+              ? occupancies[0].unitOccupancy * 100
+              : 0
+            ).toFixed(1)}
+            %
+          </div>
+          <div>
+            7 Days Ago Unit Occupancy:{" "}
+            {(occupancies[1]?.unitOccupancy
+              ? occupancies[1].unitOccupancy * 100
+              : 0
+            ).toFixed(1)}
+            %
+          </div>
+          <div>
+            30 Days Ago Unit Occupancy:{" "}
+            {(occupancies[2]?.unitOccupancy
+              ? occupancies[2].unitOccupancy * 100
+              : 0
+            ).toFixed(1)}
+            %
+          </div>
+        </div>
+        <div className="bg-gray-100 p-6 rounded-lg flex-1 text-center">
+          <div>
+            Current Occupied Units: {occupancies[0]?.occupiedUnits || 0}
+          </div>
+          <div>
+            7 Day Change:{" "}
+            {(occupancies[0]?.occupiedUnits ?? 0) -
+              (occupancies[1]?.occupiedUnits ?? 0)}
+          </div>
+          <div>
+            30 Day Change:{" "}
+            {(occupancies[0]?.occupiedUnits ?? 0) -
+              (occupancies[2]?.occupiedUnits ?? 0)}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,12 @@
 import GoalChart from "@/components/GoalChart";
+import { db } from "@/db";
+import { storageFacilities } from "@/db/schema";
 
-export default function YourPage() {
+export default async function YourPage() {
+  const locations = await db.query.storageFacilities.findMany({
+    where: (storageFacilities, { eq }) =>
+      eq(storageFacilities.currentClient, true),
+  });
   return (
     <div className="container mx-auto p-4">
       {/* Banner Section */}
@@ -28,9 +34,56 @@ export default function YourPage() {
       </div>
 
       {/* Graph Section */}
-      <div className="bg-gray-100 p-6 rounded-lg">
-        <h2 className="text-xl font-semibold mb-4">Graph Component</h2>
-        {/* Graph content goes here */}
+      <div className="container mx-auto p-4">
+        <h2 className="text-2xl font-semibold mb-6">Locations</h2>
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border border-gray-200">
+            <thead>
+              <tr className="bg-gray-100 border-b border-gray-200">
+                <th className="text-left p-4 font-semibold text-gray-600">
+                  Facility Name
+                </th>
+                <th className="text-left p-4 font-semibold text-gray-600">
+                  City
+                </th>
+                <th className="text-left p-4 font-semibold text-gray-600">
+                  State
+                </th>
+                <th className="text-left p-4 font-semibold text-gray-600">
+                  Website
+                </th>
+                <th className="text-left p-4 font-semibold text-gray-600">
+                  Domain Registrar
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {locations.map((location, index) => (
+                <tr
+                  key={index}
+                  className="border-b border-gray-200 hover:bg-gray-50"
+                >
+                  <td className="p-4 text-gray-700">{location.facilityName}</td>
+                  <td className="p-4 text-gray-700">{location.city}</td>
+                  <td className="p-4 text-gray-700">{location.state}</td>
+                  <td className="p-4">
+                    <a
+                      href={location.website ?? ""}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline"
+                    >
+                      {location.website}
+                    </a>
+                  </td>
+                  <td className="p-4 text-gray-700">
+                    {location.domainRegistrar}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

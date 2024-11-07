@@ -47,16 +47,24 @@ export default async function TopMenu() {
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center">
-            {locations.map((location) => (
-              <DropdownMenuItem key={location.sitelinkId}>
-                <Link
-                  href={`/location/${location.sitelinkId}`}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  {location.facilityAbbreviation}
-                </Link>
+            {locations.length > 0 ? (
+              locations.map((location) => (
+                <DropdownMenuItem key={location.sitelinkId}>
+                  <Link
+                    href={`/location/${location.sitelinkId}`}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    {location.facilityAbbreviation}
+                  </Link>
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem>
+                <DropdownMenuLabel>
+                  <Link href="/api/auth/signin">Login</Link>
+                </DropdownMenuLabel>
               </DropdownMenuItem>
-            ))}
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
         <Link
@@ -102,16 +110,24 @@ export default async function TopMenu() {
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center">
-                {locations.map((location) => (
-                  <DropdownMenuItem key={location.sitelinkId}>
-                    <Link
-                      href={`/location/${location.sitelinkId}`}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      {location.facilityAbbreviation}
-                    </Link>
+                {locations.length > 0 ? (
+                  locations.map((location) => (
+                    <DropdownMenuItem key={location.sitelinkId}>
+                      <Link
+                        href={`/location/${location.sitelinkId}`}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        {location.facilityAbbreviation}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem>
+                    <DropdownMenuLabel>
+                      <Link href="/api/auth/signin">Login</Link>
+                    </DropdownMenuLabel>
                   </DropdownMenuItem>
-                ))}
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
             <Link

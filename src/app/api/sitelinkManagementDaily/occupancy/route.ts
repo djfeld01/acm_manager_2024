@@ -34,27 +34,19 @@ export async function POST(req: NextRequest) {
     return {
       facilityId: facilityOccupancy.facilityId,
       date: facilityOccupancy.date,
-      unitOccupancy: String((facilityOccupancy.unitOccupancy / 100).toFixed(4)),
-      squareFootageOccupancy: String(
-        (facilityOccupancy.squareFootageOccupancy / 100).toFixed(4)
-      ),
-      financialOccupancy: String(
-        (facilityOccupancy.financialOccupancy / 100).toFixed(4)
-      ),
-      occupiedUnits: String(facilityOccupancy.occupiedUnits),
-      vacantUnits: String(facilityOccupancy.vacantUnits),
-      complimentaryUnits: String(facilityOccupancy.complimentaryUnits),
-      unrentableUnits: String(facilityOccupancy.unrentableUnits),
-      totalUnits: String(facilityOccupancy.totalUnits),
-      occupiedSquareFootage: String(facilityOccupancy.occupiedSquareFootage),
-      vacantSquareFootage: String(facilityOccupancy.vacantSquareFootage),
-      complimentarySquareFootage: String(
-        facilityOccupancy.complimentarySquareFootage
-      ),
-      unrentableSquareFootage: String(
-        facilityOccupancy.unrentableSquareFootage
-      ),
-      totalSquareFootage: String(facilityOccupancy.totalSquareFootage),
+      unitOccupancy: facilityOccupancy.unitOccupancy / 100,
+      squareFootageOccupancy: facilityOccupancy.squareFootageOccupancy / 100,
+      financialOccupancy: facilityOccupancy.financialOccupancy / 100,
+      occupiedUnits: facilityOccupancy.occupiedUnits,
+      vacantUnits: facilityOccupancy.vacantUnits,
+      complimentaryUnits: facilityOccupancy.complimentaryUnits,
+      unrentableUnits: facilityOccupancy.unrentableUnits,
+      totalUnits: facilityOccupancy.totalUnits,
+      occupiedSquareFootage: facilityOccupancy.occupiedSquareFootage,
+      vacantSquareFootage: facilityOccupancy.vacantSquareFootage,
+      complimentarySquareFootage: facilityOccupancy.complimentarySquareFootage,
+      unrentableSquareFootage: facilityOccupancy.unrentableSquareFootage,
+      totalSquareFootage: facilityOccupancy.totalSquareFootage,
       dateCreated: new Date(),
       dateUpdated: new Date(),
     };

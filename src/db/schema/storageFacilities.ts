@@ -8,6 +8,8 @@ import {
   index,
   bigint,
   PgInteger,
+  PgBoolean,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { usersToFacilities } from "./user";
 import dailyPayments from "./dailyPayments";
@@ -32,6 +34,9 @@ const storageFacilities = pgTable(
     facilityAbbreviation: varchar("facility_abbreviation").notNull(),
     phoneNumber: varchar("phone_number").notNull(),
     twilioNumber: varchar("twilio_number").notNull(),
+    website: varchar("website"),
+    domainRegistrar: varchar("domain_registrar"),
+    currentClient: boolean("current_client").default(true),
   },
   (table) => ({
     nameIndex: index().on(table.facilityName),
