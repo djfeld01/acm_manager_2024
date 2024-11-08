@@ -142,7 +142,11 @@ export async function POST(req: NextRequest) {
     .values(toInsert)
     .onConflictDoNothing();
 
-  await db.refreshMaterializedView(logonWithFacilityUserView);
+  try {
+    await db.refreshMaterializedView(logonWithFacilityUserView);
+  } catch (e) {
+    console.log(e);
+  }
 
   return NextResponse.json(res);
 }
