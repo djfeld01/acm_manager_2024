@@ -1,12 +1,13 @@
 import GoalChart from "@/components/GoalChart";
 import { db } from "@/db";
-import { storageFacilities } from "@/db/schema";
+import { logonWithFacilityUserView, storageFacilities } from "@/db/schema";
 
 export default async function YourPage() {
   const locations = await db.query.storageFacilities.findMany({
     where: (storageFacilities, { eq }) =>
       eq(storageFacilities.currentClient, true),
   });
+
   return (
     <div className="container mx-auto p-4">
       {/* Banner Section */}

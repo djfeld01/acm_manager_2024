@@ -40,6 +40,7 @@ export {
 export {
   default as sitelinkLogons,
   sitelinkLogonsRelations,
+  logonWithFacilityUserView,
 } from "@/db/schema/sitelinkLogons";
 
 export {

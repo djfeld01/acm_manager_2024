@@ -50,6 +50,13 @@
       "when": 1731014712222,
       "tag": "0006_condemned_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1731097021603,
+      "tag": "0007_logon-with-facility-user-view",
+      "breakpoints": true
     }
   ]
 }

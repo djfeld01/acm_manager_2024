@@ -11,7 +11,7 @@
     "migrate": "npx drizzle-kit generate && npx drizzle-kit migrate"
   },
   "dependencies": {
-    "@auth/core": "^0.28.2",
+    "@auth/core": "^0.37.3",
     "@auth/drizzle-adapter": "^1.4.2",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-avatar": "^1.0.4",
@@ -35,7 +35,7 @@
     "drizzle-zod": "0.5.1",
     "lucide-react": "^0.379.0",
     "net": "^1.0.2",
-    "next": "14.2.3",
+    "next": "^14.2.17",
     "next-auth": "^5.0.0-beta.18",
     "next-themes": "^0.3.0",
     "postgres": "^3.4.4",

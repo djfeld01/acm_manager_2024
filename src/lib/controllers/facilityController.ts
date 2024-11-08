@@ -54,28 +54,7 @@ export async function getFacilities(userId: string) {
     ...result,
     totalRentals: result.storageFacility.tenantActivities.length,
   }));
-  //console.log(res);
-  // const res = await db.query.storageFacilities.findMany({
-  //   where: (storageFacility, { eq }) => eq(storageFacility.state, "FL"),
-  //   columns: {
-  //     facilityAbbreviation: true,
-  //     sitelinkSiteCode: true,
-  //   },
-  //   with: {
-  //     tenantActivities: {
-  //       where: (activities, { gt }) =>
-  //         and(
-  //           gt(activities.date, "2024-06-01"),
-  //           eq(activities.activityType, "MoveIn")
-  //         ),
-  //       columns: {
-  //         date: true,
-  //         unitName: true,
-  //         employeeInitials: true,
-  //       },
-  //     },
-  //   },
-  // });
+
   return res;
 }
 
@@ -89,11 +68,14 @@ export async function getFacilityConnections(userId: string) {
           facilityAbbreviation: true,
           facilityName: true,
           sitelinkId: true,
+          currentClient: true,
         },
       },
     },
   });
-  const result = res.map((facility) => facility.storageFacility);
+  const result = res
+    .filter((facility) => facility.storageFacility.currentClient)
+    .map((facility) => facility.storageFacility);
 
   return result;
 }

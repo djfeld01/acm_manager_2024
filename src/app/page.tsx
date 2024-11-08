@@ -62,14 +62,15 @@ export default async function Dashboard() {
     new Date(new Date().getFullYear(), 0, 1),
     new Date()
   );
+
   let midnight = new Date();
   midnight.setHours(0, 0, 0, 0);
   const now = new Date();
-  const todaysRentals = await getActivitiesByDates(
-    session?.user?.id || "",
-    midnight,
-    now
-  );
+  // const todaysRentals = await getActivitiesByDates(
+  //   session?.user?.id || "",
+  //   midnight,
+  //   now
+  // );
   return (
     <div className="flex min-h-screen w-full flex-col">
       <LocationCards todaysRentals={2} locationsNumbers={results} />

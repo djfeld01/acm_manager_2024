@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import {
+  logonWithFacilityUserView,
   sitelinkLogons,
   tenantActivities,
   userDetails,
@@ -140,6 +141,8 @@ export async function POST(req: NextRequest) {
     .insert(sitelinkLogons)
     .values(toInsert)
     .onConflictDoNothing();
+
+  await db.refreshMaterializedView(logonWithFacilityUserView);
 
   return NextResponse.json(res);
 }
