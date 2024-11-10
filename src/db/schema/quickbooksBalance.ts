@@ -6,7 +6,7 @@ import {
   primaryKey,
   varchar,
 } from "drizzle-orm/pg-core";
-import storageFacilities from "./storageFacilities";
+import { storageFacilities } from "@/db/schema";
 import { relations } from "drizzle-orm";
 
 const quickbooksBalance = pgTable(

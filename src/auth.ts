@@ -10,7 +10,7 @@ import {
   userDetails,
 } from "./db/schema";
 import { eq } from "drizzle-orm";
-import { userDetailsRelations } from "./db/schema/user";
+import { userDetailsRelations } from "./db/schema";
 
 declare module "next-auth" {
   interface User {

@@ -10,7 +10,7 @@ import {
   primaryKey,
   timestamp,
 } from "drizzle-orm/pg-core";
-import storageFacilities from "./storageFacilities";
+import { storageFacilities } from "@/db/schema";
 
 const dailyManagementOccupancy = pgTable(
   "daily_management_occupancy",

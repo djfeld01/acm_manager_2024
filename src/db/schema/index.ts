@@ -6,13 +6,9 @@ export {
 export {
   default as users,
   roleEnum,
-  usersToFacilities,
-  usersToFacilitiesRelations,
   accounts,
   sessions,
   verificationTokens,
-  userDetails,
-  userDetailsRelations,
   userRelations,
 } from "@/db/schema/user";
 
@@ -40,10 +36,21 @@ export {
 export {
   default as sitelinkLogons,
   sitelinkLogonsRelations,
-  logonWithFacilityUserView,
 } from "@/db/schema/sitelinkLogons";
 
 export {
   default as dailyManagementOccupancy,
   dailyManagementOccupancyRelations,
 } from "@/db/schema/dailyManagementOccupancy";
+
+export {
+  default as usersToFacilities,
+  usersToFacilitiesRelations,
+} from "@/db/schema/usersToFacilities";
+
+export {
+  default as userDetails,
+  userDetailsRelations,
+} from "@/db/schema/userDetails";
+
+// export { default as logonWithFacilityUserView } from "@/db/schema/views/logonWithFacityUserView";

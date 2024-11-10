@@ -11,7 +11,7 @@ import {
   date,
   numeric,
 } from "drizzle-orm/pg-core";
-import storageFacilities from "./storageFacilities";
+import { storageFacilities } from "@/db/schema";
 
 const dailyPayments = pgTable(
   "daily_payment",

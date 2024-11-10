@@ -13,8 +13,7 @@ import {
   timestamp,
   unique,
 } from "drizzle-orm/pg-core";
-import storageFacilities from "./storageFacilities";
-import { userDetails } from "@/db/schema";
+import { userDetails, storageFacilities } from "@/db/schema";
 import { z } from "zod";
 
 export const activityTypeEnum = pgEnum("activity_type", [

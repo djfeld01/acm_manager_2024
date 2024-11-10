@@ -1,6 +1,5 @@
 import GoalChart from "@/components/GoalChart";
 import { db } from "@/db";
-import { logonWithFacilityUserView, storageFacilities } from "@/db/schema";
 
 export default async function YourPage() {
   const locations = await db.query.storageFacilities.findMany({

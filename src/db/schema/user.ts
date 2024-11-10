@@ -4,15 +4,14 @@ import {
   text,
   primaryKey,
   integer,
-  bigint,
   varchar,
   pgEnum,
   AnyPgColumn,
   boolean,
 } from "drizzle-orm/pg-core";
-import type { AdapterAccount, AdapterAccountType } from "next-auth/adapters";
+import type { AdapterAccountType } from "next-auth/adapters";
 import { relations, sql, SQL } from "drizzle-orm";
-import storageFacilities from "./storageFacilities";
+import { storageFacilities, usersToFacilities, userDetails } from "@/db/schema";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -50,84 +49,6 @@ export const userRelations = relations(users, ({ one }) => ({
     references: [userDetails.id],
   }),
 }));
-
-export const userDetails = pgTable("user_detail", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  email: text("email").notNull().unique(),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  fullName: text("full_name").generatedAlwaysAs(
-    (): SQL => sql`${userDetails.lastName} || ', ' || ${userDetails.firstName}`
-  ),
-  initials: text("initials").generatedAlwaysAs(
-    (): SQL =>
-      sql`LEFT(${userDetails.firstName},1) || LEFT(${userDetails.lastName},1)`
-  ),
-  //connect to the user table from auth.js
-  paycorEmployeeId: integer("paycor_employee_id").unique(),
-  supervisorId: text("supervisor_id").references(
-    (): AnyPgColumn => userDetails.id
-  ),
-});
-
-export const insertUserDetailsSchema = createInsertSchema(userDetails, {
-  email: (schema) => schema.email.email(),
-  paycorEmployeeId: z.string().transform((val) => parseFloat(val)),
-  //sitelinkEmployeeId: z.string().transform((val) => parseFloat(val)),
-});
-
-export type CreateUserDetails = z.infer<typeof insertUserDetailsSchema>;
-
-export const userDetailsRelations = relations(userDetails, ({ one, many }) => ({
-  usersToFacilities: many(usersToFacilities),
-  user: one(users),
-  supervisor: one(userDetails, {
-    fields: [userDetails.supervisorId],
-    references: [userDetails.id],
-  }),
-}));
-
-export const usersToFacilities = pgTable(
-  "user_to_facilities",
-  {
-    userId: text("user_id")
-      .notNull()
-      .references(() => userDetails.id, { onDelete: "cascade" }),
-    storageFacilityId: varchar("storage_facility_id")
-      .notNull()
-      .references(() => storageFacilities.sitelinkId),
-    sitelinkEmployeeId: varchar("sitelink_employee_id").unique(),
-    primarySite: boolean("primary_site"),
-    rentsUnits: boolean("rents_units"),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.storageFacilityId, t.userId] }),
-  })
-);
-export const insertUsersToFacilitiesSchema = createInsertSchema(
-  usersToFacilities,
-  {}
-);
-export type CreateUserToFacilities = z.infer<
-  typeof insertUsersToFacilitiesSchema
->;
-export type CreateUserToFacilityForm = CreateUserToFacilities[];
-
-export const usersToFacilitiesRelations = relations(
-  usersToFacilities,
-  ({ one }) => ({
-    storageFacility: one(storageFacilities, {
-      fields: [usersToFacilities.storageFacilityId],
-      references: [storageFacilities.sitelinkId],
-    }),
-    user: one(userDetails, {
-      fields: [usersToFacilities.userId],
-      references: [userDetails.id],
-    }),
-  })
-);
 
 export const accounts = pgTable(
   "account",

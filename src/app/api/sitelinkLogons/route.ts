@@ -1,11 +1,11 @@
 import { db } from "@/db";
 import {
-  logonWithFacilityUserView,
   sitelinkLogons,
   tenantActivities,
   userDetails,
   usersToFacilities,
 } from "@/db/schema";
+import logonWithFacilityUserView from "@/db/schema/views/logonWithFacityUserView";
 import { desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 

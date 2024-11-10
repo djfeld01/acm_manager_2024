@@ -1,12 +1,14 @@
 "use server";
 import { db } from "@/db";
-import { storageFacilities, tenantActivities } from "@/db/schema";
-import monthlyGoals, { CreateMonthlyGoals } from "@/db/schema/monthlyGoals";
 import {
+  storageFacilities,
+  tenantActivities,
   userDetailsRelations,
   userRelations,
   usersToFacilities,
-} from "@/db/schema/user";
+} from "@/db/schema";
+import monthlyGoals, { CreateMonthlyGoals } from "@/db/schema/monthlyGoals";
+
 import { count, sql, eq, lte, and, gte } from "drizzle-orm";
 
 enum ActivityType {

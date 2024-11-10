@@ -11,12 +11,15 @@ import {
   PgBoolean,
   boolean,
 } from "drizzle-orm/pg-core";
-import { usersToFacilities } from "./user";
-import dailyPayments from "./dailyPayments";
-import tenantActivities from "./tenantActivities";
-import quickbooksBalance from "./quickbooksBalance";
-import monthlyGoals from "./monthlyGoals";
-import dailyManagementOccupancy from "./dailyManagementOccupancy";
+import {
+  usersToFacilitiesRelations,
+  dailyPayments,
+  tenantActivities,
+  quickbooksBalance,
+  monthlyGoals,
+  dailyManagementOccupancy,
+  usersToFacilities,
+} from "@/db/schema";
 
 const storageFacilities = pgTable(
   "storage_facility",

@@ -2,14 +2,10 @@
 
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { storageFacilities } from "@/db/schema";
-import users, {
-  CreateUserDetails,
-  userDetails,
-  usersToFacilities,
-} from "@/db/schema/user";
+import { userDetails, usersToFacilities } from "@/db/schema";
 import { Role } from "@/db/schema/user";
 import { asc, eq } from "drizzle-orm";
+import { CreateUserDetails } from "@/db/schema/userDetails";
 
 export type StorageFacility = {
   sitelinkId: string;

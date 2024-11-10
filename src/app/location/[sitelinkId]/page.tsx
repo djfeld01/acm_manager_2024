@@ -2,7 +2,6 @@ import GoalChart from "@/components/GoalChart";
 import { db } from "@/db";
 import {
   dailyManagementOccupancy,
-  logonWithFacilityUserView,
   monthlyGoals,
   sitelinkLogons,
   sitelinkLogonsRelations,
@@ -11,6 +10,7 @@ import {
   userDetails,
   usersToFacilities,
 } from "@/db/schema";
+import logonWithFacilityUserView from "@/db/schema/views/logonWithFacityUserView";
 import { and, count, eq, gte, lte, desc } from "drizzle-orm";
 
 async function getPageData(sitelinkId: string) {
