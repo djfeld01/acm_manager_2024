@@ -35,19 +35,19 @@ export default function GoalChart({
   ];
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader className="text-center">
+    <Card className="w-full">
+      <CardHeader className="text-center p-2">
         <CardTitle>Rentals Progress</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="h-48 w-full">
+      <CardContent className="p-1">
+        <div className="h-40 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <RadialBarChart
               cx="50%"
-              cy="50%"
-              innerRadius="60%"
+              cy="35%"
+              innerRadius="65%"
               outerRadius="100%"
-              barSize={50}
+              barSize={70}
               data={chartData}
               startAngle={0}
               endAngle={endAngle}
@@ -62,19 +62,19 @@ export default function GoalChart({
               />
               <text
                 x="50%"
-                y="50%"
+                y="25%"
                 textAnchor="middle"
                 dominantBaseline="middle"
-                className="fill-primary text-4xl font-bold"
+                className="fill-primary text-2xl font-bold"
               >
                 {monthlyRentals}
               </text>
               <text
                 x="50%"
-                y="60%"
+                y="40%"
                 textAnchor="middle"
                 dominantBaseline="middle"
-                className="fill-muted-foreground text-sm"
+                className="fill-muted-foreground text-base"
               >
                 /{rentalGoal} Rentals
               </text>
@@ -82,7 +82,7 @@ export default function GoalChart({
           </ResponsiveContainer>
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col items-center gap-1 text-sm">
+      <CardFooter className="flex flex-col items-center  text-sm">
         <div className="flex items-center gap-1 font-medium">
           {percentageToGoal.toFixed(1)}% of goal reached
           <TrendingUp className="h-4 w-4 text-primary" />

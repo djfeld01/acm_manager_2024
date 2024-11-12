@@ -12,6 +12,7 @@ import {
 } from "@/db/schema";
 import logonWithFacilityUserView from "@/db/schema/views/logonWithFacityUserView";
 import { and, count, eq, gte, lte, desc } from "drizzle-orm";
+import { getDateSentence, parseLocalDate } from "@/lib/utils";
 
 async function getPageData(sitelinkId: string) {
   const date = new Date();
@@ -64,6 +65,10 @@ async function getPageData(sitelinkId: string) {
     .where(eq(logonWithFacilityUserView.storageFacilityId, sitelinkId))
     .orderBy(desc(logonWithFacilityUserView.logonDate))
     .limit(10);
+  const formattedLatestLogons = latestLogons.map((logon) => {
+    const correctedDate = parseLocalDate(logon.logonDate.toISOString());
+    return { ...logon, logonDate: correctedDate };
+  });
 
   const historicOccupancies = facilityData?.dailyManagementOccupancy || [];
   const occupancies = [latestOccupancy, ...historicOccupancies];
@@ -74,7 +79,7 @@ async function getPageData(sitelinkId: string) {
     monthlyRentals,
     rentalGoal,
     occupancies,
-    latestLogons,
+    latestLogons: formattedLatestLogons,
   };
 }
 export default async function Page({
@@ -86,10 +91,14 @@ export default async function Page({
 
   const { facility, monthlyRentals, rentalGoal, occupancies, latestLogons } =
     await getPageData(sitelinkId);
+  const latestLogonDate = latestLogons[0].logonDate;
+  const latestLogonFormatted = getDateSentence(
+    latestLogonDate || new Date(2024, 1, 1)
+  );
 
   return (
     <div className="container mx-auto p-4">
-      <div className="bg-blue-600 text-white p-6 rounded-lg mb-8 text-center">
+      <div className="bg-blue-600 text-white p-6 rounded-lg mb-1 text-center">
         <h1 className="text-2xl font-bold">{facility?.facilityName}</h1>
         <p>{facility?.streetAddress}</p>
         <p>
@@ -99,12 +108,12 @@ export default async function Page({
           Email: {facility?.email} | Phone: {facility?.phoneNumber}
         </p>
         <p>
-          Last Logon: {latestLogons[0].logonDate.toISOString()} -{" "}
-          {latestLogons[0].firstName} {latestLogons[0].lastName}
+          Last Logon: {latestLogonFormatted} - {latestLogons[0].firstName}{" "}
+          {latestLogons[0].lastName}
         </p>
       </div>
-      <div className="flex flex-col lg:flex-row justify-between gap-4 mb-8">
-        <div className="bg-gray-100 p-6 rounded-lg flex-1 text-center">
+      <div className="flex flex-col lg:flex-row justify-between gap-2 mb-8">
+        <div className="bg-gray-100 p-1 rounded-lg flex-1 text-center">
           <GoalChart
             facilityName={facility?.facilityName || ""}
             monthlyRentals={monthlyRentals}
