@@ -15,6 +15,7 @@ export type DailyPaymentType = {
   discover: number;
   ach: number;
   dinersClub: number;
+  debit: number;
 }[];
 export async function POST(req: NextRequest) {
   const body: DailyPaymentType = await req.json();
@@ -31,9 +32,9 @@ export async function POST(req: NextRequest) {
       discover: dailyPayments.discover,
       ach: dailyPayments.ach,
       dinersClub: dailyPayments.dinersClub,
+      debit: dailyPayments.debit,
     };
   });
-  console.log("🚀 ~ toInsert ~ toInsert:", toInsert);
 
   //   const data = {
   //     ...body,
