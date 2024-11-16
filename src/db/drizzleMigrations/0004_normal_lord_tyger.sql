@@ -1,0 +1,1 @@
+ALTER TABLE "daily_payment" RENAME COLUMN "checks" TO "check";

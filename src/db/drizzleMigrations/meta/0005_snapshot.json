@@ -1,6 +1,6 @@
 {
-  "id": "a7a4f142-7a78-4acb-b048-d484815cb608",
-  "prevId": "5da29810-40d4-47f1-b6b6-53110c276eee",
+  "id": "01ba2f02-40ea-4c20-9774-835a3998c4cb",
+  "prevId": "90807d24-6529-4aa1-bfca-d81b3c246829",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -126,73 +126,73 @@
         },
         "financial_occupancy": {
           "name": "financial_occupancy",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "square_footage_occupancy": {
           "name": "square_footage_occupancy",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "occupied_units": {
           "name": "occupied_units",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "vacant_units": {
           "name": "vacant_units",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "complimentary_units": {
           "name": "complimentary_units",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "unrentable_units": {
           "name": "unrentable_units",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "total_units": {
           "name": "total_units",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "occupied_square_footage": {
           "name": "occupied_square_footage",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "vacant_square_footage": {
           "name": "vacant_square_footage",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "complimentary_square_footage": {
           "name": "complimentary_square_footage",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "unrentable_square_footage": {
           "name": "unrentable_square_footage",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "total_square_footage": {
           "name": "total_square_footage",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
@@ -280,8 +280,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "checks": {
-          "name": "checks",
+        "check": {
+          "name": "check",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
@@ -316,8 +316,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "dinersClub": {
-          "name": "dinersClub",
+        "diners_club": {
+          "name": "diners_club",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
@@ -405,6 +405,41 @@
           ]
         }
       },
+      "uniqueConstraints": {}
+    },
+    "public.pay_period": {
+      "name": "pay_period",
+      "schema": "",
+      "columns": {
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_date": {
+          "name": "end_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "pay_period_status_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
     "public.quickbooks_balance": {
@@ -833,6 +868,19 @@
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "commission_has_been_paid": {
+          "name": "commission_has_been_paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
         }
       },
       "indexes": {
@@ -862,6 +910,19 @@
           ],
           "columnsTo": [
             "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tenant_activity_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "tenant_activity_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "tenant_activity",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -938,6 +999,25 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "hire_date": {
+          "name": "hire_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "termination_date": {
+          "name": "termination_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active_employee": {
+          "name": "is_active_employee",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
         }
       },
       "indexes": {},
@@ -1170,6 +1250,16 @@
         "MoveIn",
         "MoveOut",
         "Transfer"
+      ]
+    },
+    "public.pay_period_status_enum": {
+      "name": "pay_period_status_enum",
+      "schema": "public",
+      "values": [
+        "Completed",
+        "In Process",
+        "Current",
+        "Future"
       ]
     },
     "public.role": {

@@ -12,9 +12,11 @@ import {
   boolean,
   timestamp,
   unique,
+  text,
 } from "drizzle-orm/pg-core";
 import { userDetails, storageFacilities } from "@/db/schema";
 import { z } from "zod";
+import payPeriod from "./payPeriod";
 
 export const activityTypeEnum = pgEnum("activity_type", [
   "MoveIn",
@@ -54,6 +56,8 @@ const tenantActivities = pgTable(
     hasInsurance: boolean("has_insurance").notNull(),
     insuranceAmount: numeric("insurance_amount"),
     leadSource: varchar("lead_source"),
+    payPeriodId: text("pay_period_id").references(() => payPeriod.payPeriodId),
+    commisionHasBeenPaid: boolean("commission_has_been_paid").default(false),
   },
   (table) => ({
     dateIndex: index().on(table.date),
@@ -71,6 +75,10 @@ export const tenantActivitiesRelations = relations(
     user: one(userDetails, {
       fields: [tenantActivities.employeeId],
       references: [userDetails.id],
+    }),
+    payPeriod: one(payPeriod, {
+      fields: [tenantActivities.payPeriodId],
+      references: [payPeriod.payPeriodId],
     }),
   })
 );

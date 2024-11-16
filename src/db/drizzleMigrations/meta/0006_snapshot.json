@@ -1,6 +1,6 @@
 {
-  "id": "125e03ed-5344-4284-8105-1f7f2161f195",
-  "prevId": "a7a4f142-7a78-4acb-b048-d484815cb608",
+  "id": "ceb556a7-6bbc-41b1-9a6f-dbcd59c46a1d",
+  "prevId": "01ba2f02-40ea-4c20-9774-835a3998c4cb",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -276,49 +276,49 @@
         },
         "cash": {
           "name": "cash",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
-        "checks": {
-          "name": "checks",
-          "type": "numeric",
+        "check": {
+          "name": "check",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "visa": {
           "name": "visa",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "mastercard": {
           "name": "mastercard",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "american_express": {
           "name": "american_express",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "discover": {
           "name": "discover",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "ach": {
           "name": "ach",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
-        "dinersClub": {
-          "name": "dinersClub",
-          "type": "numeric",
+        "diners_club": {
+          "name": "diners_club",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         }
@@ -342,7 +342,16 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {
+        "daily_payment_date_facility_id_unique": {
+          "name": "daily_payment_date_facility_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "date",
+            "facility_id"
+          ]
+        }
+      }
     },
     "public.monthly_goal": {
       "name": "monthly_goal",
@@ -405,6 +414,41 @@
           ]
         }
       },
+      "uniqueConstraints": {}
+    },
+    "public.pay_period": {
+      "name": "pay_period",
+      "schema": "",
+      "columns": {
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_date": {
+          "name": "end_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "pay_period_status_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
     "public.quickbooks_balance": {
@@ -833,6 +877,19 @@
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "commission_has_been_paid": {
+          "name": "commission_has_been_paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
         }
       },
       "indexes": {
@@ -862,6 +919,19 @@
           ],
           "columnsTo": [
             "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tenant_activity_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "tenant_activity_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "tenant_activity",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -938,6 +1008,25 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "hire_date": {
+          "name": "hire_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "termination_date": {
+          "name": "termination_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active_employee": {
+          "name": "is_active_employee",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
         }
       },
       "indexes": {},
@@ -1170,6 +1259,16 @@
         "MoveIn",
         "MoveOut",
         "Transfer"
+      ]
+    },
+    "public.pay_period_status_enum": {
+      "name": "pay_period_status_enum",
+      "schema": "public",
+      "values": [
+        "Completed",
+        "In Process",
+        "Current",
+        "Future"
       ]
     },
     "public.role": {

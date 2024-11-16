@@ -2,14 +2,11 @@ import { relations } from "drizzle-orm";
 import {
   pgTable,
   serial,
-  integer,
   varchar,
-  timestamp,
   index,
-  bigint,
-  PgInteger,
   date,
-  numeric,
+  unique,
+  real,
 } from "drizzle-orm/pg-core";
 import { storageFacilities } from "@/db/schema";
 
@@ -19,17 +16,18 @@ const dailyPayments = pgTable(
     Id: serial("daily_payment_id").notNull().primaryKey(),
     facilityId: varchar("facility_id").notNull(),
     date: date("date").notNull(),
-    cash: numeric("cash"),
-    check: numeric("checks"),
-    visa: numeric("visa"),
-    mastercard: numeric("mastercard"),
-    americanExpress: numeric("american_express"),
-    discover: numeric("discover"),
-    ach: numeric("ach"),
-    dinersClub: numeric("dinersClub"),
+    cash: real("cash"),
+    check: real("check"),
+    visa: real("visa"),
+    mastercard: real("mastercard"),
+    americanExpress: real("american_express"),
+    discover: real("discover"),
+    ach: real("ach"),
+    dinersClub: real("diners_club"),
   },
   (table) => ({
     dateIndex: index().on(table.date),
+    unq: unique().on(table.date, table.facilityId),
   })
 );
 

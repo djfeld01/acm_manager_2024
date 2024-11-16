@@ -1,11 +1,5 @@
 import { db } from "@/db";
-import {
-  dailyManagementOccupancy,
-  sitelinkLogons,
-  tenantActivities,
-  userDetails,
-  usersToFacilities,
-} from "@/db/schema";
+import { dailyManagementOccupancy } from "@/db/schema";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { interval } from "drizzle-orm/pg-core";
 import { NextRequest, NextResponse } from "next/server";

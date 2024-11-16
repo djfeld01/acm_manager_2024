@@ -1,2 +1,0 @@
-ALTER TABLE "daily_management_occupancy" ALTER COLUMN "date_created" SET DATA TYPE timestamp (6) with time zone;--> statement-breakpoint
-ALTER TABLE "daily_management_occupancy" ALTER COLUMN "date_updated" SET DATA TYPE timestamp (6) with time zone;

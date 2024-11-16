@@ -5,6 +5,12 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
+ CREATE TYPE "public"."pay_period_status_enum" AS ENUM('Completed', 'In Process', 'Current', 'Future');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  CREATE TYPE "public"."role" AS ENUM('USER', 'MANAGER', 'ASSISTANT', 'OWNER', 'ADMIN', 'SUPERVISOR');
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -28,19 +34,21 @@ CREATE TABLE IF NOT EXISTS "account" (
 CREATE TABLE IF NOT EXISTS "daily_management_occupancy" (
 	"facility_id" varchar NOT NULL,
 	"date" date NOT NULL,
-	"unit_occupancy" numeric,
-	"financial_occupancy" numeric,
-	"square_footage_occupancy" numeric,
-	"occupied_units" numeric,
-	"vacant_units" numeric,
-	"complimentary_units" numeric,
-	"unrentable_units" numeric,
-	"total_units" numeric,
-	"occupied_square_footage" numeric,
-	"vacant_square_footage" numeric,
-	"complimentary_square_footage" numeric,
-	"unrentable_square_footage" numeric,
-	"total_square_footage" numeric,
+	"unit_occupancy" real,
+	"financial_occupancy" real,
+	"square_footage_occupancy" real,
+	"occupied_units" real,
+	"vacant_units" real,
+	"complimentary_units" real,
+	"unrentable_units" real,
+	"total_units" real,
+	"occupied_square_footage" real,
+	"vacant_square_footage" real,
+	"complimentary_square_footage" real,
+	"unrentable_square_footage" real,
+	"total_square_footage" real,
+	"date_created" timestamp (6) with time zone,
+	"date_updated" timestamp (6) with time zone,
 	CONSTRAINT "daily_management_occupancy_facility_id_date_pk" PRIMARY KEY("facility_id","date")
 );
 --> statement-breakpoint
@@ -65,6 +73,13 @@ CREATE TABLE IF NOT EXISTS "monthly_goal" (
 	"retail_goal" numeric NOT NULL,
 	"rental_goal" integer NOT NULL,
 	CONSTRAINT "monthly_goal_month_sitelink_id_pk" PRIMARY KEY("month","sitelink_id")
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "pay_period" (
+	"pay_period_id" text PRIMARY KEY NOT NULL,
+	"start_date" date NOT NULL,
+	"end_date" date NOT NULL,
+	"status" "pay_period_status_enum"
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "quickbooks_balance" (
@@ -100,7 +115,10 @@ CREATE TABLE IF NOT EXISTS "storage_facility" (
 	"email" varchar NOT NULL,
 	"facility_abbreviation" varchar NOT NULL,
 	"phone_number" varchar NOT NULL,
-	"twilio_number" varchar NOT NULL
+	"twilio_number" varchar NOT NULL,
+	"website" varchar,
+	"domain_registrar" varchar,
+	"current_client" boolean DEFAULT true
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "tenant_activity" (
@@ -130,6 +148,7 @@ CREATE TABLE IF NOT EXISTS "tenant_activity" (
 	"has_insurance" boolean NOT NULL,
 	"insurance_amount" numeric,
 	"lead_source" varchar,
+	"pay_period_id" text,
 	CONSTRAINT "tenant_activity_date_tenant_name_unique" UNIQUE("date","tenant_name")
 );
 --> statement-breakpoint
@@ -211,6 +230,12 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "tenant_activity" ADD CONSTRAINT "tenant_activity_employee_id_user_detail_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."user_detail"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "tenant_activity" ADD CONSTRAINT "tenant_activity_pay_period_id_pay_period_pay_period_id_fk" FOREIGN KEY ("pay_period_id") REFERENCES "public"."pay_period"("pay_period_id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;

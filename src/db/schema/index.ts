@@ -52,5 +52,10 @@ export {
   default as userDetails,
   userDetailsRelations,
 } from "@/db/schema/userDetails";
+export {
+  default as payPeriod,
+  payPeriodRelations,
+  payPeriodStatusEnum,
+} from "@/db/schema/payPeriod";
 
 // export { default as logonWithFacilityUserView } from "@/db/schema/views/logonWithFacityUserView";
