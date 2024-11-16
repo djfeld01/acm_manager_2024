@@ -24,6 +24,7 @@ const dailyPayments = pgTable(
     discover: real("discover"),
     ach: real("ach"),
     dinersClub: real("diners_club"),
+    debit: real("debit"),
   },
   (table) => ({
     dateIndex: index().on(table.date),
