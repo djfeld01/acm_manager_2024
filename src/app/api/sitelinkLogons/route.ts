@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
         storageFacilityId: sitelinkLogon.sitelinkId,
         primarySite: null,
         rentsUnits: null,
+        position: null,
         //user: { fullName: users[employeeIndex].fullName },
       });
 
@@ -125,6 +126,7 @@ export async function POST(req: NextRequest) {
       storageFacilityId: sitelinkLogon.sitelinkId,
       primarySite: null,
       rentsUnits: null,
+      position: null,
       //user: { fullName: users[employeeIndex].fullName },
     });
 

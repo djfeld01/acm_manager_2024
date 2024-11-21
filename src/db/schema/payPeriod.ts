@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { date, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
 import tenantActivities from "./tenantActivities";
 
@@ -13,8 +13,10 @@ const payPeriod = pgTable("pay_period", {
   payPeriodId: text("pay_period_id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  startDate: date("start_date", { mode: "date" }).notNull(),
-  endDate: date("end_date", { mode: "date" }).notNull(),
+  startDate: date("start_date").notNull().unique(),
+  endDate: date("end_date"),
+  paycheckDate: date("paycheck_date"),
+  processingDate: date("processing_date"),
   status: payPeriodStatusEnum("status"),
 });
 

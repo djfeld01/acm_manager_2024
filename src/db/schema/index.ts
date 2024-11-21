@@ -46,6 +46,7 @@ export {
 export {
   default as usersToFacilities,
   usersToFacilitiesRelations,
+  positionEnum,
 } from "@/db/schema/usersToFacilities";
 
 export {
@@ -58,4 +59,11 @@ export {
   payPeriodStatusEnum,
 } from "@/db/schema/payPeriod";
 
+export { default as mileage, mileageRelations } from "@/db/schema/mileage";
+export { default as bonus, bonusRelations } from "@/db/schema/bonus";
+export { default as vacation, vacationRelations } from "@/db/schema/vacation";
+export {
+  default as payrollNote,
+  payrollNoteRelations,
+} from "@/db/schema/payrollNote";
 // export { default as logonWithFacilityUserView } from "@/db/schema/views/logonWithFacityUserView";

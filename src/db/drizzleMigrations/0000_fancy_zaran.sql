@@ -56,14 +56,16 @@ CREATE TABLE IF NOT EXISTS "daily_payment" (
 	"daily_payment_id" serial PRIMARY KEY NOT NULL,
 	"facility_id" varchar NOT NULL,
 	"date" date NOT NULL,
-	"cash" numeric,
-	"checks" numeric,
-	"visa" numeric,
-	"mastercard" numeric,
-	"american_express" numeric,
-	"discover" numeric,
-	"ach" numeric,
-	"dinersClub" numeric
+	"cash" real,
+	"check" real,
+	"visa" real,
+	"mastercard" real,
+	"american_express" real,
+	"discover" real,
+	"ach" real,
+	"diners_club" real,
+	"debit" real,
+	CONSTRAINT "daily_payment_date_facility_id_unique" UNIQUE("date","facility_id")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "monthly_goal" (
@@ -78,8 +80,11 @@ CREATE TABLE IF NOT EXISTS "monthly_goal" (
 CREATE TABLE IF NOT EXISTS "pay_period" (
 	"pay_period_id" text PRIMARY KEY NOT NULL,
 	"start_date" date NOT NULL,
-	"end_date" date NOT NULL,
-	"status" "pay_period_status_enum"
+	"end_date" date,
+	"paycheck_date" date,
+	"processing_date" date,
+	"status" "pay_period_status_enum",
+	CONSTRAINT "pay_period_start_date_unique" UNIQUE("start_date")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "quickbooks_balance" (
@@ -149,6 +154,7 @@ CREATE TABLE IF NOT EXISTS "tenant_activity" (
 	"insurance_amount" numeric,
 	"lead_source" varchar,
 	"pay_period_id" text,
+	"commission_has_been_paid" boolean DEFAULT false,
 	CONSTRAINT "tenant_activity_date_tenant_name_unique" UNIQUE("date","tenant_name")
 );
 --> statement-breakpoint
@@ -161,6 +167,9 @@ CREATE TABLE IF NOT EXISTS "user_detail" (
 	"initials" text GENERATED ALWAYS AS (LEFT("user_detail"."first_name",1) || LEFT("user_detail"."last_name",1)) STORED,
 	"paycor_employee_id" integer,
 	"supervisor_id" text,
+	"hire_date" date,
+	"termination_date" date,
+	"is_active_employee" boolean DEFAULT true,
 	CONSTRAINT "user_detail_email_unique" UNIQUE("email"),
 	CONSTRAINT "user_detail_paycor_employee_id_unique" UNIQUE("paycor_employee_id")
 );

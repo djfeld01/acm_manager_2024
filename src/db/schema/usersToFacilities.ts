@@ -1,7 +1,9 @@
 import {
   boolean,
+  pgEnum,
   pgTable,
   primaryKey,
+  real,
   text,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -10,6 +12,13 @@ import { relations } from "drizzle-orm";
 import { z } from "zod";
 import { userDetails, storageFacilities } from "@/db/schema";
 
+export const positionEnum = pgEnum("position", [
+  "ACM_OFFICE",
+  "AREA_MANAGER",
+  "MANAGER",
+  "ASSISTANT",
+  "STORE_OWNER",
+]);
 const usersToFacilities = pgTable(
   "user_to_facilities",
   {
@@ -22,6 +31,7 @@ const usersToFacilities = pgTable(
     sitelinkEmployeeId: varchar("sitelink_employee_id").unique(),
     primarySite: boolean("primary_site"),
     rentsUnits: boolean("rents_units"),
+    position: positionEnum("position"),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.storageFacilityId, t.userId] }),

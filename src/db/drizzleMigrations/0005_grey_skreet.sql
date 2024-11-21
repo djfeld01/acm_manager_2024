@@ -1,1 +1,0 @@
-ALTER TABLE "daily_payment" RENAME COLUMN "dinersClub" TO "diners_club";

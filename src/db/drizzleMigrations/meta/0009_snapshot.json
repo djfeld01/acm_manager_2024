@@ -1,6 +1,6 @@
 {
-  "id": "75282b15-6d7f-446f-80c5-96c994d45bad",
-  "prevId": "6cf56e3a-73b0-406e-b8d7-87f4d77e691a",
+  "id": "0f20874d-9083-4405-9f40-8dff2aded88f",
+  "prevId": "aa9ec6f4-52ec-4593-b42c-9e99a90d7802",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -100,6 +100,127 @@
           ]
         }
       },
+      "uniqueConstraints": {}
+    },
+    "public.bonus": {
+      "name": "bonus",
+      "schema": "",
+      "columns": {
+        "bonus_id": {
+          "name": "bonus_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bonus_amount": {
+          "name": "bonus_amount",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bonus_type": {
+          "name": "bonus_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bonus_note": {
+          "name": "bonus_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bonus_has_been_paid": {
+          "name": "bonus_has_been_paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "bonus_date_index": {
+          "name": "bonus_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "bonus_employee_id_user_detail_id_fk": {
+          "name": "bonus_employee_id_user_detail_id_fk",
+          "tableFrom": "bonus",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bonus_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "bonus_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "bonus",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bonus_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "bonus_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "bonus",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
     "public.daily_management_occupancy": {
@@ -400,6 +521,12 @@
           "notNull": true,
           "default": 0.35
         },
+        "mileage_note": {
+          "name": "mileage_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "pay_period_id": {
           "name": "pay_period_id",
           "type": "text",
@@ -592,6 +719,89 @@
           ]
         }
       }
+    },
+    "public.payrollNote": {
+      "name": "payrollNote",
+      "schema": "",
+      "columns": {
+        "payrollNote_id": {
+          "name": "payrollNote_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "payrollNote_date_index": {
+          "name": "payrollNote_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "payrollNote_employee_id_user_detail_id_fk": {
+          "name": "payrollNote_employee_id_user_detail_id_fk",
+          "tableFrom": "payrollNote",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payrollNote_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "payrollNote_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "payrollNote",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
     "public.quickbooks_balance": {
       "name": "quickbooks_balance",
@@ -836,6 +1046,20 @@
           "primaryKey": false,
           "notNull": false,
           "default": true
+        },
+        "storage_commission_rate": {
+          "name": "storage_commission_rate",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 5
+        },
+        "insurance_commission_rate": {
+          "name": "insurance_commission_rate",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1.5
         }
       },
       "indexes": {
@@ -1306,6 +1530,25 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
+        },
+        "position": {
+          "name": "position",
+          "type": "position",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rental_commission_rate": {
+          "name": "rental_commission_rate",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "insurance_commission_rate": {
+          "name": "insurance_commission_rate",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -1355,6 +1598,121 @@
           ]
         }
       }
+    },
+    "public.vacation": {
+      "name": "vacation",
+      "schema": "",
+      "columns": {
+        "vacation_id": {
+          "name": "vacation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vacation_hours": {
+          "name": "vacation_hours",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vacation_note": {
+          "name": "vacation_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vacation_has_been_paid": {
+          "name": "vacation_has_been_paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "vacation_date_index": {
+          "name": "vacation_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "vacation_employee_id_user_detail_id_fk": {
+          "name": "vacation_employee_id_user_detail_id_fk",
+          "tableFrom": "vacation",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "vacation_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "vacation_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "vacation",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "vacation_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "vacation_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "vacation",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
     "public.verificationToken": {
       "name": "verificationToken",
@@ -1411,6 +1769,17 @@
         "In Process",
         "Current",
         "Future"
+      ]
+    },
+    "public.position": {
+      "name": "position",
+      "schema": "public",
+      "values": [
+        "ACM_OFFICE",
+        "AREA_MANAGER",
+        "MANAGER",
+        "ASSISTANT",
+        "STORE_OWNER"
       ]
     },
     "public.role": {

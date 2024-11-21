@@ -1,11 +1,49 @@
 import GoalChart from "@/components/GoalChart";
 import { db } from "@/db";
+import { payPeriod, tenantActivities } from "@/db/schema";
+import { and, eq, lt } from "drizzle-orm";
 
+function generatePayPeriods(startDate: string, endYear: number) {
+  const payPeriods = [];
+  let currentDate = new Date(startDate);
+
+  while (currentDate.getFullYear() <= endYear) {
+    payPeriods.push({
+      startDate: currentDate.toISOString().split("T")[0], // Format as YYYY-MM-DD
+      status: "Completed",
+    });
+    // Increment by 14 days
+    currentDate.setDate(currentDate.getDate() + 14);
+  }
+
+  return payPeriods;
+}
 export default async function YourPage() {
   const locations = await db.query.storageFacilities.findMany({
     where: (storageFacilities, { eq }) =>
       eq(storageFacilities.currentClient, true),
   });
+  // const toAdd = generatePayPeriods("2024-01-07", 2024);
+
+  // const addPayroll = await db
+  //   .insert(payPeriod)
+  //   .values(toAdd)
+  //   .onConflictDoNothing();
+  // // console.log("🚀 ~ YourPage ~ addPayroll:", addPayroll);
+
+  // const updateDB = await db
+  //   .update(tenantActivities)
+  //   .set({
+  //     commisionHasBeenPaid: true,
+  //     payPeriodId: "d6a07933-5846-48b6-9e0a-4f0c4825eb87",
+  //   })
+  //   .where(
+  //     and(
+  //       lt(tenantActivities.date, new Date("2024-11-01")),
+  //       eq(tenantActivities.activityType, "MoveIn")
+  //     )
+  //   );
+  // console.log("🚀 ~ YourPage ~ updateDB:", updateDB);
 
   return (
     <div className="container mx-auto p-4">
@@ -58,7 +96,7 @@ export default async function YourPage() {
               </tr>
             </thead>
             <tbody>
-              {locations.map((location, index) => (
+              {/* {locations.map((location, index) => (
                 <tr
                   key={index}
                   className="border-b border-gray-200 hover:bg-gray-50"
@@ -80,7 +118,7 @@ export default async function YourPage() {
                     {location.domainRegistrar}
                   </td>
                 </tr>
-              ))}
+              ))} */}
             </tbody>
           </table>
         </div>

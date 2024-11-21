@@ -1,6 +1,6 @@
 {
-  "id": "ceb556a7-6bbc-41b1-9a6f-dbcd59c46a1d",
-  "prevId": "01ba2f02-40ea-4c20-9774-835a3998c4cb",
+  "id": "83189123-d1ce-48a8-83e4-c0316900cb76",
+  "prevId": "7af44d8c-f098-4c0f-8af8-d2498f1600a6",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -100,6 +100,127 @@
           ]
         }
       },
+      "uniqueConstraints": {}
+    },
+    "public.bonus": {
+      "name": "bonus",
+      "schema": "",
+      "columns": {
+        "bonus_id": {
+          "name": "bonus_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bonus_amount": {
+          "name": "bonus_amount",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bonus_type": {
+          "name": "bonus_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bonus_note": {
+          "name": "bonus_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bonus_has_been_paid": {
+          "name": "bonus_has_been_paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "bonus_date_index": {
+          "name": "bonus_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "bonus_employee_id_user_detail_id_fk": {
+          "name": "bonus_employee_id_user_detail_id_fk",
+          "tableFrom": "bonus",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bonus_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "bonus_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "bonus",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bonus_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "bonus_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "bonus",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
     "public.daily_management_occupancy": {
@@ -321,6 +442,12 @@
           "type": "real",
           "primaryKey": false,
           "notNull": false
+        },
+        "debit": {
+          "name": "debit",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -352,6 +479,128 @@
           ]
         }
       }
+    },
+    "public.mileage": {
+      "name": "mileage",
+      "schema": "",
+      "columns": {
+        "mileage_id": {
+          "name": "mileage_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mileage": {
+          "name": "mileage",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mileage_rate": {
+          "name": "mileage_rate",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0.35
+        },
+        "mileage_note": {
+          "name": "mileage_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mileage_has_been_paid": {
+          "name": "mileage_has_been_paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "mileage_date_index": {
+          "name": "mileage_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "mileage_employee_id_user_detail_id_fk": {
+          "name": "mileage_employee_id_user_detail_id_fk",
+          "tableFrom": "mileage",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mileage_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "mileage_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "mileage",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mileage_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "mileage_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "mileage",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
     "public.monthly_goal": {
       "name": "monthly_goal",
@@ -436,7 +685,19 @@
           "name": "end_date",
           "type": "date",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "paycheck_date": {
+          "name": "paycheck_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "processing_date": {
+          "name": "processing_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
         },
         "status": {
           "name": "status",
@@ -448,6 +709,97 @@
       },
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "pay_period_start_date_unique": {
+          "name": "pay_period_start_date_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "start_date"
+          ]
+        }
+      }
+    },
+    "public.payrollNote": {
+      "name": "payrollNote",
+      "schema": "",
+      "columns": {
+        "payrollNote_id": {
+          "name": "payrollNote_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "payrollNote_date_index": {
+          "name": "payrollNote_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "payrollNote_employee_id_user_detail_id_fk": {
+          "name": "payrollNote_employee_id_user_detail_id_fk",
+          "tableFrom": "payrollNote",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payrollNote_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "payrollNote_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "payrollNote",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },

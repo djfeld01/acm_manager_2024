@@ -1,6 +1,5 @@
 -- Custom SQL migration file, put you code below! --
--- Custom SQL migration file, put you code below! ---- Custom SQL migration file, put you code below! --
-CREATE MATERIALIZED VIEW "logon_with_facility_user_view" AS
+-- Custom SQL migration file, put you code below! --CREATE MATERIALIZED VIEW "logon_with_facility_user_view" AS
 SELECT 
     "sitelink_logon"."sitelink_employee_id", 
     "sitelink_logon"."date_time", 
@@ -26,4 +25,3 @@ INNER JOIN
     "storage_facility"
 ON 
     "storage_facility"."sitelink_id" = "user_to_facilities"."storage_facility_id";
--- DROP MATERIALIZED VIEW IF EXISTS "logon_with_facility_user_view";

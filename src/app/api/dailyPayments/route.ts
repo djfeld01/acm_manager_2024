@@ -66,13 +66,9 @@ export async function GET(req: NextRequest) {
   //   limit: 5,
   // });
 
-  const response =
-    await db.execute(sql`SELECT DISTINCT ON (facility_id, date_trunc('month', date)) 
-    facility_id,
-    date,
-    unit_occupancy,
-    date_updated
-FROM daily_management_occupancy
-ORDER BY facility_id, date_trunc('month', date), date DESC;`);
+  const response = await db.query.dailyPayments.findMany({
+    limit: 100,
+    orderBy: [desc(dailyPayments.date)],
+  });
   return NextResponse.json({ response });
 }

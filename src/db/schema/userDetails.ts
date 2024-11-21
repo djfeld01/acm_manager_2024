@@ -4,6 +4,7 @@ import {
   boolean,
   date,
   integer,
+  pgEnum,
   pgTable,
   text,
 } from "drizzle-orm/pg-core";
@@ -25,6 +26,7 @@ const userDetails = pgTable("user_detail", {
     (): SQL =>
       sql`LEFT(${userDetails.firstName},1) || LEFT(${userDetails.lastName},1)`
   ),
+
   //connect to the user table from auth.js
   paycorEmployeeId: integer("paycor_employee_id").unique(),
   supervisorId: text("supervisor_id").references(

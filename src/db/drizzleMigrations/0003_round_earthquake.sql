@@ -1,1 +1,0 @@
-ALTER TABLE "user_detail" ADD COLUMN "is_active_employee" boolean DEFAULT true;

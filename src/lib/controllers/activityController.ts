@@ -1,8 +1,10 @@
 "use server";
+import { Activity } from "@/components/EmployeeCard";
 import { db } from "@/db";
 import {
   storageFacilities,
   tenantActivities,
+  userDetails,
   userDetailsRelations,
   userRelations,
   usersToFacilities,
@@ -55,42 +57,6 @@ export async function getActivitiesByEmployee() {}
 export async function insertMonthlyGoals(values: CreateMonthlyGoals) {
   return await db.insert(monthlyGoals).values(values).returning();
 }
-
-// export async function getActivitiesByMonth(
-//   userId: string,
-//   startDate?: string,
-//   endDate?: string,
-//   activityType?: ActivityType
-// ) {
-//   const result = await db.query.usersToFacilities.findMany({
-//     where: (userRelation, { eq }) => eq(userRelation.userId, userId),
-//     with: {
-//       storageFacility: {
-//         columns: {},
-//         with: {
-//           tenantActivities: {
-//             where: (tenantActivity, { lte, eq, gte, and }) =>
-//               and(
-//                 lte(tenantActivity.date, endDate || new Date("2500-01-01")),
-//                 gte(tenantActivity.date, startDate || "1900-01-01"),
-//                 eq(tenantActivity.activityType, activityType || "MoveIn")
-//               ),
-//           },
-//         },
-//       },
-//     },
-//   });
-//   return result;
-// }
-
-// type MonthGroup = { month: string; rentals: number };
-
-// type ActivityTypeGroup = {
-//   activityType: "MoveIn" | "MoveOut" | "Transfer";
-//   monthGroups: MonthGroup[];
-// };
-
-// type FacilityNameGroup = Record<string, ActivityTypeGroup>[];
 
 export async function getActivitiesByMonth2(
   userId: string,
@@ -169,4 +135,72 @@ export async function getActivitiesByMonth2(
   // console.log(JSON.stringify(formattedResult, null, 4));
 
   return result;
+}
+
+export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
+  const getEmployees = await db
+    .select({
+      fullName: userDetails.fullName,
+      firstName: userDetails.firstName,
+      lastName: userDetails.lastName,
+      userDetailsId: userDetails.id,
+      position: usersToFacilities.position,
+      rentals: count(),
+      insurance:
+        sql`CAST(SUM(CASE WHEN ${tenantActivities.hasInsurance} THEN 1 ELSE 0 END) AS INTEGER)`.as(
+          "insurance"
+        ),
+      activities:
+        sql`JSON_AGG(JSON_BUILD_OBJECT('activityType', ${tenantActivities.activityType},
+      'date', ${tenantActivities.date},'unitName',${tenantActivities.unitName},
+      'tenantName',${tenantActivities.tenantName},
+      'activityId', ${tenantActivities.Id},
+      'hasInsurance', ${tenantActivities.hasInsurance}))`.as("activities"),
+    })
+    .from(userDetails)
+    .fullJoin(tenantActivities, eq(tenantActivities.employeeId, userDetails.id))
+    .leftJoin(
+      usersToFacilities,
+      and(
+        eq(usersToFacilities.userId, userDetails.id),
+        eq(usersToFacilities.storageFacilityId, sitelinkId)
+      )
+    )
+    .where(
+      and(
+        eq(tenantActivities.facilityId, sitelinkId),
+        eq(tenantActivities.activityType, "MoveIn"),
+        eq(tenantActivities.commisionHasBeenPaid, false)
+      )
+    )
+    .groupBy(userDetails.id, usersToFacilities.position);
+
+  const result = getEmployees.map((item) => {
+    const typedItem = {
+      ...item,
+      insurance: item.insurance as number,
+      activities: item.activities as Activity[],
+    };
+
+    const sortedActivities = typedItem.activities.sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    return { ...typedItem, activities: sortedActivities };
+  });
+  const { insuranceCommissionRate, storageCommissionRate } =
+    (await db.query.storageFacilities.findFirst({
+      where: (storageFacilities, { eq }) =>
+        eq(storageFacilities.sitelinkId, sitelinkId),
+      columns: { storageCommissionRate: true, insuranceCommissionRate: true },
+    })) || { storageCommissionRate: 5, insuranceCommissionRate: 1.5 };
+  const employees = result.map((employee) => {
+    const commission =
+      employee.position === "MANAGER"
+        ? employee.insurance * insuranceCommissionRate
+        : employee.insurance * insuranceCommissionRate +
+          employee.rentals * storageCommissionRate;
+    return { ...employee, commission };
+  });
+  return employees;
 }

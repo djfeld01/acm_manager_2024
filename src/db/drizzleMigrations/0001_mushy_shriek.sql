@@ -1,1 +1,0 @@
-ALTER TABLE "tenant_activity" ADD COLUMN "commission_has_been_paid" boolean DEFAULT false;

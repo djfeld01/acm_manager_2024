@@ -13,75 +13,10 @@ import {
 import logonWithFacilityUserView from "@/db/schema/views/logonWithFacityUserView";
 import { and, count, eq, gte, lte, desc } from "drizzle-orm";
 import { getDateSentence, parseLocalDate } from "@/lib/utils";
+import EmployeeContainer from "@/components/EmployeeContainer";
+import { auth } from "@/auth";
+import { getFacilityPageData } from "@/lib/controllers/facilityController";
 
-async function getPageData(sitelinkId: string) {
-  const date = new Date();
-  const goalsDate = new Date(date.getFullYear(), date.getMonth(), 1);
-  const today = new Date();
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(today.getDate() - 7);
-  const sevenDaysAgoString = sevenDaysAgo.toDateString();
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(today.getDate() - 30);
-  const thirtyDaysAgoString = thirtyDaysAgo.toDateString();
-  const thisMonthsRentals = await db
-    .select({ monthlyRentals: count() })
-    .from(tenantActivities)
-    .where(
-      and(
-        eq(tenantActivities.facilityId, sitelinkId),
-        eq(tenantActivities.activityType, "MoveIn"),
-        lte(tenantActivities.date, today),
-        gte(tenantActivities.date, goalsDate)
-      )
-    )
-    .limit(1);
-
-  const latestOccupancy = await db.query.dailyManagementOccupancy.findFirst({
-    where: (dailyManagementOccupancy, { eq }) =>
-      eq(dailyManagementOccupancy.facilityId, sitelinkId),
-  });
-
-  const facilityData = await db.query.storageFacilities.findFirst({
-    where: (storageFacilities, { eq }) =>
-      eq(storageFacilities.sitelinkId, sitelinkId),
-    with: {
-      monthlyGoals: {
-        where: (monthlyGoals, { eq }) => eq(monthlyGoals.month, goalsDate),
-      },
-      dailyManagementOccupancy: {
-        where: (dailyManagementOccupancy, { eq, or }) =>
-          or(
-            eq(dailyManagementOccupancy.date, sevenDaysAgoString),
-            eq(dailyManagementOccupancy.date, thirtyDaysAgoString)
-          ),
-      },
-    },
-  });
-
-  const latestLogons = await db
-    .select()
-    .from(logonWithFacilityUserView)
-    .where(eq(logonWithFacilityUserView.storageFacilityId, sitelinkId))
-    .orderBy(desc(logonWithFacilityUserView.logonDate))
-    .limit(10);
-  const formattedLatestLogons = latestLogons.map((logon) => {
-    const correctedDate = parseLocalDate(logon.logonDate.toISOString());
-    return { ...logon, logonDate: correctedDate };
-  });
-
-  const historicOccupancies = facilityData?.dailyManagementOccupancy || [];
-  const occupancies = [latestOccupancy, ...historicOccupancies];
-  const monthlyRentals = thisMonthsRentals[0].monthlyRentals;
-  const rentalGoal = facilityData?.monthlyGoals[0]?.rentalGoal || 0;
-  return {
-    facility: facilityData,
-    monthlyRentals,
-    rentalGoal,
-    occupancies,
-    latestLogons: formattedLatestLogons,
-  };
-}
 export default async function Page({
   params,
 }: {
@@ -90,12 +25,11 @@ export default async function Page({
   const sitelinkId = (await params).sitelinkId;
 
   const { facility, monthlyRentals, rentalGoal, occupancies, latestLogons } =
-    await getPageData(sitelinkId);
+    await getFacilityPageData(sitelinkId);
   const latestLogonDate = latestLogons[0].logonDate;
   const latestLogonFormatted = getDateSentence(
     latestLogonDate || new Date(2024, 1, 1)
   );
-
   return (
     <div className="container mx-auto p-4">
       <div className="bg-blue-600 text-white p-6 rounded-lg mb-1 text-center">
@@ -162,6 +96,7 @@ export default async function Page({
           </div>
         </div>
       </div>
+      <EmployeeContainer sitelinkId={sitelinkId} />
     </div>
   );
 }

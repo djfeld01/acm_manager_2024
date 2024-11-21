@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import AddEmployeeDetails from "@/components/AddEmployeeDetails";
 import UpdateEmployeeFacilitiesForm from "@/components/UpdateEmployeeFacilities2";
+import UpdateUserPositionsForm from "@/components/UpdateUserPositionsForm";
 import { db } from "@/db";
 import { Role } from "@/db/schema/user";
 import {
@@ -12,21 +13,28 @@ import {
   getUsersWithConnectedFacilities,
   UserToFacility,
 } from "@/lib/controllers/userController";
-import { useState } from "react";
 
-interface Facility {
+export type Position =
+  | "MANAGER"
+  | "ASSISTANT"
+  | "STORE_OWNER"
+  | "ACM_OFFICE"
+  | "AREA_MANAGER"
+  | null;
+export interface Facility {
   sitelinkId: string;
   facilityAbbreviation: string;
 }
-interface User {
+export interface User {
   id?: string;
   fullName?: string | null;
-  usersToFacilities?: { storageFacility: Facility }[];
+  usersToFacilities?: { position?: Position; storageFacility: Facility }[];
 }
 
 // Fetch users, facilities, and user-facility associations
 const fetchUsers = async (): Promise<User[]> => {
   const users = (await getUsersWithConnectedFacilities()) || [];
+  console.log("🚀 ~ fetchUsers ~ users:", JSON.stringify(users, null, 4));
   return users;
 };
 
@@ -60,6 +68,7 @@ export default async function Page() {
               users={users}
               facilities={facilities}
             />
+            <UpdateUserPositionsForm />
           </div>
         </main>
       </div>

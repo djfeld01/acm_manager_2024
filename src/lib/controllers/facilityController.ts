@@ -4,13 +4,13 @@ import { db } from "@/db";
 import {
   storageFacilities,
   tenantActivities,
-  users,
   usersToFacilities,
-  usersToFacilitiesRelations,
 } from "@/db/schema";
-import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, sql, desc, count, lte } from "drizzle-orm";
 import { date } from "drizzle-orm/pg-core";
 import { NextRequest, NextResponse } from "next/server";
+import { parseLocalDate } from "../utils";
+import logonWithFacilityUserView from "@/db/schema/views/logonWithFacityUserView";
 
 export async function createFacility(req: NextRequest) {
   const body = await req.json();
@@ -90,4 +90,73 @@ export async function getConnectedFacilities(userDetailId: string) {
   return await db.query.usersToFacilities.findMany({
     where: eq(usersToFacilities.userId, userDetailId),
   });
+}
+
+export async function getFacilityPageData(sitelinkId: string) {
+  const date = new Date();
+  const goalsDate = new Date(date.getFullYear(), date.getMonth(), 1);
+  const today = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 7);
+  const sevenDaysAgoString = sevenDaysAgo.toDateString();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(today.getDate() - 30);
+  const thirtyDaysAgoString = thirtyDaysAgo.toDateString();
+  const thisMonthsRentals = await db
+    .select({ monthlyRentals: count() })
+    .from(tenantActivities)
+    .where(
+      and(
+        eq(tenantActivities.facilityId, sitelinkId),
+        eq(tenantActivities.activityType, "MoveIn"),
+        lte(tenantActivities.date, today),
+        gte(tenantActivities.date, goalsDate)
+      )
+    )
+    .limit(1);
+
+  const latestOccupancy = await db.query.dailyManagementOccupancy.findFirst({
+    where: (dailyManagementOccupancy, { eq }) =>
+      eq(dailyManagementOccupancy.facilityId, sitelinkId),
+  });
+
+  const facilityData = await db.query.storageFacilities.findFirst({
+    where: (storageFacilities, { eq }) =>
+      eq(storageFacilities.sitelinkId, sitelinkId),
+    with: {
+      monthlyGoals: {
+        where: (monthlyGoals, { eq }) => eq(monthlyGoals.month, goalsDate),
+      },
+      dailyManagementOccupancy: {
+        where: (dailyManagementOccupancy, { eq, or }) =>
+          or(
+            eq(dailyManagementOccupancy.date, sevenDaysAgoString),
+            eq(dailyManagementOccupancy.date, thirtyDaysAgoString)
+          ),
+      },
+    },
+  });
+
+  const latestLogons = await db
+    .select()
+    .from(logonWithFacilityUserView)
+    .where(eq(logonWithFacilityUserView.storageFacilityId, sitelinkId))
+    .orderBy(desc(logonWithFacilityUserView.logonDate))
+    .limit(10);
+  const formattedLatestLogons = latestLogons.map((logon) => {
+    const correctedDate = parseLocalDate(logon.logonDate.toISOString());
+    return { ...logon, logonDate: correctedDate };
+  });
+
+  const historicOccupancies = facilityData?.dailyManagementOccupancy || [];
+  const occupancies = [latestOccupancy, ...historicOccupancies];
+  const monthlyRentals = thisMonthsRentals[0].monthlyRentals;
+  const rentalGoal = facilityData?.monthlyGoals[0]?.rentalGoal || 0;
+  return {
+    facility: facilityData,
+    monthlyRentals,
+    rentalGoal,
+    occupancies,
+    latestLogons: formattedLatestLogons,
+  };
 }

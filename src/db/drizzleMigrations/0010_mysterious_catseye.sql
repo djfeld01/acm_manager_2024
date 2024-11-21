@@ -1,0 +1,1 @@
+ALTER TABLE "storage_facility" ALTER COLUMN "twilio_number" DROP NOT NULL;
