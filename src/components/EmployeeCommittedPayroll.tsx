@@ -10,18 +10,14 @@ import {
 import { CardContent, CardHeader, CardTitle } from "./ui/card";
 
 type EmployeeCommittedPayrollProps = {
-  employee: UserWithActivities;
   committedActivities: Activity[];
-  committedInsurance: number;
-  committedRentals: number;
+
   committedCommission: number;
   updateActivities: (buttonType: string, selectedActivities: number[]) => void;
 };
 function EmployeeCommittedPayroll({
-  employee,
   committedActivities,
-  committedInsurance,
-  committedRentals,
+
   committedCommission,
   updateActivities,
 }: EmployeeCommittedPayrollProps) {
@@ -45,7 +41,7 @@ function EmployeeCommittedPayroll({
             {committedActivities.map((activity) => (
               <div key={activity.activityId}>
                 <div>
-                  {activity.unitName}{" "}
+                  {activity.unitName}
                   {new Date(activity.date).toLocaleDateString(undefined, {
                     month: "2-digit",
                     day: "2-digit",

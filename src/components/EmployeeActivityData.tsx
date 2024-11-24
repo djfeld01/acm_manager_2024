@@ -1,4 +1,7 @@
+"use client";
+
 import React, { useState } from "react";
+//import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { WrenchIcon } from "lucide-react";
 import { Activity } from "./EmployeeComissionComponent";
@@ -16,6 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem } from "./ui/form";
+import { toast } from "./ui/use-toast";
+import { updateActivityUser } from "@/lib/controllers/activityController";
 
 type EmployeeActivityDataProps = {
   index: number;
@@ -24,7 +33,13 @@ type EmployeeActivityDataProps = {
   toggleActivity: (activityId: number) => void;
   employeeList: { userDetailId: string; firstName: string; lastName: string }[];
   employeeName?: string;
+  refreshData: () => void;
 };
+const FormSchema = z.object({
+  userDetailId: z.string({
+    required_error: "Please select a user to assign activity to.",
+  }),
+});
 function EmployeeActivityData({
   index,
   selectedActivities,
@@ -32,8 +47,23 @@ function EmployeeActivityData({
   toggleActivity,
   employeeList,
   employeeName,
+  refreshData,
 }: EmployeeActivityDataProps) {
+  //const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+
+  const form = useForm<z.infer<typeof FormSchema>>({
+    resolver: zodResolver(FormSchema),
+  });
+
+  async function onSubmit(data: z.infer<typeof FormSchema>) {
+    const dataToSubmit = {
+      activityId: activity.activityId,
+      userDetailId: data.userDetailId,
+    };
+    const updatedValue = await updateActivityUser(dataToSubmit);
+    //router.refresh();
+  }
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <div
@@ -73,21 +103,50 @@ function EmployeeActivityData({
         </CollapsibleTrigger>
       </div>
       <CollapsibleContent>
-        <Select>
-          <SelectTrigger className="w-[140px] m-2">
-            <SelectValue placeholder={employeeName || "assign to employee"} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>Fruits</SelectLabel>
-              <SelectItem value="apple">Apple</SelectItem>
-              <SelectItem value="banana">Banana</SelectItem>
-              <SelectItem value="blueberry">Blueberry</SelectItem>
-              <SelectItem value="grapes">Grapes</SelectItem>
-              <SelectItem value="pineapple">Pineapple</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="grid grid-cols-8"
+          >
+            <FormField
+              control={form.control}
+              name="userDetailId"
+              render={({ field }) => (
+                <FormItem className="col-span-4 m-2">
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={employeeName || "assign to employee"}
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Employees</SelectLabel>
+                        {employeeList.map((employee) => (
+                          <SelectItem
+                            value={employee.userDetailId}
+                            key={employee.userDetailId}
+                          >
+                            {employee.firstName} {employee.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+            <div className="col-span-1"></div>
+            <Button type="submit" className="col-span-3 m-2" variant="outline">
+              Change Assignment
+            </Button>
+          </form>
+        </Form>
       </CollapsibleContent>
     </Collapsible>
   );

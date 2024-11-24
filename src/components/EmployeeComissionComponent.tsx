@@ -62,9 +62,9 @@ type EmployeeCommissionComponentProps = {
   uncommittedInsurance: number;
   uncommittedCommission: number;
   nextPayPeriod: PayPeriod;
-
   updateActivities: (buttonType: string, selectedActivities: number[]) => void;
   employeeList: { userDetailId: string; firstName: string; lastName: string }[];
+  refreshData: () => void;
 };
 function EmployeeComissionComponent({
   employee,
@@ -75,6 +75,7 @@ function EmployeeComissionComponent({
   nextPayPeriod,
   updateActivities,
   employeeList,
+  refreshData,
 }: EmployeeCommissionComponentProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedActivities, setSelectedActivities] = useState<number[]>([]);
@@ -152,6 +153,7 @@ function EmployeeComissionComponent({
             key={activity.activityId}
             employeeList={employeeList}
             employeeName={employee.fullName || undefined}
+            refreshData={refreshData}
           />
         ))}
         <div className="grid grid-cols-8 items-center">

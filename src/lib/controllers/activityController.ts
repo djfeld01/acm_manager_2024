@@ -1,4 +1,5 @@
 "use server";
+import EmployeeActivityData from "@/components/EmployeeActivityData";
 import { Activity, Logins } from "@/components/EmployeeComissionComponent";
 import { db } from "@/db";
 import {
@@ -401,4 +402,20 @@ export async function uncommitActivityFromPayroll(activitiesArray: number[]) {
     .where(inArray(tenantActivities.Id, activitiesArray))
     .returning({ ids: tenantActivities.Id });
   return updatedArray;
+}
+
+export async function updateActivityUser(activityUpdate: {
+  activityId: number;
+  userDetailId: string;
+}) {
+  const { activityId, userDetailId } = activityUpdate;
+  if (!activityId || !userDetailId) {
+    throw Error(`The data wasn't formed correctly`);
+  }
+  const updatedData = await db
+    .update(tenantActivities)
+    .set({ employeeId: userDetailId })
+    .where(eq(tenantActivities.Id, activityId))
+    .returning({ Ids: tenantActivities.Id });
+  return updatedData;
 }

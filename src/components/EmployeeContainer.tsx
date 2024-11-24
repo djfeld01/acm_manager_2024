@@ -1,3 +1,4 @@
+"use server";
 import { db } from "@/db";
 import React from "react";
 import { and, count, eq, gte, lte, desc, sql } from "drizzle-orm";
@@ -18,7 +19,7 @@ interface EmployeeContainerProps {
 async function EmployeeContainer({ sitelinkId }: EmployeeContainerProps) {
   const today = new Date();
 
-  const {
+  let {
     employees,
     nextPayPeriod,
     insuranceCommissionRate,
@@ -42,6 +43,16 @@ async function EmployeeContainer({ sitelinkId }: EmployeeContainerProps) {
     return prevList;
   }, []);
 
+  async function refreshData() {
+    "use server";
+    return ({
+      employees,
+      nextPayPeriod,
+      insuranceCommissionRate,
+      storageCommissionRate,
+      unlinkedActivities,
+    } = await getUnpaidActivitiesByEmployee(sitelinkId));
+  }
   // const updatedArray = await db
   //   .update(tenantActivities)
   //   .set({ payPeriodId: null })
@@ -62,6 +73,7 @@ async function EmployeeContainer({ sitelinkId }: EmployeeContainerProps) {
               nextPayPeriod={nextPayPeriod}
               storageCommissionRate={storageCommissionRate}
               insuranceCommissionRate={insuranceCommissionRate}
+              refreshData={refreshData}
             />
           )
       )}

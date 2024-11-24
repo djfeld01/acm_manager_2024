@@ -34,6 +34,7 @@ import {
   CollapsibleTrigger,
 } from "./ui/collapsible";
 import EmployeeVacationComponent from "./EmployeeVacationComponent";
+import EmployeeMileageComponent from "./EmployeeMileageComponent";
 
 type EmployeeCardProps = {
   employee: UserWithActivities;
@@ -41,6 +42,7 @@ type EmployeeCardProps = {
   storageCommissionRate: number;
   insuranceCommissionRate: number;
   employeeList: { userDetailId: string; firstName: string; lastName: string }[];
+  refreshData: () => void;
 };
 
 function calculateCommission(
@@ -61,6 +63,7 @@ export function EmployeeCard({
   storageCommissionRate,
   insuranceCommissionRate,
   employeeList,
+  refreshData,
 }: EmployeeCardProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { position } = employee;
@@ -234,11 +237,8 @@ export function EmployeeCard({
       <CardContent>
         {employee.fullName && (
           <EmployeeCommittedPayroll
-            employee={employee}
             committedActivities={committedActivities}
             committedCommission={committedCommission}
-            committedInsurance={committedInsurance}
-            committedRentals={commmittedRentals}
             updateActivities={updateActivities}
           />
         )}
@@ -251,9 +251,11 @@ export function EmployeeCard({
           uncommittedInsurance={uncommittedInsurance}
           nextPayPeriod={nextPayPeriod}
           updateActivities={updateActivities}
+          refreshData={refreshData}
         />
         <div className="grid grid-cols-2">
           <EmployeeVacationComponent />
+          <EmployeeMileageComponent />
           <div></div>
         </div>
       </CardContent>
