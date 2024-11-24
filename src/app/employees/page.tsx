@@ -34,7 +34,6 @@ export interface User {
 // Fetch users, facilities, and user-facility associations
 const fetchUsers = async (): Promise<User[]> => {
   const users = (await getUsersWithConnectedFacilities()) || [];
-  console.log("🚀 ~ fetchUsers ~ users:", JSON.stringify(users, null, 4));
   return users;
 };
 

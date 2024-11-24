@@ -10,7 +10,7 @@ function generatePayPeriods(startDate: string, endYear: number) {
   while (currentDate.getFullYear() <= endYear) {
     payPeriods.push({
       startDate: currentDate.toISOString().split("T")[0], // Format as YYYY-MM-DD
-      status: "Completed",
+      status: "Future",
     });
     // Increment by 14 days
     currentDate.setDate(currentDate.getDate() + 14);
@@ -23,7 +23,7 @@ export default async function YourPage() {
     where: (storageFacilities, { eq }) =>
       eq(storageFacilities.currentClient, true),
   });
-  // const toAdd = generatePayPeriods("2024-01-07", 2024);
+  // const toAdd = generatePayPeriods("2024-11-24", 2027);
 
   // const addPayroll = await db
   //   .insert(payPeriod)

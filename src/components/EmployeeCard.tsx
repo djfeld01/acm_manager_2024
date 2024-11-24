@@ -4,30 +4,7 @@ import { useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -37,70 +14,205 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { CheckSquare2, ChevronsUpDown, WrenchIcon } from "lucide-react";
 
-// Type for each activity
-export type Activity = {
-  activityType: string;
-  date: string; // ISO 8601 string format for date
-  unitName: string;
-  tenantName: string;
-  activityId: number;
-  hasInsurance: boolean;
-};
-
-// Type for each user and their activities
-type UserWithActivities = {
-  commission: number | null;
-  fullName: string | null; // Full name can be null
-  firstName: string | null;
-  lastName: string | null;
-  userDetailsId: string | null; // userDetailsId can be null
-  position:
-    | "ACM_OFFICE"
-    | "AREA_MANAGER"
-    | "MANAGER"
-    | "ASSISTANT"
-    | "STORE_OWNER"
-    | null;
-  rentals: number;
-  insurance: number;
-  activities: Activity[]; // Array of Activity objects
-};
+import EmployeeComissionComponent, {
+  Activity,
+  PayPeriod,
+  UserWithActivities,
+} from "./EmployeeComissionComponent";
+import EmployeeCommittedPayroll from "./EmployeeCommittedPayroll";
+import {
+  commitActivityCommissionToPayroll,
+  markActivitiesAsPaid,
+  uncommitActivityFromPayroll,
+} from "@/lib/controllers/activityController";
 
 type EmployeeCardProps = {
   employee: UserWithActivities;
+  nextPayPeriod: PayPeriod;
+  storageCommissionRate: number;
+  insuranceCommissionRate: number;
 };
-export function EmployeeCard({ employee }: EmployeeCardProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedActivities, setSelectedActivities] = useState(new Set());
-  const isDesktop = useMediaQuery("(min-width: 768px)");
 
-  function toggleAll(checked: boolean) {
-    if (checked) {
-      setSelectedActivities(
-        new Set(employee.activities.map((a) => a.activityId))
+function calculateCommission(
+  position: string,
+  insurance: number,
+  insuranceCommissionRate: number,
+  rentals: number,
+  storageCommissionRate: number
+) {
+  return position === "MANAGER"
+    ? insurance * insuranceCommissionRate
+    : insurance * insuranceCommissionRate + rentals * storageCommissionRate;
+}
+
+export function EmployeeCard({
+  employee,
+  nextPayPeriod,
+  storageCommissionRate,
+  insuranceCommissionRate,
+}: EmployeeCardProps) {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const { position } = employee;
+  const [committedActivities, setCommittedActivities] = useState<Activity[]>(
+    employee.committedActivities
+  );
+  const [uncommittedActivities, setUncommittedActivities] = useState<
+    Activity[]
+  >(employee.activities);
+
+  const [uncommmittedRentals, setUncommittedRentals] = useState<number>(
+    uncommittedActivities.length
+  );
+  const [uncommittedInsurance, setUncommittedInsurance] = useState<number>(
+    uncommittedActivities.reduce(
+      (prev, activity) => (activity.hasInsurance ? prev + 1 : prev),
+      0
+    )
+  );
+  const [uncommittedCommission, setUncommittedCommission] = useState<number>(
+    calculateCommission(
+      position || "",
+      uncommittedInsurance,
+      insuranceCommissionRate,
+      uncommmittedRentals,
+      storageCommissionRate
+    )
+  );
+
+  const [commmittedRentals, setCommittedRentals] = useState<number>(
+    committedActivities.length
+  );
+  const [committedInsurance, setCommittedInsurance] = useState<number>(
+    committedActivities.reduce(
+      (prev, activity) => (activity.hasInsurance ? prev + 1 : prev),
+      0
+    )
+  );
+  const [committedCommission, setCommittedCommission] = useState<number>(
+    calculateCommission(
+      position || "",
+      committedInsurance,
+      insuranceCommissionRate,
+      commmittedRentals,
+      storageCommissionRate
+    )
+  );
+  async function updateActivities(
+    buttonType: string,
+    selectedActivities: number[]
+  ) {
+    if (buttonType === "markActivitiesAsPaid") {
+      await markActivitiesAsPaid(selectedActivities);
+    }
+
+    if (buttonType === "uncommitActivity") {
+      await uncommitActivityFromPayroll(selectedActivities);
+      // Move selected activities from uncommitted to committed
+      setUncommittedActivities((prevActivities) => {
+        const activitiesToAdd = committedActivities.filter((activity) =>
+          selectedActivities.includes(activity.activityId)
+        );
+        const updatedActivities = [...prevActivities, ...activitiesToAdd];
+        const updatedRentals = updatedActivities.length;
+        const updatedInsurance = updatedActivities.reduce(
+          (prev, activity) => (activity.hasInsurance ? prev + 1 : prev),
+          0
+        );
+
+        const updatedCommission = calculateCommission(
+          position || "",
+          updatedInsurance,
+          insuranceCommissionRate,
+          updatedRentals,
+          storageCommissionRate
+        );
+
+        setUncommittedRentals(updatedRentals),
+          setUncommittedInsurance(updatedInsurance),
+          setUncommittedCommission(updatedCommission);
+        return updatedActivities;
+      });
+
+      setCommittedActivities((prevActivities) => {
+        const updatedActivities = prevActivities.filter(
+          (activity) => !selectedActivities.includes(activity.activityId)
+        );
+        const updatedRentals = updatedActivities.length;
+        const updatedInsurance = updatedActivities.reduce(
+          (prev, activity) => (activity.hasInsurance ? prev + 1 : prev),
+          0
+        );
+        const updatedCommission = calculateCommission(
+          position || "",
+          updatedInsurance,
+          insuranceCommissionRate,
+          updatedRentals,
+          storageCommissionRate
+        );
+
+        setCommittedRentals(updatedRentals);
+        setCommittedInsurance(updatedInsurance);
+        setCommittedCommission(updatedCommission);
+        return updatedActivities;
+      });
+    }
+
+    if (buttonType === "commitActivityCommissionToPayroll") {
+      await commitActivityCommissionToPayroll(
+        selectedActivities,
+        nextPayPeriod.payPeriodId
       );
-    } else {
-      setSelectedActivities(new Set());
+      // Move selected activities from uncommitted to committed
+      setCommittedActivities((prevActivities) => {
+        const activitiesToAdd = uncommittedActivities.filter((activity) =>
+          selectedActivities.includes(activity.activityId)
+        );
+        const updatedActivities = [...prevActivities, ...activitiesToAdd];
+        const updatedRentals = updatedActivities.length;
+        const updatedInsurance = updatedActivities.reduce(
+          (prev, activity) => (activity.hasInsurance ? prev + 1 : prev),
+          0
+        );
+
+        const updatedCommission = calculateCommission(
+          position || "",
+          updatedInsurance,
+          insuranceCommissionRate,
+          updatedRentals,
+          storageCommissionRate
+        );
+
+        setCommittedRentals(updatedRentals),
+          setCommittedInsurance(updatedInsurance),
+          setCommittedCommission(updatedCommission);
+        return updatedActivities;
+      });
+
+      setUncommittedActivities((prevActivities) => {
+        const updatedActivities = prevActivities.filter(
+          (activity) => !selectedActivities.includes(activity.activityId)
+        );
+        const updatedRentals = updatedActivities.length;
+        const updatedInsurance = updatedActivities.reduce(
+          (prev, activity) => (activity.hasInsurance ? prev + 1 : prev),
+          0
+        );
+        const updatedCommission = calculateCommission(
+          position || "",
+          updatedInsurance,
+          insuranceCommissionRate,
+          updatedRentals,
+          storageCommissionRate
+        );
+
+        setUncommittedRentals(updatedRentals);
+        setUncommittedInsurance(updatedInsurance);
+        setUncommittedCommission(updatedCommission);
+        return updatedActivities;
+      });
     }
   }
-
-  function toggleActivity(activityId: number) {
-    setSelectedActivities((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(activityId)) {
-        newSet.delete(activityId);
-      } else {
-        newSet.add(activityId);
-      }
-      console.log("🚀 ~ setSelectedActivities ~ newSet:", newSet);
-
-      return newSet;
-    });
-  }
-
   // if (isDesktop) {
   return (
     // <Dialog open={open} onOpenChange={setOpen}>
@@ -108,119 +220,29 @@ export function EmployeeCard({ employee }: EmployeeCardProps) {
       <CardTitle>
         {employee?.firstName || "Unlinked Rentals"} {employee?.lastName || ""}
       </CardTitle>
-      <CardDescription>{employee?.position || "NA"}</CardDescription>
+      <CardDescription>{employee?.position || "NA"}</CardDescription>{" "}
       <CardContent>
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <div className="col-span-7">Unpaid Commissions</div>
-          <div className="grid grid-cols-7 bg-gray-200 rounded-xl">
-            <div className="col-span-2 justify-start">
-              Rentals: {employee.rentals}
-            </div>
-            <div className="col-span-2 justify-center">
-              Insurance: {employee.insurance}
-            </div>
-            <div className="col-span-2 justify-end">
-              Commission: ${employee.commission?.toFixed(2)}
-            </div>
-            <div className="flex justify-end">
-              <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-6 h-6 p-0 flex items-center justify-center"
-                >
-                  <ChevronsUpDown className="h-4 w-4" />
-                  <span className="sr-only">Toggle</span>
-                </Button>
-              </CollapsibleTrigger>
-            </div>
-          </div>
-
-          <CollapsibleContent className="w-auto bg-gray-200 rounded-xl m-2">
-            <div className="grid grid-cols-9 items-center">
-              <div className="col-span-1 flex justify-end">
-                {/* <div className=" w-6 h-6 flex items-center justify-end">
-                  <CheckSquare2 className="h-5 w-5" />
-                </div> */}
-                <input
-                  type="checkbox"
-                  className="w-4 h-4"
-                  onChange={(e) => toggleAll(e.target.checked)}
-                />
-              </div>
-              <div className="font-bold col-span-2">Unit</div>
-              <div className="font-bold col-span-2">Date</div>
-              <div className="font-bold col-span-2">Tenant</div>
-              <div className="font-bold "></div>
-              <div></div>
-            </div>
-            {employee.activities.map((activity, index) => (
-              <div
-                className={`${
-                  index % 2 === 0 ? "bg-white" : "bg-slate-300"
-                } grid grid-cols-9 items-center`}
-                key={activity.activityId}
-              >
-                <div className="col-span-1 flex justify-end">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4"
-                    checked={selectedActivities.has(activity.activityId)}
-                    onChange={() => toggleActivity(activity.activityId)}
-                  />
-                </div>
-                <div className="col-span-2">{activity.unitName}</div>
-                <div className="col-span-2">
-                  {new Date(activity.date).toLocaleDateString()}
-                </div>
-                <div className="col-span-2">{activity.tenantName}</div>
-                <div className="col-span-1">
-                  {activity.hasInsurance ? "Ins" : ""}
-                </div>
-                <div className="col-span-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-6 h-6 p-0 flex items-center justify-center"
-                  >
-                    <WrenchIcon className="h-4 w-4" />
-                    <span className="sr-only">Toggle</span>
-                  </Button>
-                </div>
-              </div>
-            ))}
-            <div className="grid grid-cols-8 items-center">
-              <div className="col-span-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-end"
-                  disabled={
-                    employee.fullName === null ||
-                    employee.position === "ACM_OFFICE" ||
-                    employee.position === "AREA_MANAGER"
-                  }
-                >
-                  Mark as Paid
-                </Button>
-              </div>
-              <div className="col-span-6">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-end"
-                  disabled={
-                    employee.fullName === null ||
-                    employee.position === "ACM_OFFICE" ||
-                    employee.position === "AREA_MANAGER"
-                  }
-                >
-                  Add to Current Payroll
-                </Button>
-              </div>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+        {employee.fullName && (
+          <EmployeeCommittedPayroll
+            employee={employee}
+            committedActivities={committedActivities}
+            committedCommission={committedCommission}
+            committedInsurance={committedInsurance}
+            committedRentals={commmittedRentals}
+            updateActivities={updateActivities}
+          />
+        )}
+        <EmployeeComissionComponent
+          employee={employee}
+          uncommittedActivities={uncommittedActivities}
+          uncommittedRentals={uncommmittedRentals}
+          uncommittedCommission={uncommittedCommission}
+          uncommittedInsurance={uncommittedInsurance}
+          nextPayPeriod={nextPayPeriod}
+          insuranceCommissionRate={insuranceCommissionRate}
+          storageCommissionRate={storageCommissionRate}
+          updateActivities={updateActivities}
+        />
       </CardContent>
     </Card>
 
@@ -261,20 +283,4 @@ export function EmployeeCard({ employee }: EmployeeCardProps) {
   //     </DrawerContent>
   //   </Drawer>
   // );
-}
-
-function ProfileForm({ className }: React.ComponentProps<"form">) {
-  return (
-    <form className={cn("grid items-start gap-4", className)}>
-      <div className="grid gap-2">
-        <Label htmlFor="email">Email</Label>
-        <Input type="email" id="email" defaultValue="shadcn@example.com" />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="username">Username</Label>
-        <Input id="username" defaultValue="@shadcn" />
-      </div>
-      <Button type="submit">Save changes</Button>
-    </form>
-  );
 }

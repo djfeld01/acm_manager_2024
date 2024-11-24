@@ -1,7 +1,9 @@
 "use server";
-import { Activity } from "@/components/EmployeeCard";
+import { Activity, Logins } from "@/components/EmployeeComissionComponent";
 import { db } from "@/db";
 import {
+  payPeriod,
+  sitelinkLogons,
   storageFacilities,
   tenantActivities,
   userDetails,
@@ -10,8 +12,22 @@ import {
   usersToFacilities,
 } from "@/db/schema";
 import monthlyGoals, { CreateMonthlyGoals } from "@/db/schema/monthlyGoals";
+import { Item } from "@radix-ui/react-dropdown-menu";
 
-import { count, sql, eq, lte, and, gte } from "drizzle-orm";
+import {
+  count,
+  sql,
+  eq,
+  lte,
+  and,
+  gte,
+  desc,
+  asc,
+  inArray,
+  or,
+  not,
+  isNull,
+} from "drizzle-orm";
 
 enum ActivityType {
   MoveIn = "MoveIn",
@@ -138,69 +154,251 @@ export async function getActivitiesByMonth2(
 }
 
 export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
-  const getEmployees = await db
+  // const nextPayPeriod = await db.query.payPeriod.findFirst({
+  //   where: (payPeriod, { gte }) =>
+  //     gte(payPeriod.processingDate, new Date().toDateString()),
+  //   orderBy: payPeriod.processingDate,
+  //   with: {tenantActivities:{}
+  // });
+  const nextPayPeriodArray = await db
+    .select()
+    .from(payPeriod)
+    .where(gte(payPeriod.processingDate, new Date().toDateString()))
+    .limit(1)
+    .orderBy(payPeriod.processingDate);
+  if (!nextPayPeriodArray) {
+    throw new Error("No pay period found for the given criteria.");
+  }
+  const { startDate, endDate } = nextPayPeriodArray[0];
+  if (!endDate) {
+    throw new Error("No End Date");
+  }
+  const nextPayPeriod = nextPayPeriodArray[0];
+  const loginsSubquery = db
     .select({
-      fullName: userDetails.fullName,
+      employeeId: userDetails.id,
+      logins: sql`ARRAY_AGG(JSON_BUILD_OBJECT(
+    'dateTime', ${sitelinkLogons.dateTime},
+    'computerName', ${sitelinkLogons.computerName},
+    'computerIP', ${sitelinkLogons.computerIP}
+  ))`.as("logins"),
+    })
+    .from(sitelinkLogons)
+    .innerJoin(
+      usersToFacilities,
+      eq(
+        sitelinkLogons.sitelinkEmployeeId,
+        usersToFacilities.sitelinkEmployeeId
+      )
+    )
+    .innerJoin(userDetails, eq(usersToFacilities.userId, userDetails.id))
+    .where(
+      and(
+        eq(usersToFacilities.storageFacilityId, sitelinkId),
+        gte(sitelinkLogons.dateTime, new Date(startDate)),
+        lte(sitelinkLogons.dateTime, new Date(endDate))
+      )
+    )
+    .groupBy(userDetails.id)
+    .as("logins_subquery");
+
+  // Subquery: Aggregate activities for each employee
+  const activitiesSubquery = db
+    .select({
+      employeeId: userDetails.id,
+      activities: sql`ARRAY_AGG(JSON_BUILD_OBJECT(
+    'activityType', ${tenantActivities.activityType},
+    'activityId',${tenantActivities.Id},
+    'date', ${tenantActivities.date},
+    'tenantName', ${tenantActivities.tenantName},
+    'unitName', ${tenantActivities.unitName},
+    'hasInsurance', ${tenantActivities.hasInsurance},
+    'payPeriodId', ${tenantActivities.payPeriodId}
+  ))`.as("activities"),
+    })
+    .from(tenantActivities)
+    .fullJoin(userDetails, eq(tenantActivities.employeeId, userDetails.id))
+    .where(
+      and(
+        eq(tenantActivities.activityType, "MoveIn"),
+        eq(tenantActivities.commisionHasBeenPaid, false),
+        eq(tenantActivities.facilityId, sitelinkId),
+        isNull(tenantActivities.payPeriodId)
+      )
+    )
+    .groupBy(userDetails.id)
+    .as("activities_subquery");
+
+  const committedActivitiesSubquery = db
+    .select({
+      employeeId: userDetails.id,
+      activities: sql`ARRAY_AGG(JSON_BUILD_OBJECT(
+    'activityType', ${tenantActivities.activityType},
+    'activityId',${tenantActivities.Id},
+    'date', ${tenantActivities.date},
+    'tenantName', ${tenantActivities.tenantName},
+    'unitName', ${tenantActivities.unitName},
+    'hasInsurance', ${tenantActivities.hasInsurance},
+    'payPeriodId', ${tenantActivities.payPeriodId}
+  ))`.as("committed_activities"),
+    })
+    .from(tenantActivities)
+    .fullJoin(userDetails, eq(tenantActivities.employeeId, userDetails.id))
+    .where(
+      and(
+        eq(tenantActivities.activityType, "MoveIn"),
+        eq(tenantActivities.payPeriodId, nextPayPeriod.payPeriodId),
+        eq(tenantActivities.facilityId, sitelinkId)
+      )
+    )
+    .groupBy(userDetails.id)
+    .as("committed_activities_subquery");
+  // Main query: Combine employee data with logins and activities
+  const result = await db
+    .select({
+      userDetailsId: userDetails.id,
       firstName: userDetails.firstName,
       lastName: userDetails.lastName,
-      userDetailsId: userDetails.id,
+      fullName: userDetails.fullName,
       position: usersToFacilities.position,
-      rentals: count(),
-      insurance:
-        sql`CAST(SUM(CASE WHEN ${tenantActivities.hasInsurance} THEN 1 ELSE 0 END) AS INTEGER)`.as(
-          "insurance"
-        ),
-      activities:
-        sql`JSON_AGG(JSON_BUILD_OBJECT('activityType', ${tenantActivities.activityType},
-      'date', ${tenantActivities.date},'unitName',${tenantActivities.unitName},
-      'tenantName',${tenantActivities.tenantName},
-      'activityId', ${tenantActivities.Id},
-      'hasInsurance', ${tenantActivities.hasInsurance}))`.as("activities"),
+      logins: loginsSubquery.logins,
+      activities: activitiesSubquery.activities,
+      committedActivities: committedActivitiesSubquery.activities,
     })
     .from(userDetails)
-    .fullJoin(tenantActivities, eq(tenantActivities.employeeId, userDetails.id))
+    .innerJoin(usersToFacilities, eq(userDetails.id, usersToFacilities.userId))
+    .leftJoin(loginsSubquery, eq(userDetails.id, loginsSubquery.employeeId))
     .leftJoin(
-      usersToFacilities,
-      and(
-        eq(usersToFacilities.userId, userDetails.id),
-        eq(usersToFacilities.storageFacilityId, sitelinkId)
-      )
+      activitiesSubquery,
+      eq(userDetails.id, activitiesSubquery.employeeId)
+    )
+    .leftJoin(
+      committedActivitiesSubquery,
+      eq(userDetails.id, committedActivitiesSubquery.employeeId)
     )
     .where(
       and(
-        eq(tenantActivities.facilityId, sitelinkId),
-        eq(tenantActivities.activityType, "MoveIn"),
-        eq(tenantActivities.commisionHasBeenPaid, false)
+        eq(usersToFacilities.storageFacilityId, sitelinkId),
+        sql`${loginsSubquery.logins} IS NOT NULL AND ARRAY_LENGTH(${loginsSubquery.logins}, 1) > 0`,
+        and(
+          not(eq(usersToFacilities.position, "AREA_MANAGER")),
+          not(eq(usersToFacilities.position, "ACM_OFFICE"))
+        )
       )
-    )
-    .groupBy(userDetails.id, usersToFacilities.position);
-
-  const result = getEmployees.map((item) => {
-    const typedItem = {
-      ...item,
-      insurance: item.insurance as number,
-      activities: item.activities as Activity[],
-    };
-
-    const sortedActivities = typedItem.activities.sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    return { ...typedItem, activities: sortedActivities };
+  const employees = result.map((item) => {
+    const typedItem = {
+      ...item,
+      logins: item.logins as Logins[],
+      activities: item.activities as Activity[],
+      committedActivities: item.committedActivities as Activity[],
+    };
+
+    const sortedLogins = typedItem.logins.sort(
+      (a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
+    );
+    let sortedActivities = [] as Activity[];
+    if (typedItem.activities) {
+      sortedActivities = typedItem.activities.sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+    }
+    let sortedCommittedActivities = [] as Activity[];
+    if (typedItem.committedActivities) {
+      sortedCommittedActivities = typedItem.committedActivities.sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+    }
+    return {
+      ...typedItem,
+      logins: sortedLogins,
+      activities: sortedActivities,
+      committedActivities: sortedCommittedActivities,
+    };
   });
+
+  const results = await db.query.tenantActivities.findMany({
+    where: (tenantActivities, { eq, and, isNull }) =>
+      and(
+        eq(tenantActivities.facilityId, sitelinkId),
+        isNull(tenantActivities.employeeId),
+        eq(tenantActivities.commisionHasBeenPaid, false),
+        eq(tenantActivities.activityType, "MoveIn")
+      ),
+    columns: {
+      activityType: true,
+      date: true,
+      Id: true,
+      unitName: true,
+      tenantName: true,
+      hasInsurance: true,
+      payPeriodId: true,
+    },
+  });
+  const unlinkedActivities = results.map((item) => {
+    return {
+      ...item,
+      date: item.date.toISOString(),
+      activityId: item.Id,
+      payPeriodId: item.payPeriodId ?? undefined,
+    };
+  });
+  const unlinkedEntry = {
+    activities: unlinkedActivities,
+    committedActivities: [],
+    logins: [],
+    userDetailsId: "",
+    firstName: "",
+    lastName: "",
+    fullName: null,
+    position: null,
+  };
+  const finalEmployees = [...employees, unlinkedEntry];
   const { insuranceCommissionRate, storageCommissionRate } =
     (await db.query.storageFacilities.findFirst({
       where: (storageFacilities, { eq }) =>
         eq(storageFacilities.sitelinkId, sitelinkId),
       columns: { storageCommissionRate: true, insuranceCommissionRate: true },
     })) || { storageCommissionRate: 5, insuranceCommissionRate: 1.5 };
-  const employees = result.map((employee) => {
-    const commission =
-      employee.position === "MANAGER"
-        ? employee.insurance * insuranceCommissionRate
-        : employee.insurance * insuranceCommissionRate +
-          employee.rentals * storageCommissionRate;
-    return { ...employee, commission };
-  });
-  return employees;
+
+  return {
+    nextPayPeriod,
+    employees: finalEmployees,
+    insuranceCommissionRate,
+    storageCommissionRate,
+    unlinkedActivities,
+  };
+}
+
+export async function markActivitiesAsPaid(activitiesArray: number[]) {
+  const updatedArray = await db
+    .update(tenantActivities)
+    .set({ commisionHasBeenPaid: true })
+    .where(inArray(tenantActivities.Id, activitiesArray))
+    .returning({ ids: tenantActivities.Id });
+
+  return updatedArray;
+}
+
+export async function commitActivityCommissionToPayroll(
+  activitiesArray: number[],
+  payPeriodId: string
+) {
+  const updatedArray = await db
+    .update(tenantActivities)
+    .set({ payPeriodId: payPeriodId })
+    .where(inArray(tenantActivities.Id, activitiesArray))
+    .returning({ ids: tenantActivities.Id });
+
+  return updatedArray;
+}
+
+export async function uncommitActivityFromPayroll(activitiesArray: number[]) {
+  const updatedArray = await db
+    .update(tenantActivities)
+    .set({ payPeriodId: null, commisionHasBeenPaid: false })
+    .where(inArray(tenantActivities.Id, activitiesArray))
+    .returning({ ids: tenantActivities.Id });
+  return updatedArray;
 }
