@@ -25,6 +25,23 @@ async function EmployeeContainer({ sitelinkId }: EmployeeContainerProps) {
     storageCommissionRate,
     unlinkedActivities,
   } = await getUnpaidActivitiesByEmployee(sitelinkId);
+
+  const employeeList = employees.reduce<
+    { userDetailId: string; firstName: string; lastName: string }[]
+  >((prevList, employee) => {
+    if (employee.firstName) {
+      return [
+        ...prevList,
+        {
+          userDetailId: employee.userDetailsId,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+        },
+      ];
+    }
+    return prevList;
+  }, []);
+
   // const updatedArray = await db
   //   .update(tenantActivities)
   //   .set({ payPeriodId: null })
@@ -39,6 +56,7 @@ async function EmployeeContainer({ sitelinkId }: EmployeeContainerProps) {
         (employee) =>
           (employee.fullName ?? employee.activities.length > 0) && (
             <EmployeeCard
+              employeeList={employeeList}
               employee={employee}
               key={employee.userDetailsId}
               nextPayPeriod={nextPayPeriod}

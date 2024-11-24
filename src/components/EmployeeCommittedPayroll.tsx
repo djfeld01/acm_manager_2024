@@ -28,16 +28,14 @@ function EmployeeCommittedPayroll({
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <div>
-        <div className="grid grid-cols-4 bg-grey-300">
-          <div>Rentals</div>
+        <div className="grid grid-cols-3 bg-grey-300">
           <div>Commission</div>
           <div>Vacation</div>
           <div>Miles</div>
           <CollapsibleTrigger asChild>
-            <div>{committedRentals || 0}</div>
-          </CollapsibleTrigger>
-          <CollapsibleTrigger asChild>
-            <div>${(committedCommission || 0).toFixed(2)}</div>
+            <div className="cursor-pointer">
+              ${(committedCommission || 0).toFixed(2)}
+            </div>
           </CollapsibleTrigger>
         </div>
         <CollapsibleContent>

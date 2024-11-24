@@ -13,6 +13,7 @@ import {
   markActivitiesAsPaid,
 } from "@/lib/controllers/activityController";
 import next from "next";
+import EmployeeActivityData from "./EmployeeActivityData";
 
 export type Logins = {
   dateTime: Date;
@@ -61,9 +62,9 @@ type EmployeeCommissionComponentProps = {
   uncommittedInsurance: number;
   uncommittedCommission: number;
   nextPayPeriod: PayPeriod;
-  storageCommissionRate: number;
-  insuranceCommissionRate: number;
+
   updateActivities: (buttonType: string, selectedActivities: number[]) => void;
+  employeeList: { userDetailId: string; firstName: string; lastName: string }[];
 };
 function EmployeeComissionComponent({
   employee,
@@ -72,9 +73,8 @@ function EmployeeComissionComponent({
   uncommittedInsurance,
   uncommittedCommission,
   nextPayPeriod,
-  storageCommissionRate,
-  insuranceCommissionRate,
   updateActivities,
+  employeeList,
 }: EmployeeCommissionComponentProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedActivities, setSelectedActivities] = useState<number[]>([]);
@@ -144,46 +144,19 @@ function EmployeeComissionComponent({
           <div></div>
         </div>
         {uncommittedActivities.map((activity, index) => (
-          <div
-            className={`${
-              index % 2 === 0 ? "bg-white" : "bg-slate-300"
-            } grid grid-cols-9 items-center`}
+          <EmployeeActivityData
+            index={index}
+            activity={activity}
+            toggleActivity={toggleActivity}
+            selectedActivities={selectedActivities}
             key={activity.activityId}
-          >
-            <div className="col-span-1 flex justify-end">
-              <input
-                type="checkbox"
-                className="w-4 h-4"
-                checked={selectedActivities.includes(activity.activityId)}
-                onChange={() => toggleActivity(activity.activityId)}
-              />
-            </div>
-            <div className="col-span-2">{activity.unitName}</div>
-            <div className="col-span-2">
-              {new Date(activity.date).toLocaleDateString(undefined, {
-                month: "2-digit",
-                day: "2-digit",
-              })}
-            </div>
-            <div className="col-span-2">{activity.tenantName}</div>
-            <div className="col-span-1">
-              {activity.hasInsurance ? "Ins" : ""}
-            </div>
-            <div className="col-span-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-6 h-6 p-0 flex items-center justify-center"
-              >
-                <WrenchIcon className="h-4 w-4" />
-                <span className="sr-only">Toggle</span>
-              </Button>
-            </div>
-          </div>
+            employeeList={employeeList}
+            employeeName={employee.fullName || undefined}
+          />
         ))}
         <div className="grid grid-cols-8 items-center">
           <div className="col-span-2">
-            <Button
+            {/* <Button
               onClick={() =>
                 updateActivities("markActivitiesAsPaid", selectedActivities)
               }
@@ -193,7 +166,7 @@ function EmployeeComissionComponent({
               disabled={true}
             >
               Mark as Paid
-            </Button>
+            </Button> */}
           </div>
           <div className="col-span-6">
             <Button

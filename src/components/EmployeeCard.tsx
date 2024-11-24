@@ -26,12 +26,21 @@ import {
   markActivitiesAsPaid,
   uncommitActivityFromPayroll,
 } from "@/lib/controllers/activityController";
+import { CirclePlusIcon } from "lucide-react";
+import { Button } from "./ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./ui/collapsible";
+import EmployeeVacationComponent from "./EmployeeVacationComponent";
 
 type EmployeeCardProps = {
   employee: UserWithActivities;
   nextPayPeriod: PayPeriod;
   storageCommissionRate: number;
   insuranceCommissionRate: number;
+  employeeList: { userDetailId: string; firstName: string; lastName: string }[];
 };
 
 function calculateCommission(
@@ -51,6 +60,7 @@ export function EmployeeCard({
   nextPayPeriod,
   storageCommissionRate,
   insuranceCommissionRate,
+  employeeList,
 }: EmployeeCardProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { position } = employee;
@@ -233,16 +243,19 @@ export function EmployeeCard({
           />
         )}
         <EmployeeComissionComponent
+          employeeList={employeeList}
           employee={employee}
           uncommittedActivities={uncommittedActivities}
           uncommittedRentals={uncommmittedRentals}
           uncommittedCommission={uncommittedCommission}
           uncommittedInsurance={uncommittedInsurance}
           nextPayPeriod={nextPayPeriod}
-          insuranceCommissionRate={insuranceCommissionRate}
-          storageCommissionRate={storageCommissionRate}
           updateActivities={updateActivities}
         />
+        <div className="grid grid-cols-2">
+          <EmployeeVacationComponent />
+          <div></div>
+        </div>
       </CardContent>
     </Card>
 
