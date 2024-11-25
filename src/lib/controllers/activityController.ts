@@ -201,8 +201,8 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
     .where(
       and(
         eq(usersToFacilities.storageFacilityId, sitelinkId),
-        gte(sitelinkLogons.dateTime, new Date(startDate)),
-        lte(sitelinkLogons.dateTime, new Date(endDate))
+        gte(sitelinkLogons.dateTime, new Date(`${startDate}T00:00:00-05:00`)),
+        lte(sitelinkLogons.dateTime, new Date(`${endDate}T11:59:59-05:00`))
       )
     )
     .groupBy(userDetails.id)
