@@ -62,7 +62,7 @@ function EmployeeActivityData({
       userDetailId: data.userDetailId,
     };
     const updatedValue = await updateActivityUser(dataToSubmit);
-    //router.refresh();
+    setIsOpen(false);
   }
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
