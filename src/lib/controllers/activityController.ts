@@ -318,7 +318,6 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
         )
       )
     );
-  console.log(result);
   const employees = result.map((item) => {
     const typedItem = {
       ...item,
