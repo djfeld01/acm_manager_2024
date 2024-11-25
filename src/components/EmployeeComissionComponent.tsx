@@ -15,6 +15,13 @@ import {
 import next from "next";
 import EmployeeActivityData from "./EmployeeActivityData";
 
+export type Vacations = {
+  vacationId: string;
+  vacationHours: number;
+  date: string;
+  vacationNote?: string;
+};
+
 export type Logins = {
   dateTime: Date;
   computerName: string;
@@ -54,6 +61,7 @@ export type UserWithActivities = {
   activities: Activity[]; // Array of Activity objects
   committedActivities: Activity[];
   logins: Logins[];
+  vacation: Vacations[];
 };
 type EmployeeCommissionComponentProps = {
   employee: UserWithActivities;

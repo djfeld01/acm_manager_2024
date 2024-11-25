@@ -26,7 +26,6 @@ async function EmployeeContainer({ sitelinkId }: EmployeeContainerProps) {
     storageCommissionRate,
     unlinkedActivities,
   } = await getUnpaidActivitiesByEmployee(sitelinkId);
-
   const employeeList = employees.reduce<
     { userDetailId: string; firstName: string; lastName: string }[]
   >((prevList, employee) => {

@@ -1,5 +1,9 @@
 import React, { useState } from "react";
-import { Activity, UserWithActivities } from "./EmployeeComissionComponent";
+import {
+  Activity,
+  UserWithActivities,
+  Vacations,
+} from "./EmployeeComissionComponent";
 import { CircleMinus } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -11,17 +15,21 @@ import { CardContent, CardHeader, CardTitle } from "./ui/card";
 
 type EmployeeCommittedPayrollProps = {
   committedActivities: Activity[];
-
   committedCommission: number;
+  vacation: Vacations[];
   updateActivities: (buttonType: string, selectedActivities: number[]) => void;
 };
 function EmployeeCommittedPayroll({
   committedActivities,
-
   committedCommission,
   updateActivities,
+  vacation,
 }: EmployeeCommittedPayrollProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const vacationHours = vacation.reduce(
+    (prev, item) => prev + item.vacationHours,
+    0
+  );
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <div className="bg-gray-200 rounded-3xl">
@@ -36,6 +44,7 @@ function EmployeeCommittedPayroll({
                 ${(committedCommission || 0).toFixed(2)}
               </div>
             </CollapsibleTrigger>
+            <div>{vacationHours || 0}</div>
           </div>
           <CollapsibleContent>
             {committedActivities.map((activity) => (

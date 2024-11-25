@@ -240,6 +240,7 @@ export function EmployeeCard({
             committedActivities={committedActivities}
             committedCommission={committedCommission}
             updateActivities={updateActivities}
+            vacation={employee?.vacation || []}
           />
         )}
         <EmployeeComissionComponent
