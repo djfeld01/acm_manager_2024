@@ -38,7 +38,6 @@ function EmployeeDaysWorkedComponent({
   nextPayPeriod,
 }: EmployeeDaysWorkedComponentProps) {
   const [isOpen, setIsOpen] = useState(false);
-  console.log(logins);
   const daysWorked = logins.map((entry) =>
     new Date(entry.dateTime).toLocaleDateString(undefined, {
       month: "2-digit",
