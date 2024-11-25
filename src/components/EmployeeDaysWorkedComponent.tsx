@@ -7,6 +7,7 @@ import {
   CollapsibleTrigger,
 } from "./ui/collapsible";
 import { payPeriod } from "@/db/schema";
+import { CardDescription } from "./ui/card";
 
 type EmployeeDaysWorkedComponentProps = {
   logins: Logins[];
@@ -56,6 +57,7 @@ function EmployeeDaysWorkedComponent({
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger>Show Days Worked</CollapsibleTrigger>
       <CollapsibleContent>
+        <CardDescription>Determined by Sitelink Logins</CardDescription>
         <div className="grid grid-cols-7  outline-double">
           <div className="col-span-1">Sun</div>
           <div className="col-span-1">Mon</div>

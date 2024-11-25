@@ -3,10 +3,12 @@ import EmployeeActivityData from "@/components/EmployeeActivityData";
 import {
   Activity,
   Logins,
+  Mileage,
   Vacations,
 } from "@/components/EmployeeComissionComponent";
 import { db } from "@/db";
 import {
+  mileage,
   payPeriod,
   sitelinkLogons,
   storageFacilities,
@@ -283,6 +285,29 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
     .groupBy(userDetails.id)
     .as("vacation_subquery");
 
+  const mileageSubquery = db
+    .select({
+      employeeId: userDetails.id,
+      mileageUsage: sql`ARRAY_AGG(JSON_BUILD_OBJECT(
+    'mileageId', ${mileage.mileageId},
+    'mileage',${mileage.mileage},
+    'mileageRate',${mileage.mileageRate},
+    'date', ${mileage.date},
+    'employeeId', ${mileage.employeeId},
+    'mileageNote', ${mileage.mileageNote},
+    'payPeriodId', ${mileage.payPeriodId}
+  ))`.as("mileage_usage"),
+    })
+    .from(mileage)
+    .fullJoin(userDetails, eq(mileage.employeeId, userDetails.id))
+    .where(
+      and(
+        eq(mileage.mileageHasBeenPaid, false),
+        eq(mileage.facilityId, sitelinkId)
+      )
+    )
+    .groupBy(userDetails.id)
+    .as("mileage_subquery");
   // Main query: Combine employee data with logins and activities and committed activities
   const result = await db
     .select({
@@ -295,6 +320,7 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
       activities: activitiesSubquery.activities,
       committedActivities: committedActivitiesSubquery.activities,
       vacation: vacationSubquery.vacationUsage,
+      mileage: mileageSubquery.mileageUsage,
     })
     .from(userDetails)
     .innerJoin(usersToFacilities, eq(userDetails.id, usersToFacilities.userId))
@@ -308,6 +334,7 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
       eq(userDetails.id, committedActivitiesSubquery.employeeId)
     )
     .leftJoin(vacationSubquery, eq(userDetails.id, vacationSubquery.employeeId))
+    .leftJoin(mileageSubquery, eq(userDetails.id, mileageSubquery.employeeId))
     .where(
       and(
         eq(usersToFacilities.storageFacilityId, sitelinkId),
@@ -318,6 +345,7 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
         )
       )
     );
+
   const employees = result.map((item) => {
     const typedItem = {
       ...item,
@@ -325,6 +353,7 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
       activities: item.activities as Activity[],
       committedActivities: item.committedActivities as Activity[],
       vacation: item.vacation as Vacations[],
+      mileage: item.mileage as Mileage[],
     };
 
     const sortedLogins = typedItem.logins.sort(
@@ -386,6 +415,7 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
     lastName: "",
     fullName: null,
     position: null,
+    mileage: [],
   };
   const finalEmployees = [...employees, unlinkedEntry];
   const { insuranceCommissionRate, storageCommissionRate } =

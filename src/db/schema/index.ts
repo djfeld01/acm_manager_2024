@@ -61,7 +61,11 @@ export {
 
 export { default as mileage, mileageRelations } from "@/db/schema/mileage";
 export { default as bonus, bonusRelations } from "@/db/schema/bonus";
-export { default as vacation, vacationRelations } from "@/db/schema/vacation";
+export {
+  default as vacation,
+  vacationRelations,
+  vacationTypeEnum,
+} from "@/db/schema/vacation";
 export {
   default as payrollNote,
   payrollNoteRelations,

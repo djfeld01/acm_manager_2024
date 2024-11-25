@@ -44,6 +44,7 @@ type EmployeeCardProps = {
   insuranceCommissionRate: number;
   employeeList: { userDetailId: string; firstName: string; lastName: string }[];
   refreshData: () => void;
+  sitelinkId: string;
 };
 
 function calculateCommission(
@@ -65,6 +66,7 @@ export function EmployeeCard({
   insuranceCommissionRate,
   employeeList,
   refreshData,
+  sitelinkId,
 }: EmployeeCardProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { position } = employee;
@@ -242,6 +244,7 @@ export function EmployeeCard({
             committedCommission={committedCommission}
             updateActivities={updateActivities}
             vacation={employee?.vacation || []}
+            mileage={employee?.mileage || []}
           />
         )}
         <EmployeeComissionComponent
@@ -255,11 +258,23 @@ export function EmployeeCard({
           updateActivities={updateActivities}
           refreshData={refreshData}
         />
-        <div className="grid grid-cols-2">
-          <EmployeeVacationComponent />
-          <EmployeeMileageComponent />
-          <div></div>
-        </div>
+
+        {employee.userDetailsId && (
+          <div className="grid grid-cols-2">
+            <EmployeeVacationComponent
+              sitelinkId={sitelinkId}
+              employeeId={employee.userDetailsId}
+              payPeriodId={nextPayPeriod.payPeriodId}
+            />
+            <EmployeeMileageComponent
+              sitelinkId={sitelinkId}
+              employeeId={employee.userDetailsId}
+              payPeriodId={nextPayPeriod.payPeriodId}
+            />
+            <div></div>
+          </div>
+        )}
+
         {employee.logins.length > 0 && (
           <EmployeeDaysWorkedComponent
             logins={employee?.logins || []}

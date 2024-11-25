@@ -7,9 +7,12 @@ import {
   text,
   boolean,
   index,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 import { payPeriod, storageFacilities, userDetails } from "@/db/schema";
-
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+export const vacationTypeEnum = pgEnum("vacation_type", ["USED", "EARNED"]);
 const vacation = pgTable(
   "vacation",
   {
@@ -22,6 +25,7 @@ const vacation = pgTable(
       .notNull()
       .references(() => storageFacilities.sitelinkId),
     vacationHours: real("vacation_hours").notNull(),
+    vacationHoursType: vacationTypeEnum("vacation_hours_type").notNull(),
     vacationNote: text("vacation_note"),
     payPeriodId: text("pay_period_id").references(() => payPeriod.payPeriodId),
     vacationHasBeenPaid: boolean("vacation_has_been_paid").default(false),
@@ -45,5 +49,12 @@ export const vacationRelations = relations(vacation, ({ one }) => ({
     references: [storageFacilities.sitelinkId],
   }),
 }));
+
+export const insertVacationSchema = createInsertSchema(vacation, {
+  vacationHours: z.string().transform((val) => parseFloat(val)),
+  date: z.date().transform((val) => val.toDateString()),
+});
+
+export type AddVacationHours = z.infer<typeof insertVacationSchema>;
 
 export default vacation;

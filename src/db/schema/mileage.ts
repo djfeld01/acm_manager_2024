@@ -9,6 +9,8 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { payPeriod, storageFacilities, userDetails } from "@/db/schema";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
 const mileage = pgTable(
   "mileage",
@@ -46,5 +48,11 @@ export const mileageRelations = relations(mileage, ({ one }) => ({
     references: [storageFacilities.sitelinkId],
   }),
 }));
+export const insertMileageSchema = createInsertSchema(mileage, {
+  mileage: z.string().transform((val) => parseFloat(val)),
+  date: z.date().transform((val) => val.toDateString()),
+});
+
+export type AddMileage = z.infer<typeof insertMileageSchema>;
 
 export default mileage;

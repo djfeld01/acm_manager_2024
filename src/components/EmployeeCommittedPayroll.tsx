@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   Activity,
+  Mileage,
   UserWithActivities,
   Vacations,
 } from "./EmployeeComissionComponent";
@@ -17,6 +18,7 @@ type EmployeeCommittedPayrollProps = {
   committedActivities: Activity[];
   committedCommission: number;
   vacation: Vacations[];
+  mileage: Mileage[];
   updateActivities: (buttonType: string, selectedActivities: number[]) => void;
 };
 function EmployeeCommittedPayroll({
@@ -24,12 +26,16 @@ function EmployeeCommittedPayroll({
   committedCommission,
   updateActivities,
   vacation,
+  mileage,
 }: EmployeeCommittedPayrollProps) {
   const [isOpen, setIsOpen] = useState(false);
   const vacationHours = vacation.reduce(
     (prev, item) => prev + item.vacationHours,
     0
   );
+  const mileagePaid = mileage.reduce((prev, item) => {
+    return prev + item.mileage * item.mileageRate;
+  }, 0);
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <div className="bg-gray-200 rounded-3xl">
@@ -45,6 +51,7 @@ function EmployeeCommittedPayroll({
               </div>
             </CollapsibleTrigger>
             <div>{vacationHours || 0}</div>
+            <div>${(mileagePaid || 0).toFixed(2)}</div>
           </div>
           <CollapsibleContent>
             {committedActivities.map((activity) => (

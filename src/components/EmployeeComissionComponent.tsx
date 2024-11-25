@@ -15,6 +15,13 @@ import {
 import next from "next";
 import EmployeeActivityData from "./EmployeeActivityData";
 
+export type Mileage = {
+  mileageId: string;
+  mileage: number;
+  date: string;
+  mileageNote?: string;
+  mileageRate: number;
+};
 export type Vacations = {
   vacationId: string;
   vacationHours: number;
@@ -62,6 +69,7 @@ export type UserWithActivities = {
   committedActivities: Activity[];
   logins: Logins[];
   vacation: Vacations[];
+  mileage: Mileage[];
 };
 type EmployeeCommissionComponentProps = {
   employee: UserWithActivities;
