@@ -11,9 +11,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  // const userId = headers().get("userId");
-  //console.log(userId);
-
   const response = await db.query.storageFacilities.findMany();
 
   return NextResponse.json(response || "EMPTY");

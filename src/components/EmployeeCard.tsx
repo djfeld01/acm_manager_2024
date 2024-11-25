@@ -35,6 +35,7 @@ import {
 } from "./ui/collapsible";
 import EmployeeVacationComponent from "./EmployeeVacationComponent";
 import EmployeeMileageComponent from "./EmployeeMileageComponent";
+import EmployeeDaysWorkedComponent from "./EmployeeDaysWorkedComponent";
 
 type EmployeeCardProps = {
   employee: UserWithActivities;
@@ -259,6 +260,12 @@ export function EmployeeCard({
           <EmployeeMileageComponent />
           <div></div>
         </div>
+        {employee.logins.length > 0 && (
+          <EmployeeDaysWorkedComponent
+            logins={employee?.logins || []}
+            nextPayPeriod={nextPayPeriod}
+          />
+        )}
       </CardContent>
     </Card>
 
