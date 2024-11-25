@@ -70,7 +70,7 @@ function EmployeeMileageComponent({
                 name="date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Vacation Date</FormLabel>
+                    <FormLabel>Mileage Date</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
