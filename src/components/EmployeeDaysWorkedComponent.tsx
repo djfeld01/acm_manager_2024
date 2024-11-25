@@ -13,8 +13,8 @@ type EmployeeDaysWorkedComponentProps = {
   nextPayPeriod: PayPeriod;
 };
 function generateDateRange(startDate: string, endDate: string) {
-  const startDateObj = new Date(startDate);
-  const endDateObj = new Date(endDate);
+  const startDateObj = new Date(`${startDate}T00:00:00-05:00`); // Eastern Time
+  const endDateObj = new Date(`${endDate}T00:00:00-05:00`); // Eastern Time
   const dateArray = [];
 
   for (
@@ -23,8 +23,9 @@ function generateDateRange(startDate: string, endDate: string) {
     date.setDate(date.getDate() + 1)
   ) {
     dateArray.push(
-      new Date(date).toLocaleDateString(undefined, {
+      new Date(date).toLocaleDateString("en-US", {
         month: "2-digit",
+        timeZone: "America/New_York",
         day: "2-digit",
       })
     );
@@ -37,6 +38,7 @@ function EmployeeDaysWorkedComponent({
   nextPayPeriod,
 }: EmployeeDaysWorkedComponentProps) {
   const [isOpen, setIsOpen] = useState(false);
+  console.log(logins);
   const daysWorked = logins.map((entry) =>
     new Date(entry.dateTime).toLocaleDateString(undefined, {
       month: "2-digit",
