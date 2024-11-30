@@ -92,6 +92,20 @@
       "when": 1732567917045,
       "tag": "0012_left_jack_power",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1732742137780,
+      "tag": "0013_dusty_banshee",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1733003544835,
+      "tag": "0014_fine_scourge",
+      "breakpoints": true
     }
   ]
 }

@@ -162,12 +162,6 @@ export async function getActivitiesByMonth2(
 }
 
 export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
-  // const nextPayPeriod = await db.query.payPeriod.findFirst({
-  //   where: (payPeriod, { gte }) =>
-  //     gte(payPeriod.processingDate, new Date().toDateString()),
-  //   orderBy: payPeriod.processingDate,
-  //   with: {tenantActivities:{}
-  // });
   const nextPayPeriodArray = await db
     .select()
     .from(payPeriod)
@@ -177,6 +171,8 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
   if (!nextPayPeriodArray) {
     throw new Error("No pay period found for the given criteria.");
   }
+  console.log("🚀 ~ nextPayPeriodArray:", nextPayPeriodArray);
+
   const { startDate, endDate } = nextPayPeriodArray[0];
   if (!endDate) {
     throw new Error("No End Date");

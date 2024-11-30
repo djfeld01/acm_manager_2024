@@ -70,4 +70,9 @@ export {
   default as payrollNote,
   payrollNoteRelations,
 } from "@/db/schema/payrollNote";
-// export { default as logonWithFacilityUserView } from "@/db/schema/views/logonWithFacityUserView";
+
+export {
+  default as dailyManagementReceivable,
+  dailyManagementReceivableRelations,
+  receivablePeriodTypeEnum,
+} from "@/db/schema/dailyManagementReceivable";

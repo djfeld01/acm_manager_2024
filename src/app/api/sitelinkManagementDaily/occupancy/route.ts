@@ -21,10 +21,23 @@ export type SitelinkManagementDailyOccupancy = {
   unrentableSquareFootage: number;
   totalSquareFootage: number;
 }[];
-export async function POST(req: NextRequest) {
-  const body: SitelinkManagementDailyOccupancy = await req.json();
+export type SitelinkManagementDailyReceivable = {
+  facilityId: string;
+  date: string;
+  period: string;
+  delinquentTotal: number;
+  delinquentUnits: number;
+}[];
 
-  const toInsert = body.map((facilityOccupancy) => {
+export type BodyType = {
+  occupancy: SitelinkManagementDailyOccupancy;
+  receivable: SitelinkManagementDailyReceivable;
+};
+export async function POST(req: NextRequest) {
+  const body: BodyType = await req.json();
+  const { occupancy, receivable } = body;
+
+  const toInsert = occupancy.map((facilityOccupancy) => {
     return {
       facilityId: facilityOccupancy.facilityId,
       date: facilityOccupancy.date,

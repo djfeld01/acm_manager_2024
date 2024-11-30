@@ -61,7 +61,7 @@ const tenantActivities = pgTable(
   },
   (table) => ({
     dateIndex: index().on(table.date),
-    uniqueActivity: unique().on(table.date, table.tenantName),
+    uniqueActivity: unique().on(table.date, table.unitName),
   })
 );
 

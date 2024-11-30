@@ -1,7 +1,8 @@
 import GoalChart from "@/components/GoalChart";
 import { db } from "@/db";
 import { payPeriod, tenantActivities } from "@/db/schema";
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, lt, sql } from "drizzle-orm";
+// import { parse as parseOFX } from "ofx-js";
 
 function generatePayPeriods(startDate: string, endYear: number) {
   const payPeriods = [];
@@ -45,6 +46,279 @@ export default async function YourPage() {
   //   );
   // console.log("🚀 ~ YourPage ~ updateDB:", updateDB);
 
+  // const insuranceSignups = await db.query.storageFacilities.findMany({
+  //   with: {
+  //     tenantActivities: {
+  //       where: (tenantActivities, { eq, and, gte }) =>
+  //         and(
+  //           eq(tenantActivities.activityType, "MoveIn"),
+  //           gte(tenantActivities.date, new Date("01-01-2023"))
+  //         ),
+  //     },
+  //   },
+  // });
+
+  // const storeArray = insuranceSignups
+  //   .map((location) => {
+  //     return {
+  //       location: location.facilityAbbreviation,
+  //       percentageWithInsurance:
+  //         (location.tenantActivities.filter((moveIn) => moveIn.hasInsurance)
+  //           .length /
+  //           location.tenantActivities.length) *
+  //         100,
+  //       totalMoveins: location.tenantActivities.length,
+  //     };
+  //   })
+  //   .sort((a, b) => a.percentageWithInsurance - b.percentageWithInsurance);
+  // console.log(
+  //   "🚀 ~ YourPage ~ storeArray:",
+  //   JSON.stringify(storeArray, null, 4)
+  // );
+
+  // const findDuplicates = await db
+  //   .select({
+  //     tenant_unit: tenantActivities.unitName,
+  //     date: tenantActivities.date,
+  //     count: sql<number>`COUNT(*)`, // Use raw SQL for the COUNT function
+  //   })
+  //   .from(tenantActivities)
+  //   .groupBy(tenantActivities.unitName, tenantActivities.date)
+  //   .having(sql`COUNT(*) > 1`); // Filter groups with more than one occurrence
+
+  // console.log("🚀 ~ YourPage ~ findDuplicates:", findDuplicates);
+
+  //   function parseQFXDate(dtPosted: string) {
+  //     // Extract the numeric portion before the `[0:GMT]`
+  //     const dateString = dtPosted.split("[")[0];
+
+  //     // Extract components from the date string
+  //     const year = parseInt(dateString.slice(0, 4), 10);
+  //     const month = parseInt(dateString.slice(4, 6), 10) - 1; // JavaScript months are 0-based
+  //     const day = parseInt(dateString.slice(6, 8), 10);
+  //     const hours = parseInt(dateString.slice(8, 10), 10);
+  //     const minutes = parseInt(dateString.slice(10, 12), 10);
+  //     const seconds = parseInt(dateString.slice(12, 14), 10);
+
+  //     // Create a Date object in UTC
+  //     return new Date(Date.UTC(year, month, day, hours, minutes, seconds));
+  //   }
+
+  //   const ofxString = `
+  // OFXHEADER:100
+  // DATA:OFXSGML
+  // VERSION:102
+  // SECURITY:NONE
+  // ENCODING:USASCII
+  // CHARSET:1252
+  // COMPRESSION:NONE
+  // OLDFILEUID:NONE
+  // NEWFILEUID:NONE
+  // <OFX>
+  // <SIGNONMSGSRSV1>
+  // <SONRS>
+  // <STATUS>
+  // <CODE>0
+  // <SEVERITY>INFO
+  // </STATUS>
+  // <DTSERVER>20241127120000[0:GMT]
+  // <LANGUAGE>ENG
+  // <FI>
+  // <ORG>B1
+  // <FID>10898
+  // </FI>
+  // <INTU.BID>2430
+  // </SONRS>
+  // </SIGNONMSGSRSV1>
+  // <BANKMSGSRSV1>
+  // <STMTTRNRS>
+  // <TRNUID>1
+  // <STATUS>
+  // <CODE>0
+  // <SEVERITY>INFO
+  // <MESSAGE>Success
+  // </STATUS>
+  // <STMTRS>
+  // <CURDEF>USD
+  // <BANKACCTFROM>
+  // <BANKID>322271627
+  // <ACCTID>360951807
+  // <ACCTTYPE>CHECKING
+  // </BANKACCTFROM>
+  // <BANKTRANLIST>
+  // <DTSTART>20241121120000[0:GMT]
+  // <DTEND>20241126120000[0:GMT]
+  // <STMTTRN>
+  // <TRNTYPE>CREDIT
+  // <DTPOSTED>20241126120000[0:GMT]
+  // <TRNAMT>281.00
+  // <FITID>202411260
+  // <NAME>ORIG CO NAME:MerchPayout SV9T
+  // <MEMO>ORIG ID:1043575881 DESC DATE:241
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CHECK
+  // <DTPOSTED>20241126120000[0:GMT]
+  // <TRNAMT>-70.00
+  // <FITID>202411261
+  // <CHECKNUM>4195
+  // <NAME>CHECK 4195
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CHECK
+  // <DTPOSTED>20241126120000[0:GMT]
+  // <TRNAMT>-278.71
+  // <FITID>202411262
+  // <CHECKNUM>4199
+  // <NAME>CHECK 4199
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CHECK
+  // <DTPOSTED>20241126120000[0:GMT]
+  // <TRNAMT>-30.00
+  // <FITID>202411263
+  // <CHECKNUM>4192
+  // <NAME>CHECK 4192
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CHECK
+  // <DTPOSTED>20241126120000[0:GMT]
+  // <TRNAMT>-342.31
+  // <FITID>202411264
+  // <CHECKNUM>4193
+  // <NAME>CHECK 4193
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CREDIT
+  // <DTPOSTED>20241125120000[0:GMT]
+  // <TRNAMT>680.52
+  // <FITID>202411250
+  // <NAME>DEPOSIT
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CREDIT
+  // <DTPOSTED>20241125120000[0:GMT]
+  // <TRNAMT>1176.63
+  // <FITID>202411251
+  // <NAME>ORIG CO NAME:MerchPayout SV9T
+  // <MEMO>ORIG ID:1043575881 DESC DATE:241
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CREDIT
+  // <DTPOSTED>20241125120000[0:GMT]
+  // <TRNAMT>949.15
+  // <FITID>202411252
+  // <NAME>ORIG CO NAME:MerchPayout SV9T
+  // <MEMO>ORIG ID:1043575881 DESC DATE:241
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CREDIT
+  // <DTPOSTED>20241125120000[0:GMT]
+  // <TRNAMT>753.32
+  // <FITID>202411253
+  // <NAME>ORIG CO NAME:MerchPayout SV9T
+  // <MEMO>ORIG ID:1043575881 DESC DATE:241
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>DEBIT
+  // <DTPOSTED>20241125120000[0:GMT]
+  // <TRNAMT>-11.15
+  // <FITID>202411254
+  // <NAME>ORIG CO NAME:QUILL CORPORATIO
+  // <MEMO>ORIG ID:3629529041 DESC DATE:112
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>DEBIT
+  // <DTPOSTED>20241125120000[0:GMT]
+  // <TRNAMT>-101.56
+  // <FITID>202411255
+  // <NAME>ORIG CO NAME:NIPSCO ACCOUNTS
+  // <MEMO>ORIG ID:0000000160 DESC DATE:241
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CHECK
+  // <DTPOSTED>20241125120000[0:GMT]
+  // <TRNAMT>-84.00
+  // <FITID>202411256
+  // <CHECKNUM>4196
+  // <NAME>CHECK 4196
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CREDIT
+  // <DTPOSTED>20241122120000[0:GMT]
+  // <TRNAMT>102.00
+  // <FITID>202411220
+  // <NAME>DEPOSIT
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CREDIT
+  // <DTPOSTED>20241122120000[0:GMT]
+  // <TRNAMT>73.00
+  // <FITID>202411221
+  // <NAME>DEPOSIT
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CREDIT
+  // <DTPOSTED>20241122120000[0:GMT]
+  // <TRNAMT>200.96
+  // <FITID>202411222
+  // <NAME>ORIG CO NAME:MerchPayout SV9T
+  // <MEMO>ORIG ID:1043575881 DESC DATE:241
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CREDIT
+  // <DTPOSTED>20241121120000[0:GMT]
+  // <TRNAMT>122.50
+  // <FITID>202411210
+  // <NAME>ORIG CO NAME:MerchPayout SV9T
+  // <MEMO>ORIG ID:1043575881 DESC DATE:241
+  // </STMTTRN>
+  // <STMTTRN>
+  // <TRNTYPE>CHECK
+  // <DTPOSTED>20241121120000[0:GMT]
+  // <TRNAMT>-900.00
+  // <FITID>202411211
+  // <CHECKNUM>4190
+  // <NAME>CHECK 4190
+  // </STMTTRN>
+  // </BANKTRANLIST>
+  // <LEDGERBAL>
+  // <BALAMT>112105.13
+  // <DTASOF>20241127120000[0:GMT]
+  // </LEDGERBAL>
+  // <AVAILBAL>
+  // <BALAMT>110736.90
+  // <DTASOF>20241127120000[0:GMT]
+  // </AVAILBAL>
+  // </STMTRS>
+  // </STMTTRNRS>
+  // </BANKMSGSRSV1>
+  // </OFX>`;
+
+  //   const { transactionStatement, accountId } = await parseOFX(ofxString).then(
+  //     (ofxData) => {
+  //       const statementResponse = ofxData.OFX.BANKMSGSRSV1.STMTTRNRS.STMTRS;
+  //       const accountId = statementResponse.BANKACCTFROM.ACCTID;
+  //       //const currencyCode = (currencyCode = statementResponse.CURDEF);
+  //       const transactionStatement = statementResponse.BANKTRANLIST.STMTTRN;
+  //       // do something...
+
+  //       return { transactionStatement, accountId };
+  //     }
+  //   );
+
+  //   const deposits = transactionStatement.filter(
+  //     (transaction) => transaction.NAME === "DEPOSIT"
+  //   );
+  //   const transactionJSON = transactionStatement.map((transaction) => ({
+  //     ID: transaction.FITID,
+  //     Date: parseQFXDate(transaction.DTPOSTED),
+  //     type: transaction.TRNTYPE,
+  //     amount: transaction.TRNAMT,
+  //     account: accountId,
+  //   }));
+
+  // console.log("🚀 ~ transactionJSON ~ transactionJSON:", transactionJSON);
   return (
     <div className="container mx-auto p-4">
       {/* Banner Section */}

@@ -1,0 +1,2 @@
+ALTER TABLE "tenant_activity" DROP CONSTRAINT "tenant_activity_date_tenant_name_unique";--> statement-breakpoint
+ALTER TABLE "tenant_activity" ADD CONSTRAINT "tenant_activity_date_unit_name_unique" UNIQUE("date","unit_name");
