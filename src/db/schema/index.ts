@@ -74,5 +74,5 @@ export {
 export {
   default as dailyManagementReceivable,
   dailyManagementReceivableRelations,
-  receivablePeriodTypeEnum,
+  //receivablePeriodTypeEnum,
 } from "@/db/schema/dailyManagementReceivable";

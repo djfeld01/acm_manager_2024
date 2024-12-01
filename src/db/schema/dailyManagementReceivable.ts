@@ -10,19 +10,20 @@ import {
   primaryKey,
   timestamp,
   pgEnum,
+  integer,
 } from "drizzle-orm/pg-core";
 import { storageFacilities } from "@/db/schema";
 
-export const receivablePeriodTypeEnum = pgEnum("recievable_period", [
-  "zeroToTen",
-  "elevenToThirty",
-  "thirtyOneToSixty",
-  "sixtyToNinety",
-  "ninetyOneToOneTwenty",
-  "oneTwentyToOneEighty",
-  "oneEightyOneToThreeSixty",
-  "overThreeSixty",
-]);
+// export const receivablePeriodTypeEnum = pgEnum("recievable_period", [
+//   "zeroToTen",
+//   "elevenToThirty",
+//   "thirtyOneToSixty",
+//   "sixtyToNinety",
+//   "ninetyOneToOneTwenty",
+//   "oneTwentyToOneEighty",
+//   "oneEightyOneToThreeSixty",
+//   "overThreeSixty",
+// ]);
 
 const dailyManagementReceivable = pgTable(
   "daily_management_receivable",
@@ -31,9 +32,10 @@ const dailyManagementReceivable = pgTable(
       .notNull()
       .references(() => storageFacilities.sitelinkId),
     date: date("date").notNull(),
-    period: receivablePeriodTypeEnum("period").notNull(),
     delinquentTotal: real("delinquent_total").notNull(),
     delinquentUnits: real("delinquent_units").notNull(),
+    lowerDayRange: integer("lower_day_range").notNull(),
+    upperDayRange: integer("upper_day_range").notNull(),
     dateCreated: timestamp("date_created", {
       precision: 6,
       withTimezone: true,

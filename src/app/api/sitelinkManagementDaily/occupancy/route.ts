@@ -1,5 +1,8 @@
 import { db } from "@/db";
-import { dailyManagementOccupancy } from "@/db/schema";
+import {
+  dailyManagementOccupancy,
+  dailyManagementReceivable,
+} from "@/db/schema";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { interval } from "drizzle-orm/pg-core";
 import { NextRequest, NextResponse } from "next/server";
@@ -33,11 +36,47 @@ export type BodyType = {
   occupancy: SitelinkManagementDailyOccupancy;
   receivable: SitelinkManagementDailyReceivable;
 };
+
+// const receivablePeriod={
+//   "0-10": "zeroToTen",
+//   "11-30":"elevenToThirty",
+//   "31-60": "thirtyOneToSixty",
+//   "61-90":"sixtyToNinety",
+//   "ninetyOneToOneTwenty",
+//   "oneTwentyToOneEighty",
+//   "oneEightyOneToThreeSixty",
+//   "overThreeSixty",
+
+// }
+
+function getDayRange(period: string) {
+  switch (period) {
+    case "0-10":
+      return { lowerDayRange: 0, upperDayRange: 10 };
+    case "11-30":
+      return { lowerDayRange: 11, upperDayRange: 30 };
+    case "31-60":
+      return { lowerDayRange: 31, upperDayRange: 60 };
+    case "61-90":
+      return { lowerDayRange: 61, upperDayRange: 90 };
+    case "91-120":
+      return { lowerDayRange: 91, upperDayRange: 120 };
+    case "121-180":
+      return { lowerDayRange: 121, upperDayRange: 180 };
+    case "181-360":
+      return { lowerDayRange: 181, upperDayRange: 360 };
+    case ">360":
+      return { lowerDayRange: 361, upperDayRange: 1000 };
+    default:
+      return { lowerDayRange: 10000, upperDayRange: 10000 };
+  }
+}
+
 export async function POST(req: NextRequest) {
   const body: BodyType = await req.json();
   const { occupancy, receivable } = body;
 
-  const toInsert = occupancy.map((facilityOccupancy) => {
+  const occupancyToInsert = occupancy.map((facilityOccupancy) => {
     return {
       facilityId: facilityOccupancy.facilityId,
       date: facilityOccupancy.date,
@@ -59,13 +98,45 @@ export async function POST(req: NextRequest) {
     };
   });
 
+  const receivableToInsert = receivable.map((facilityReceivable) => {
+    const { lowerDayRange, upperDayRange } = getDayRange(
+      facilityReceivable.period
+    );
+
+    return {
+      facilityId: facilityReceivable.facilityId,
+      date: facilityReceivable.date,
+      lowerDayRange,
+      upperDayRange,
+      delinquentTotal: facilityReceivable.delinquentTotal,
+      delinquentUnits: facilityReceivable.delinquentUnits,
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
+    };
+  });
+  await db
+    .insert(dailyManagementReceivable)
+    .values(receivableToInsert)
+    .onConflictDoUpdate({
+      target: [
+        dailyManagementReceivable.facilityId,
+        dailyManagementReceivable.date,
+      ],
+      set: {
+        lowerDayRange: sql.raw(`excluded.lower_day_range`),
+        upperDayRange: sql.raw(`excluded.upper_day_range`),
+        delinquentTotal: sql.raw(`excluded.delinquent_total`),
+        delinquentUnits: sql.raw(`excluded.delinquent_units`),
+        dateUpdated: new Date(),
+      },
+    });
   //   const data = {
   //     ...body,
   //     date: body.date.toISOString(), // Convert Date to string
   //   };
   await db
     .insert(dailyManagementOccupancy)
-    .values(toInsert)
+    .values(occupancyToInsert)
     .onConflictDoUpdate({
       target: [
         dailyManagementOccupancy.facilityId,

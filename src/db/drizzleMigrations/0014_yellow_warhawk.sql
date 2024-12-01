@@ -1,15 +1,10 @@
-DO $$ BEGIN
- CREATE TYPE "public"."recievable_period" AS ENUM('zeroToTen', 'elevenToThirty', 'thirtyOneToSixty', 'sixtyToNinety', 'ninetyOneToOneTwenty', 'oneTwentyToOneEighty', 'oneEightyOneToThreeSixty', 'overThreeSixty');
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "daily_management_receivable" (
 	"facility_id" varchar NOT NULL,
 	"date" date NOT NULL,
-	"period" "recievable_period" NOT NULL,
 	"delinquent_total" real NOT NULL,
 	"delinquent_units" real NOT NULL,
+	"lower_day_range" integer NOT NULL,
+	"upper_day_range" integer NOT NULL,
 	"date_created" timestamp (6) with time zone,
 	"date_updated" timestamp (6) with time zone,
 	CONSTRAINT "daily_management_receivable_facility_id_date_pk" PRIMARY KEY("facility_id","date")

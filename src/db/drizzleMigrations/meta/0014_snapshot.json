@@ -1,5 +1,5 @@
 {
-  "id": "2ad3dd87-d839-4ee7-b129-f912b7eb418b",
+  "id": "fd4aa014-d934-4e26-8cbd-d95a9690838e",
   "prevId": "c5017a5c-cc7a-4acc-939c-64344c9e1e61",
   "version": "7",
   "dialect": "postgresql",
@@ -389,13 +389,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "period": {
-          "name": "period",
-          "type": "recievable_period",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
         "delinquent_total": {
           "name": "delinquent_total",
           "type": "real",
@@ -405,6 +398,18 @@
         "delinquent_units": {
           "name": "delinquent_units",
           "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lower_day_range": {
+          "name": "lower_day_range",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "upper_day_range": {
+          "name": "upper_day_range",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -1866,20 +1871,6 @@
         "MANAGER",
         "ASSISTANT",
         "STORE_OWNER"
-      ]
-    },
-    "public.recievable_period": {
-      "name": "recievable_period",
-      "schema": "public",
-      "values": [
-        "zeroToTen",
-        "elevenToThirty",
-        "thirtyOneToSixty",
-        "sixtyToNinety",
-        "ninetyOneToOneTwenty",
-        "oneTwentyToOneEighty",
-        "oneEightyOneToThreeSixty",
-        "overThreeSixty"
       ]
     },
     "public.role": {
