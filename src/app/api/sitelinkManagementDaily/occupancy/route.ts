@@ -134,6 +134,7 @@ export async function POST(req: NextRequest) {
       dailyTotal: facilityActivity.dailyTotal,
       monthlyTotal: facilityActivity.monthlyTotal,
       yearlyTotal: facilityActivity.yearlyTotal,
+      sortId: facilityActivity.sortId,
       dateCreated: new Date(),
       dateUpdated: new Date(),
     };
@@ -152,6 +153,7 @@ export async function POST(req: NextRequest) {
         dailyTotal: sql.raw(`excluded.daily_total`),
         monthlyTotal: sql.raw(`excluded.monthly_total`),
         yearlyTotal: sql.raw(`excluded.yearly_total`),
+        sortId: sql.raw(`excluded.sort_id`),
       },
     });
   await db
