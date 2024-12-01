@@ -8,31 +8,49 @@ import {
   numeric,
   unique,
   primaryKey,
+  pgEnum,
+  integer,
+  timestamp,
 } from "drizzle-orm/pg-core";
 import { storageFacilities } from "@/db/schema";
 
-const dailyManagementOccupancy = pgTable(
-  "daily_management_occupancy",
+const dailyManagementActivity = pgTable(
+  "daily_management_activity",
   {
     facilityId: varchar("facility_id")
       .notNull()
       .references(() => storageFacilities.sitelinkId),
+    activityType: varchar("activityType").notNull(),
+    dailyTotal: integer("daily_total").notNull(),
+    monthlyTotal: integer("monthly_total").notNull(),
+    yearlyTotal: integer("yearly_total").notNull(),
     date: date("date").notNull(),
+    sortId: integer("sort_id"),
+    dateCreated: timestamp("date_created", {
+      precision: 6,
+      withTimezone: true,
+    }),
+    dateUpdated: timestamp("date_updated", {
+      precision: 6,
+      withTimezone: true,
+    }),
   },
   (table) => ({
     dateIndex: index().on(table.date),
-    pkDateFacility: primaryKey({ columns: [table.facilityId, table.date] }),
+    pkDateFacility: primaryKey({
+      columns: [table.facilityId, table.date, table.activityType],
+    }),
   })
 );
 
-export const dailyManagementOccupancyRelations = relations(
-  dailyManagementOccupancy,
+export const dailyManagementActivityRelations = relations(
+  dailyManagementActivity,
   ({ one }) => ({
     facility: one(storageFacilities, {
-      fields: [dailyManagementOccupancy.facilityId],
+      fields: [dailyManagementActivity.facilityId],
       references: [storageFacilities.sitelinkId],
     }),
   })
 );
 
-export default dailyManagementOccupancy;
+export default dailyManagementActivity;

@@ -1,0 +1,2 @@
+ALTER TABLE "daily_management_activity" ADD COLUMN "date_created" timestamp (6) with time zone;--> statement-breakpoint
+ALTER TABLE "daily_management_activity" ADD COLUMN "date_updated" timestamp (6) with time zone;

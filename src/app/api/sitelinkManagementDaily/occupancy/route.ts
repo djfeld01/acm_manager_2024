@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import {
+  dailyManagementActivity,
   dailyManagementOccupancy,
   dailyManagementReceivable,
 } from "@/db/schema";
@@ -31,10 +32,20 @@ export type SitelinkManagementDailyReceivable = {
   delinquentTotal: number;
   delinquentUnits: number;
 }[];
+export type SitelinkManagementDailyActivity = {
+  facilityId: string;
+  date: string;
+  sortId: number;
+  activityType: string;
+  dailyTotal: number;
+  monthlyTotal: number;
+  yearlyTotal: number;
+}[];
 
 export type BodyType = {
   occupancy: SitelinkManagementDailyOccupancy;
   receivable: SitelinkManagementDailyReceivable;
+  activity: SitelinkManagementDailyActivity;
 };
 
 // const receivablePeriod={
@@ -74,7 +85,7 @@ function getDayRange(period: string) {
 
 export async function POST(req: NextRequest) {
   const body: BodyType = await req.json();
-  const { occupancy, receivable } = body;
+  const { occupancy, receivable, activity } = body;
 
   const occupancyToInsert = occupancy.map((facilityOccupancy) => {
     return {
@@ -114,6 +125,35 @@ export async function POST(req: NextRequest) {
       dateUpdated: new Date(),
     };
   });
+
+  const activityToInsert = activity.map((facilityActivity) => {
+    return {
+      facilityId: facilityActivity.facilityId,
+      date: facilityActivity.date,
+      activityType: facilityActivity.activityType,
+      dailyTotal: facilityActivity.dailyTotal,
+      monthlyTotal: facilityActivity.monthlyTotal,
+      yearlyTotal: facilityActivity.yearlyTotal,
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
+    };
+  });
+
+  await db
+    .insert(dailyManagementActivity)
+    .values(activityToInsert)
+    .onConflictDoUpdate({
+      target: [
+        dailyManagementActivity.facilityId,
+        dailyManagementActivity.date,
+        dailyManagementActivity.activityType,
+      ],
+      set: {
+        dailyTotal: sql.raw(`excluded.daily_total`),
+        monthlyTotal: sql.raw(`excluded.monthly_total`),
+        yearlyTotal: sql.raw(`excluded.yearly_total`),
+      },
+    });
   await db
     .insert(dailyManagementReceivable)
     .values(receivableToInsert)

@@ -76,3 +76,8 @@ export {
   dailyManagementReceivableRelations,
   //receivablePeriodTypeEnum,
 } from "@/db/schema/dailyManagementReceivable";
+export {
+  default as dailyManagementActivity,
+  dailyManagementActivityRelations,
+  //ActivityPeriodTypeEnum,
+} from "@/db/schema/dailyManagementActivity";
