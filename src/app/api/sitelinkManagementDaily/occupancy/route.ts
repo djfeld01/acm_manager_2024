@@ -121,10 +121,10 @@ export async function POST(req: NextRequest) {
       target: [
         dailyManagementReceivable.facilityId,
         dailyManagementReceivable.date,
+        dailyManagementReceivable.lowerDayRange,
+        dailyManagementReceivable.upperDayRange,
       ],
       set: {
-        lowerDayRange: sql.raw(`excluded.lower_day_range`),
-        upperDayRange: sql.raw(`excluded.upper_day_range`),
         delinquentTotal: sql.raw(`excluded.delinquent_total`),
         delinquentUnits: sql.raw(`excluded.delinquent_units`),
         dateUpdated: new Date(),

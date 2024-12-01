@@ -47,7 +47,14 @@ const dailyManagementReceivable = pgTable(
   },
   (table) => ({
     dateIndex: index().on(table.date),
-    pkDateFacility: primaryKey({ columns: [table.facilityId, table.date] }),
+    pkDateFacility: primaryKey({
+      columns: [
+        table.facilityId,
+        table.date,
+        table.lowerDayRange,
+        table.upperDayRange,
+      ],
+    }),
   })
 );
 

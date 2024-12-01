@@ -1,0 +1,2 @@
+ALTER TABLE "daily_management_receivable" DROP CONSTRAINT "daily_management_receivable_facility_id_date_pk";--> statement-breakpoint
+ALTER TABLE "daily_management_receivable" ADD CONSTRAINT "daily_management_receivable_facility_id_date_lower_day_range_upper_day_range_pk" PRIMARY KEY("facility_id","date","lower_day_range","upper_day_range");
