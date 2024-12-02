@@ -238,7 +238,7 @@ export function EmployeeCard({
       </CardTitle>
       <CardDescription>{employee?.position || "NA"}</CardDescription>{" "}
       <CardContent>
-        {employee.fullName && (
+        {employee.userDetailsId && (
           <EmployeeCommittedPayroll
             committedActivities={committedActivities}
             committedCommission={committedCommission}

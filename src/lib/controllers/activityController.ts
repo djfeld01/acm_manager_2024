@@ -171,7 +171,6 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
   if (!nextPayPeriodArray) {
     throw new Error("No pay period found for the given criteria.");
   }
-  console.log("🚀 ~ nextPayPeriodArray:", nextPayPeriodArray);
 
   const { startDate, endDate } = nextPayPeriodArray[0];
   if (!endDate) {
@@ -274,7 +273,7 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
     .fullJoin(userDetails, eq(vacation.employeeId, userDetails.id))
     .where(
       and(
-        eq(vacation.vacationHasBeenPaid, false),
+        eq(vacation.payPeriodId, nextPayPeriod.payPeriodId),
         eq(vacation.facilityId, sitelinkId)
       )
     )
@@ -298,7 +297,7 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
     .fullJoin(userDetails, eq(mileage.employeeId, userDetails.id))
     .where(
       and(
-        eq(mileage.mileageHasBeenPaid, false),
+        eq(mileage.payPeriodId, nextPayPeriod.payPeriodId),
         eq(mileage.facilityId, sitelinkId)
       )
     )

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import {
   dailyManagementActivity,
   dailyManagementOccupancy,
+  dailyManagementPaymentReceipt,
   dailyManagementReceivable,
   monthlyGoals,
   payPeriod,
@@ -364,6 +365,19 @@ export default async function YourPage() {
       monthlyGoals: {
         where: (monthlyGoals, { eq }) =>
           eq(monthlyGoals.month, new Date("2024-11-01")),
+      },
+      dailyManagementPaymentReceipt: {
+        limit: 1,
+        orderBy: desc(dailyManagementPaymentReceipt.date),
+        where: (dailyManagementPaymentReceipt, { and, lte, eq }) =>
+          and(
+            lte(dailyManagementPaymentReceipt.date, "2024-11-30"),
+            eq(dailyManagementPaymentReceipt.description, "Merchandise")
+          ),
+        columns: {
+          description: true,
+          monthlyAmount: true,
+        },
       },
     },
   });
