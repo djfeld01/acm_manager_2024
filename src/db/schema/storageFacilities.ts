@@ -14,7 +14,10 @@ import {
   monthlyGoals,
   dailyManagementOccupancy,
   usersToFacilities,
+  dailyManagementActivity,
+  dailyManagementReceivable,
 } from "@/db/schema";
+import dailyManagementPaymentReceipt from "./dailyManagementPaymentReceipt";
 
 const storageFacilities = pgTable(
   "storage_facility",
@@ -53,6 +56,9 @@ export const storageFacilitiesRelations = relations(
     quickbooksBalance: many(quickbooksBalance),
     monthlyGoals: many(monthlyGoals),
     dailyManagementOccupancy: many(dailyManagementOccupancy),
+    dailyManagementActivity: many(dailyManagementActivity),
+    dailyManagementReceivable: many(dailyManagementReceivable),
+    dailyManagementPaymentReceipt: many(dailyManagementPaymentReceipt),
   })
 );
 

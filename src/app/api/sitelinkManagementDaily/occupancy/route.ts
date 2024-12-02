@@ -2,6 +2,7 @@ import { db } from "@/db";
 import {
   dailyManagementActivity,
   dailyManagementOccupancy,
+  dailyManagementPaymentReceipt,
   dailyManagementReceivable,
 } from "@/db/schema";
 import { asc, desc, eq, sql } from "drizzle-orm";
@@ -41,24 +42,22 @@ export type SitelinkManagementDailyActivity = {
   monthlyTotal: number;
   yearlyTotal: number;
 }[];
+export type SitelinkManagementPaymentReceipt = {
+  facilityId: string;
+  date: string;
+  sortId: number;
+  description: string;
+  dailyAmount: number;
+  monthlyAmount: number;
+  yearlyAmount: number;
+}[];
 
 export type BodyType = {
   occupancy: SitelinkManagementDailyOccupancy;
   receivable: SitelinkManagementDailyReceivable;
   activity: SitelinkManagementDailyActivity;
+  paymentReceipt: SitelinkManagementPaymentReceipt;
 };
-
-// const receivablePeriod={
-//   "0-10": "zeroToTen",
-//   "11-30":"elevenToThirty",
-//   "31-60": "thirtyOneToSixty",
-//   "61-90":"sixtyToNinety",
-//   "ninetyOneToOneTwenty",
-//   "oneTwentyToOneEighty",
-//   "oneEightyOneToThreeSixty",
-//   "overThreeSixty",
-
-// }
 
 function getDayRange(period: string) {
   switch (period) {
@@ -85,7 +84,7 @@ function getDayRange(period: string) {
 
 export async function POST(req: NextRequest) {
   const body: BodyType = await req.json();
-  const { occupancy, receivable, activity } = body;
+  const { occupancy, receivable, activity, paymentReceipt } = body;
 
   const occupancyToInsert = occupancy.map((facilityOccupancy) => {
     return {
@@ -140,6 +139,37 @@ export async function POST(req: NextRequest) {
     };
   });
 
+  const paymentReceiptToInsert = paymentReceipt.map((paymentReceipt) => {
+    return {
+      facilityId: paymentReceipt.facilityId,
+      date: paymentReceipt.date,
+      description: paymentReceipt.description,
+      dailyAmount: paymentReceipt.dailyAmount,
+      monthlyAmount: paymentReceipt.monthlyAmount,
+      yearlyAmount: paymentReceipt.yearlyAmount,
+      sortId: paymentReceipt.sortId,
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
+    };
+  });
+
+  await db
+    .insert(dailyManagementPaymentReceipt)
+    .values(paymentReceiptToInsert)
+    .onConflictDoUpdate({
+      target: [
+        dailyManagementPaymentReceipt.facilityId,
+        dailyManagementPaymentReceipt.date,
+        dailyManagementPaymentReceipt.description,
+      ],
+      set: {
+        dailyAmount: sql.raw(`excluded.daily_amount`),
+        monthlyAmount: sql.raw(`excluded.monthly_amount`),
+        yearlyAmount: sql.raw(`excluded.yearly_amount`),
+        sortId: sql.raw(`excluded.sort_id`),
+        dateUpdated: new Date(),
+      },
+    });
   await db
     .insert(dailyManagementActivity)
     .values(activityToInsert)
@@ -154,6 +184,7 @@ export async function POST(req: NextRequest) {
         monthlyTotal: sql.raw(`excluded.monthly_total`),
         yearlyTotal: sql.raw(`excluded.yearly_total`),
         sortId: sql.raw(`excluded.sort_id`),
+        dateUpdated: new Date(),
       },
     });
   await db

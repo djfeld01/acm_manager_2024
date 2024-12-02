@@ -1,7 +1,14 @@
 import GoalChart from "@/components/GoalChart";
 import { db } from "@/db";
-import { payPeriod, tenantActivities } from "@/db/schema";
-import { and, eq, lt, sql } from "drizzle-orm";
+import {
+  dailyManagementActivity,
+  dailyManagementOccupancy,
+  dailyManagementReceivable,
+  monthlyGoals,
+  payPeriod,
+  tenantActivities,
+} from "@/db/schema";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
 // import { parse as parseOFX } from "ofx-js";
 
 function generatePayPeriods(startDate: string, endYear: number) {
@@ -319,6 +326,52 @@ export default async function YourPage() {
   //   }));
 
   // console.log("🚀 ~ transactionJSON ~ transactionJSON:", transactionJSON);
+
+  const getMonthlyStuff = await db.query.storageFacilities.findMany({
+    columns: { facilityAbbreviation: true, sitelinkId: true },
+    with: {
+      dailyManagementReceivable: {
+        limit: 3,
+        orderBy: desc(dailyManagementReceivable.date),
+        where: (dailyManagementReceivable, { and, lte }) =>
+          and(
+            lte(dailyManagementReceivable.date, "2024-11-30"),
+            lte(dailyManagementReceivable.upperDayRange, 60)
+          ),
+        columns: {
+          delinquentTotal: true,
+          delinquentUnits: true,
+          upperDayRange: true,
+        },
+      },
+      dailyManagementOccupancy: {
+        limit: 1,
+        orderBy: desc(dailyManagementOccupancy.date),
+        where: (dailyManagementOccupancy, { lte }) =>
+          lte(dailyManagementOccupancy.date, "2024-11-30"),
+        columns: { unitOccupancy: true },
+      },
+      dailyManagementActivity: {
+        limit: 1,
+        orderBy: desc(dailyManagementActivity.date),
+        where: (dailyManagementActivity, { and, lte, eq }) =>
+          and(
+            lte(dailyManagementActivity.date, "2024-11-30"),
+            eq(dailyManagementActivity.activityType, "Move-Ins")
+          ),
+        columns: { monthlyTotal: true },
+      },
+      monthlyGoals: {
+        where: (monthlyGoals, { eq }) =>
+          eq(monthlyGoals.month, new Date("2024-11-01")),
+      },
+    },
+  });
+  console.log(
+    "🚀 ~ YourPage ~ getMonthlyStuff:",
+    JSON.stringify(getMonthlyStuff, null, 4)
+  );
+
   return (
     <div className="container mx-auto p-4">
       {/* Banner Section */}
