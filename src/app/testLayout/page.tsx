@@ -5,11 +5,13 @@ import {
   dailyManagementOccupancy,
   dailyManagementPaymentReceipt,
   dailyManagementReceivable,
+  dailyPayments,
   monthlyGoals,
   payPeriod,
+  sitelinkLogons,
   tenantActivities,
 } from "@/db/schema";
-import { and, desc, eq, lt, sql } from "drizzle-orm";
+import { and, between, desc, eq, lt, sql } from "drizzle-orm";
 // import { parse as parseOFX } from "ofx-js";
 
 function generatePayPeriods(startDate: string, endYear: number) {
@@ -381,10 +383,75 @@ export default async function YourPage() {
       },
     },
   });
-  console.log(
-    "🚀 ~ YourPage ~ getMonthlyStuff:",
-    JSON.stringify(getMonthlyStuff, null, 4)
-  );
+  // console.log(
+  //   "🚀 ~ YourPage ~ getMonthlyStuff:",
+  //   JSON.stringify(getMonthlyStuff, null, 4)
+  // );
+
+  // //days worked query
+  // const result = await db
+  //   .select({
+  //     sitelinkEmployeeId: sitelinkLogons.sitelinkEmployeeId,
+  //     loginDays: sql`COUNT(DISTINCT DATE(${sitelinkLogons.dateTime}))`.as(
+  //       "login_days"
+  //     ),
+  //   })
+  //   .from(sitelinkLogons)
+  //   .where(
+  //     sql`${sitelinkLogons.dateTime} BETWEEN ${sql.param(
+  //       "2024-11-01"
+  //     )} AND ${sql.param("2024-11-30")}`
+  //   )
+  //   .groupBy(sitelinkLogons.sitelinkEmployeeId);
+
+  //cash+check AND CC query
+  const result = await db
+    .select({
+      facilityId: dailyPayments.facilityId,
+      date: dailyPayments.date,
+      cash: dailyPayments.cash,
+      check: dailyPayments.check,
+      visa: dailyPayments.visa,
+      mastercard: dailyPayments.mastercard,
+      americanExpress: dailyPayments.americanExpress,
+      ach: dailyPayments.ach,
+      dinersClub: dailyPayments.dinersClub,
+      debit: dailyPayments.debit,
+      cashCheckTotal: sql`
+      COALESCE(SUM(${dailyPayments.cash}), 0) + COALESCE(SUM(${dailyPayments.check}), 0)
+    `.as("cash_check_total"),
+      creditCardsTotal: sql`
+      COALESCE(SUM(${dailyPayments.visa}), 0) +
+      COALESCE(SUM(${dailyPayments.mastercard}), 0) +
+      COALESCE(SUM(${dailyPayments.americanExpress}), 0) +
+      COALESCE(SUM(${dailyPayments.discover}), 0) +
+      COALESCE(SUM(${dailyPayments.ach}), 0) +
+      COALESCE(SUM(${dailyPayments.dinersClub}), 0) +
+      COALESCE(SUM(${dailyPayments.debit}), 0)
+    `.as("credit_cards_total"),
+    })
+    .from(dailyPayments)
+    .where(
+      and(
+        between(dailyPayments.date, "2024-11-01", "2024-11-30"),
+        eq(dailyPayments.facilityId, "35")
+      )
+    )
+    .groupBy(
+      dailyPayments.facilityId,
+      dailyPayments.date,
+      dailyPayments.cash,
+      dailyPayments.check,
+      dailyPayments.ach,
+      dailyPayments.mastercard,
+      dailyPayments.visa,
+      dailyPayments.dinersClub,
+      dailyPayments.discover,
+      dailyPayments.americanExpress,
+      dailyPayments.debit
+    );
+
+  console.log("🚀 ~ YourPage ~ result:", result);
 
   return (
     <div className="container mx-auto p-4">

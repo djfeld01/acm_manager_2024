@@ -70,7 +70,11 @@ export {
   default as payrollNote,
   payrollNoteRelations,
 } from "@/db/schema/payrollNote";
-
+export {
+  default as holiday,
+  holidayRelations,
+  holidayTypeEnum,
+} from "@/db/schema/holiday";
 export {
   default as dailyManagementReceivable,
   dailyManagementReceivableRelations,

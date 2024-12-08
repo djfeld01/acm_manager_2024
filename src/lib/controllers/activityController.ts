@@ -36,6 +36,7 @@ import {
   not,
   isNull,
 } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 
 enum ActivityType {
   MoveIn = "MoveIn",
@@ -374,6 +375,22 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
     };
   });
 
+  const employeeList = employees.reduce<
+    { userDetailId: string; firstName: string; lastName: string }[]
+  >((prevList, employee) => {
+    if (employee.firstName) {
+      return [
+        ...prevList,
+        {
+          userDetailId: employee.userDetailsId,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+        },
+      ];
+    }
+    return prevList;
+  }, []);
+
   const results = await db.query.tenantActivities.findMany({
     where: (tenantActivities, { eq, and, isNull }) =>
       and(
@@ -425,7 +442,7 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
     employees: finalEmployees,
     insuranceCommissionRate,
     storageCommissionRate,
-    unlinkedActivities,
+    employeeList,
   };
 }
 
@@ -443,13 +460,13 @@ export async function commitActivityCommissionToPayroll(
   activitiesArray: number[],
   payPeriodId: string
 ) {
-  const updatedArray = await db
+  const data = await db
     .update(tenantActivities)
     .set({ payPeriodId: payPeriodId })
     .where(inArray(tenantActivities.Id, activitiesArray))
     .returning({ ids: tenantActivities.Id });
-
-  return updatedArray;
+  revalidatePath("/");
+  return data;
 }
 
 export async function uncommitActivityFromPayroll(activitiesArray: number[]) {
@@ -458,6 +475,7 @@ export async function uncommitActivityFromPayroll(activitiesArray: number[]) {
     .set({ payPeriodId: null, commisionHasBeenPaid: false })
     .where(inArray(tenantActivities.Id, activitiesArray))
     .returning({ ids: tenantActivities.Id });
+
   return updatedArray;
 }
 
@@ -474,5 +492,21 @@ export async function updateActivityUser(activityUpdate: {
     .set({ employeeId: userDetailId })
     .where(eq(tenantActivities.Id, activityId))
     .returning({ Ids: tenantActivities.Id });
+  revalidatePath("/");
   return updatedData;
+}
+
+export async function deleteMileage(mileageId: string) {
+  const deletedMileage = await db
+    .delete(mileage)
+    .where(eq(mileage.mileageId, mileageId))
+    .returning({ Id: mileage.mileageId });
+  return deletedMileage;
+}
+export async function deleteVacation(vacationId: string) {
+  const deletedVacation = await db
+    .delete(vacation)
+    .where(eq(vacation.vacationId, vacationId))
+    .returning({ Id: vacation.vacationId });
+  return deletedVacation;
 }

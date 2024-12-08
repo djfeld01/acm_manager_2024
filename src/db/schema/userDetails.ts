@@ -10,7 +10,16 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { usersToFacilities, users } from "@/db/schema";
+import {
+  usersToFacilities,
+  users,
+  vacation,
+  bonus,
+  mileage,
+  payrollNote,
+  tenantActivities,
+} from "@/db/schema";
+import holiday from "./holiday";
 
 const userDetails = pgTable("user_detail", {
   id: text("id")
@@ -46,6 +55,12 @@ export type CreateUserDetails = z.infer<typeof insertUserDetailsSchema>;
 
 export const userDetailsRelations = relations(userDetails, ({ one, many }) => ({
   usersToFacilities: many(usersToFacilities),
+  vacation: many(vacation),
+  holiday: many(holiday),
+  bonus: many(bonus),
+  mileage: many(mileage),
+  payrollNote: many(payrollNote),
+  tenantActivities: many(tenantActivities),
   user: one(users),
   supervisor: one(userDetails, {
     fields: [userDetails.supervisorId],

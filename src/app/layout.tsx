@@ -6,7 +6,8 @@ import { ThemeProvider } from "next-themes";
 import TopMenu from "@/components/navigation/TopMenu";
 import { Toaster } from "@/components/ui/toaster";
 import { Analytics } from "@vercel/analytics/react";
-
+import Providers from "./providers";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 const fontSans = FontSans({
   subsets: ["latin"],
   variable: "--font-sans",
@@ -30,17 +31,20 @@ export default function RootLayout({
           fontSans.variable
         )}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <TopMenu />
-          {children}
-          <Analytics />
-        </ThemeProvider>
-        <Toaster />
+        <Providers>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <TopMenu />
+            {children}
+            <Analytics />
+          </ThemeProvider>
+          <Toaster />
+          <ReactQueryDevtools initialIsOpen={false} />
+        </Providers>
       </body>
     </html>
   );

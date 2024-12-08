@@ -6,7 +6,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "./ui/collapsible";
-import { payPeriod } from "@/db/schema";
+
 import { CardDescription } from "./ui/card";
 
 type EmployeeDaysWorkedComponentProps = {

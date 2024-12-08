@@ -17,30 +17,13 @@ interface EmployeeContainerProps {
 }
 
 async function EmployeeContainer({ sitelinkId }: EmployeeContainerProps) {
-  const today = new Date();
-
   let {
     employees,
     nextPayPeriod,
     insuranceCommissionRate,
     storageCommissionRate,
-    unlinkedActivities,
+    employeeList,
   } = await getUnpaidActivitiesByEmployee(sitelinkId);
-  const employeeList = employees.reduce<
-    { userDetailId: string; firstName: string; lastName: string }[]
-  >((prevList, employee) => {
-    if (employee.firstName) {
-      return [
-        ...prevList,
-        {
-          userDetailId: employee.userDetailsId,
-          firstName: employee.firstName,
-          lastName: employee.lastName,
-        },
-      ];
-    }
-    return prevList;
-  }, []);
 
   async function refreshData() {
     "use server";
@@ -49,7 +32,6 @@ async function EmployeeContainer({ sitelinkId }: EmployeeContainerProps) {
       nextPayPeriod,
       insuranceCommissionRate,
       storageCommissionRate,
-      unlinkedActivities,
     } = await getUnpaidActivitiesByEmployee(sitelinkId));
   }
   // const updatedArray = await db

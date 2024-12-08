@@ -134,6 +134,20 @@
       "when": 1733100612684,
       "tag": "0018_gorgeous_stark_industries",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1733682702102,
+      "tag": "0019_numerous_sasquatch",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1733682748164,
+      "tag": "0020_natural_firebrand",
+      "breakpoints": true
     }
   ]
 }

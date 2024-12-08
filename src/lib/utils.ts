@@ -57,3 +57,15 @@ export function parseLocalDate(dateString: string): Date | null {
   // Create a new Date using the parsed values as local time
   return new Date(year, month - 1, day, hours, minutes, seconds);
 }
+
+export function calculateCommission(
+  position: string,
+  insurance: number,
+  insuranceCommissionRate: number,
+  rentals: number,
+  storageCommissionRate: number
+) {
+  return position === "MANAGER"
+    ? insurance * insuranceCommissionRate
+    : insurance * insuranceCommissionRate + rentals * storageCommissionRate;
+}

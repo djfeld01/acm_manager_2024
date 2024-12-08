@@ -51,7 +51,7 @@ export default async function TopMenu() {
               locations.map((location) => (
                 <DropdownMenuItem key={location.sitelinkId}>
                   <Link
-                    href={`/location/${location.sitelinkId}`}
+                    href={`/payroll/${location.sitelinkId}`}
                     className="text-muted-foreground hover:text-foreground"
                   >
                     {location.facilityAbbreviation}
@@ -114,7 +114,7 @@ export default async function TopMenu() {
                   locations.map((location) => (
                     <DropdownMenuItem key={location.sitelinkId}>
                       <Link
-                        href={`/location/${location.sitelinkId}`}
+                        href={`/payroll/${location.sitelinkId}`}
                         className="text-muted-foreground hover:text-foreground"
                       >
                         {location.facilityAbbreviation}

@@ -6,43 +6,101 @@ import {
   Vacations,
 } from "./EmployeeComissionComponent";
 import { CircleMinus } from "lucide-react";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
+
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "./ui/collapsible";
-import { CardContent, CardHeader, CardTitle } from "./ui/card";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
-import { deleteMileage } from "@/lib/controllers/activityController";
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
+  deleteMileage,
+  deleteVacation,
+  uncommitActivityFromPayroll,
+} from "@/lib/controllers/activityController";
+import { calculateCommission } from "@/lib/utils";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { payrollPageDataOptions } from "@/app/queryHelpers/queryOptions";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type EmployeeCommittedPayrollProps = {
-  committedActivities: Activity[];
-  committedCommission: number;
-  vacation: Vacations[];
-  mileage: Mileage[];
-  updateActivities: (buttonType: string, selectedActivities: number[]) => void;
+  employeeId: string;
+  sitelinkId: string;
 };
 function EmployeeCommittedPayroll({
-  committedActivities,
-  committedCommission,
-  updateActivities,
-  vacation,
-  mileage,
+  employeeId,
+  sitelinkId,
 }: EmployeeCommittedPayrollProps) {
-  const vacationHours = vacation.reduce(
-    (prev, item) => prev + item.vacationHours,
+  const queryClient = useQueryClient();
+
+  const { data: employeesData, isRefetching } = useSuspenseQuery(
+    payrollPageDataOptions(sitelinkId)
+  );
+
+  const { employees, insuranceCommissionRate, storageCommissionRate } =
+    employeesData;
+
+  const employee = employees.filter(
+    (employee) => employee.userDetailsId === employeeId
+  )[0];
+  const { committedActivities, position, vacation, mileage } = employee;
+
+  const commmittedRentals = committedActivities.length;
+  const committedInsurance = committedActivities.reduce(
+    (prev, activity) => (activity.hasInsurance ? prev + 1 : prev),
     0
   );
-  const mileagePaid = mileage.reduce((prev, item) => {
-    return prev + item.mileage * item.mileageRate;
-  }, 0);
+
+  const committedCommission = calculateCommission(
+    position || "",
+    committedInsurance,
+    insuranceCommissionRate,
+    commmittedRentals,
+    storageCommissionRate
+  );
+
+  const vacationHours = vacation
+    ? vacation.reduce((prev, item) => prev + item.vacationHours, 0)
+    : 0;
+  const mileagePaid = mileage
+    ? mileage.reduce((prev, item) => {
+        return prev + item.mileage * item.mileageRate;
+      }, 0)
+    : 0;
 
   async function updateMileage(id: string) {
     const deletedMileage = await deleteMileage(id);
-
-    console.log(deletedMileage);
+    queryClient.invalidateQueries({
+      queryKey: ["payrollPageData", sitelinkId],
+    });
   }
+
+  async function updateActivities(selectedActivities: number[]) {
+    await uncommitActivityFromPayroll(selectedActivities);
+    queryClient.invalidateQueries({
+      queryKey: ["payrollPageData", sitelinkId],
+    });
+  }
+
+  if (isRefetching) {
+    return (
+      <div className="bg-gray-200 rounded-3xl">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[250px]" />
+          <Skeleton className="h-4 w-[200px]" />
+        </div>
+      </div>
+    );
+  }
+
+  async function updateVacation(selectedVacation: string) {
+    await deleteVacation(selectedVacation);
+    queryClient.invalidateQueries({
+      queryKey: ["payrollPageData", sitelinkId],
+    });
+  }
+
   return (
     // <Collapsible open={isOpen} onOpenChange={setIsOpen}>
     <div className="bg-gray-200 rounded-3xl">
@@ -62,11 +120,7 @@ function EmployeeCommittedPayroll({
               {committedActivities.map((activity) => (
                 <div key={activity.activityId} className="grid grid-cols-5 ">
                   <Button
-                    onClick={() =>
-                      updateActivities("uncommitActivity", [
-                        activity.activityId,
-                      ])
-                    }
+                    onClick={() => updateActivities([activity.activityId])}
                     variant="ghost"
                     size="sm"
                     className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
@@ -91,15 +145,35 @@ function EmployeeCommittedPayroll({
             <div>$0.00</div>
           </div>
         )}
-        {vacation.length > 0 ? (
+        {vacation ? (
           <HoverCard>
             <HoverCardTrigger asChild>
               <div className="cursor-pointer flex-1">
                 <div className="font-semibold">Vacation</div>
-                <div> ${vacationHours || 0} hours</div>
+                <div> {vacationHours || 0} hours</div>
               </div>
             </HoverCardTrigger>
-            <HoverCardContent></HoverCardContent>
+            <HoverCardContent>
+              {vacation.map((vacation) => (
+                <div key={vacation.vacationId} className="grid grid-cols-5 ">
+                  <Button
+                    onClick={() => updateVacation(vacation.vacationId)}
+                    variant="ghost"
+                    size="sm"
+                    className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
+                  >
+                    <CircleMinus className="h-4 w-4" />
+                    <span className="sr-only">Toggle</span>
+                  </Button>
+                  <div className="col-span-2">
+                    {new Date(vacation.date).toLocaleDateString(undefined, {
+                      month: "2-digit",
+                      day: "2-digit",
+                    })}
+                  </div>
+                </div>
+              ))}
+            </HoverCardContent>
           </HoverCard>
         ) : (
           <div className="flex-1">
@@ -107,7 +181,7 @@ function EmployeeCommittedPayroll({
             <div> 0 hours</div>
           </div>
         )}
-        {mileage.length > 0 ? (
+        {mileage ? (
           <HoverCard>
             <HoverCardTrigger asChild>
               <div className="cursor-pointer flex-1">
