@@ -15,25 +15,38 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import {
+  deleteHoliday,
   deleteMileage,
   deleteVacation,
+  getCommittedHolidayHours,
   uncommitActivityFromPayroll,
 } from "@/lib/controllers/activityController";
 import { calculateCommission } from "@/lib/utils";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { payrollPageDataOptions } from "@/app/queryHelpers/queryOptions";
+import {
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import {
+  committedHolidayHoursOptions,
+  payrollPageDataOptions,
+} from "@/app/queryHelpers/queryOptions";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type EmployeeCommittedPayrollProps = {
   employeeId: string;
   sitelinkId: string;
+  payPeriodId: string;
 };
 function EmployeeCommittedPayroll({
   employeeId,
   sitelinkId,
+  payPeriodId,
 }: EmployeeCommittedPayrollProps) {
   const queryClient = useQueryClient();
-
+  const { data: holiday, isRefetching: holidayRefetching } = useQuery(
+    committedHolidayHoursOptions(sitelinkId, employeeId, payPeriodId)
+  );
   const { data: employeesData, isRefetching } = useSuspenseQuery(
     payrollPageDataOptions(sitelinkId)
   );
@@ -59,6 +72,11 @@ function EmployeeCommittedPayroll({
     commmittedRentals,
     storageCommissionRate
   );
+
+  const holidayHours =
+    holiday && holiday.length > 0
+      ? holiday.reduce((prev, item) => prev + item.holidayHours, 0)
+      : 0;
 
   const vacationHours = vacation
     ? vacation.reduce((prev, item) => prev + item.vacationHours, 0)
@@ -98,6 +116,13 @@ function EmployeeCommittedPayroll({
     await deleteVacation(selectedVacation);
     queryClient.invalidateQueries({
       queryKey: ["payrollPageData", sitelinkId],
+    });
+  }
+
+  async function updateHoliday(selectedHoliday: string) {
+    await deleteHoliday(selectedHoliday);
+    queryClient.invalidateQueries({
+      queryKey: ["committedHolidayHours", payPeriodId, sitelinkId, employeeId],
     });
   }
 
@@ -219,8 +244,43 @@ function EmployeeCommittedPayroll({
             <div>$0.00</div>
           </div>
         )}
-        {/* 
-          <div>${(mileagePaid || 0).toFixed(2)}</div> */}
+        {holiday && holiday.length > 0 ? (
+          <HoverCard>
+            <HoverCardTrigger asChild>
+              <div className="cursor-pointer flex-1">
+                <div className="font-semibold">Holiday</div>
+                <div> {holidayHours}</div>
+              </div>
+            </HoverCardTrigger>
+            <HoverCardContent>
+              {holiday.map((holidayEntry) => (
+                <div key={holidayEntry.holidayId} className="grid grid-cols-7 ">
+                  <Button
+                    onClick={() => updateHoliday(holidayEntry.holidayId)}
+                    variant="ghost"
+                    size="sm"
+                    className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
+                  >
+                    <CircleMinus className="h-4 w-4" />
+                    <span className="sr-only">Toggle</span>
+                  </Button>
+                  <div className="col-span-2">{holidayEntry.holidayHours}</div>
+                  <div className="col-span-2">
+                    {new Date(holidayEntry.date).toLocaleDateString(undefined, {
+                      month: "2-digit",
+                      day: "2-digit",
+                    })}
+                  </div>
+                  <div className="col-span-2">
+                    {holidayEntry.holidayHoursType}
+                  </div>
+                </div>
+              ))}
+            </HoverCardContent>
+          </HoverCard>
+        ) : (
+          <></>
+        )}
       </CardContent>
     </div>
     // </Collapsible>

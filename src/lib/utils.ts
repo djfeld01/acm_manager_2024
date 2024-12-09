@@ -69,3 +69,90 @@ export function calculateCommission(
     ? insurance * insuranceCommissionRate
     : insurance * insuranceCommissionRate + rentals * storageCommissionRate;
 }
+
+export function calculateRetailBonus(
+  retailGoal: number,
+  retailSold: number,
+  daysWorked: number,
+  totalDaysWorked: number
+) {
+  return retailSold >= retailGoal
+    ? (retailSold * 0.1 * daysWorked) / totalDaysWorked
+    : 0;
+}
+
+export function caluclateReceivableBonus(
+  receivableGoal: number,
+  actualReceivable: number,
+  position: string
+) {
+  if (
+    position <= "Manager" ||
+    receivableGoal <= 0 ||
+    actualReceivable > receivableGoal
+  ) {
+    return 0;
+  }
+  return 75;
+}
+export function calculateStorageBonus(
+  rentalsGoal: number,
+  actualRentals: number,
+  occupancy: number,
+  position: string
+) {
+  if (rentalsGoal <= 0) {
+    return 0;
+  }
+
+  if (actualRentals < rentalsGoal && occupancy < 0.94) {
+    return 0;
+  }
+
+  if (position === "Assistant") {
+    return 33.34;
+  }
+
+  let bonus = 75;
+
+  if (actualRentals < rentalsGoal && occupancy > 0.94) {
+    return bonus;
+  }
+
+  if (actualRentals === rentalsGoal) {
+    return bonus;
+  }
+
+  bonus += (actualRentals - rentalsGoal) * 5;
+
+  if (actualRentals >= rentalsGoal * 1.25) {
+    bonus += 50;
+  }
+
+  return bonus;
+}
+
+export function calculateMysteryShop(
+  mysteryShopScore: number,
+  mysteryShopGoal: number = 0.9
+) {
+  if (mysteryShopScore > mysteryShopGoal) {
+    return 50;
+  }
+  return 0;
+}
+
+export const holidays = [
+  {
+    display: "New Years",
+    value: "newYear",
+  },
+  {
+    display: "Memorial Day",
+    value: "memorialDay",
+  },
+  { display: "July 4th", value: "fourthOfJuly" },
+  { display: "Labor Day", value: "laborDay" },
+  { display: "Thanksgiving", value: "thanksgiving" },
+  { display: "Christmas", value: "christmas" },
+];

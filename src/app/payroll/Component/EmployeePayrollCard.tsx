@@ -31,6 +31,8 @@ import { payrollPageDataOptions } from "@/app/queryHelpers/queryOptions";
 import EmployeeVacationComponent from "./EmployeeVacationComponent";
 import EmployeeMileageComponent from "@/components/EmployeeMileageComponent";
 import EmployeeDaysWorkedComponent from "@/components/EmployeeDaysWorkedComponent";
+import EmployeeHolidayComponent from "./EmployeeHolidayComponent";
+import next from "next";
 
 // import EmployeeVacationComponent from "./EmployeeVacationComponent";
 // import EmployeeMileageComponent from "./EmployeeMileageComponent";
@@ -66,6 +68,7 @@ export function EmployeePayrollCard({
           <EmployeeCommittedPayroll
             employeeId={employee.userDetailsId || ""}
             sitelinkId={sitelinkId}
+            payPeriodId={nextPayPeriod.payPeriodId}
           />
         )}
         <EmployeeComissionComponent
@@ -74,13 +77,18 @@ export function EmployeePayrollCard({
         />
 
         {employee.userDetailsId && (
-          <div className="grid grid-cols-2">
+          <div className="grid grid-cols-3">
             <EmployeeVacationComponent
               sitelinkId={sitelinkId}
               employeeId={employee.userDetailsId}
               payPeriodId={nextPayPeriod.payPeriodId}
             />
             <EmployeeMileageComponent
+              sitelinkId={sitelinkId}
+              employeeId={employee.userDetailsId}
+              payPeriodId={nextPayPeriod.payPeriodId}
+            />
+            <EmployeeHolidayComponent
               sitelinkId={sitelinkId}
               employeeId={employee.userDetailsId}
               payPeriodId={nextPayPeriod.payPeriodId}

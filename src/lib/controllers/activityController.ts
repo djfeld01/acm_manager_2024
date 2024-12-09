@@ -8,6 +8,7 @@ import {
 } from "@/components/EmployeeComissionComponent";
 import { db } from "@/db";
 import {
+  holiday,
   mileage,
   payPeriod,
   sitelinkLogons,
@@ -509,4 +510,61 @@ export async function deleteVacation(vacationId: string) {
     .where(eq(vacation.vacationId, vacationId))
     .returning({ Id: vacation.vacationId });
   return deletedVacation;
+}
+
+export async function deleteHoliday(holidayId: string) {
+  const deletedHoliday = await db
+    .delete(holiday)
+    .where(eq(holiday.holidayId, holidayId))
+    .returning({ Id: holiday.holidayId });
+  return deletedHoliday;
+}
+
+export async function getCommittedHolidayHours(
+  sitelinkId: string,
+  employeeId: string,
+  payPeriodId: string
+) {
+  const results = await db.query.holiday.findMany({
+    where: (holiday, { and, eq }) =>
+      and(
+        eq(holiday.facilityId, sitelinkId),
+        eq(holiday.payPeriodId, payPeriodId),
+        eq(holiday.employeeId, employeeId)
+      ),
+  });
+  return results;
+}
+export async function employeesWhoWorked(
+  sitelinkId: string,
+  startDate: string,
+  endDate: string
+) {
+  const results = await db
+    .select({
+      employeeId: userDetails.id,
+      logins: sql`ARRAY_AGG(JSON_BUILD_OBJECT(
+  'dateTime', ${sitelinkLogons.dateTime},
+  'computerName', ${sitelinkLogons.computerName},
+  'computerIP', ${sitelinkLogons.computerIP}
+))`.as("logins"),
+    })
+    .from(sitelinkLogons)
+    .innerJoin(
+      usersToFacilities,
+      eq(
+        sitelinkLogons.sitelinkEmployeeId,
+        usersToFacilities.sitelinkEmployeeId
+      )
+    )
+    .innerJoin(userDetails, eq(usersToFacilities.userId, userDetails.id))
+    .where(
+      and(
+        eq(usersToFacilities.storageFacilityId, sitelinkId),
+        gte(sitelinkLogons.dateTime, new Date(`${startDate}T00:00:00-05:00`)),
+        lte(sitelinkLogons.dateTime, new Date(`${endDate}T11:59:59-05:00`))
+      )
+    )
+    .groupBy(userDetails.id);
+  return results;
 }

@@ -1,5 +1,5 @@
 {
-  "id": "ca084de7-6b08-4d2f-9bfc-9c3f006a2002",
+  "id": "34935201-629d-4ebf-ac9b-5fc83ff53470",
   "prevId": "6a3dc3a5-46b8-4fc3-a759-0e72eec0f529",
   "version": "7",
   "dialect": "postgresql",
@@ -2181,6 +2181,18 @@
         "MoveIn",
         "MoveOut",
         "Transfer"
+      ]
+    },
+    "public.holiday_type": {
+      "name": "holiday_type",
+      "schema": "public",
+      "values": [
+        "christmas",
+        "thanksgiving",
+        "newYear",
+        "memorialDay",
+        "laborDay",
+        "fourthOfJuly"
       ]
     },
     "public.pay_period_status_enum": {

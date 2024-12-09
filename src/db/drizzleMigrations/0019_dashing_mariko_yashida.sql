@@ -1,3 +1,9 @@
+DO $$ BEGIN
+ CREATE TYPE "public"."holiday_type" AS ENUM('christmas', 'thanksgiving', 'newYear', 'memorialDay', 'laborDay', 'fourthOfJuly');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "holiday" (
 	"holiday_id" text PRIMARY KEY NOT NULL,
 	"date" date NOT NULL,
