@@ -50,9 +50,13 @@ export async function POST(req: NextRequest) {
     const [lastName, firstName] = sitelinkLogon.fullName
       .split(", ")
       .map((name) => name.trim());
-    const email = `${firstName
+    let email = `${firstName
       .charAt(0)
       .toLowerCase()}.${lastName.toLowerCase()}@advantageconsultingmanagement.com`;
+
+    if (sitelinkLogon.fullName === "Willey, Tabatha") {
+      email = "tabby@advantageconsultingmanagement.com";
+    }
 
     const employeeIndex = users.findIndex((user) => user.email === email);
 

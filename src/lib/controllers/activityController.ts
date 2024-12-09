@@ -8,6 +8,7 @@ import {
 } from "@/components/EmployeeComissionComponent";
 import { db } from "@/db";
 import {
+  bonus,
   holiday,
   mileage,
   payPeriod,
@@ -335,11 +336,11 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
     .where(
       and(
         eq(usersToFacilities.storageFacilityId, sitelinkId),
-        sql`${loginsSubquery.logins} IS NOT NULL AND ARRAY_LENGTH(${loginsSubquery.logins}, 1) > 0`,
-        and(
-          not(eq(usersToFacilities.position, "AREA_MANAGER")),
-          not(eq(usersToFacilities.position, "ACM_OFFICE"))
-        )
+        sql`${loginsSubquery.logins} IS NOT NULL AND ARRAY_LENGTH(${loginsSubquery.logins}, 1) > 0`
+        // and(
+        //   not(eq(usersToFacilities.position, "AREA_MANAGER")),
+        //   not(eq(usersToFacilities.position, "ACM_OFFICE"))
+        // )
       )
     );
 
@@ -391,6 +392,10 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
     }
     return prevList;
   }, []);
+  console.log(
+    "🚀 ~ getUnpaidActivitiesByEmployee ~ employeeList:",
+    employeeList
+  );
 
   const results = await db.query.tenantActivities.findMany({
     where: (tenantActivities, { eq, and, isNull }) =>
@@ -431,6 +436,7 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
     mileage: [],
   };
   const finalEmployees = [...employees, unlinkedEntry];
+
   const { insuranceCommissionRate, storageCommissionRate } =
     (await db.query.storageFacilities.findFirst({
       where: (storageFacilities, { eq }) =>
@@ -520,6 +526,13 @@ export async function deleteHoliday(holidayId: string) {
   return deletedHoliday;
 }
 
+export async function deleteBonus(bonusId: string) {
+  const deletedBonus = await db
+    .delete(bonus)
+    .where(eq(bonus.bonusId, bonusId))
+    .returning({ Id: bonus.bonusId });
+  return deletedBonus;
+}
 export async function getCommittedHolidayHours(
   sitelinkId: string,
   employeeId: string,
@@ -531,6 +544,21 @@ export async function getCommittedHolidayHours(
         eq(holiday.facilityId, sitelinkId),
         eq(holiday.payPeriodId, payPeriodId),
         eq(holiday.employeeId, employeeId)
+      ),
+  });
+  return results;
+}
+export async function getCommitedBonus(
+  sitelinkId: string,
+  employeeId: string,
+  payPeriodId: string
+) {
+  const results = await db.query.bonus.findMany({
+    where: (bonus, { eq, and }) =>
+      and(
+        eq(bonus.facilityId, sitelinkId),
+        eq(bonus.payPeriodId, payPeriodId),
+        eq(bonus.employeeId, employeeId)
       ),
   });
   return results;

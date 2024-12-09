@@ -15,6 +15,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import {
+  deleteBonus,
   deleteHoliday,
   deleteMileage,
   deleteVacation,
@@ -28,6 +29,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import {
+  commitedBonusOptions,
   committedHolidayHoursOptions,
   payrollPageDataOptions,
 } from "@/app/queryHelpers/queryOptions";
@@ -44,8 +46,12 @@ function EmployeeCommittedPayroll({
   payPeriodId,
 }: EmployeeCommittedPayrollProps) {
   const queryClient = useQueryClient();
-  const { data: holiday, isRefetching: holidayRefetching } = useQuery(
+  const { data: holiday, isRefetching: holidayIsRefetching } = useQuery(
     committedHolidayHoursOptions(sitelinkId, employeeId, payPeriodId)
+  );
+
+  const { data: bonus, isRefetching: bonusIsRefetching } = useQuery(
+    commitedBonusOptions(sitelinkId, employeeId, payPeriodId)
   );
   const { data: employeesData, isRefetching } = useSuspenseQuery(
     payrollPageDataOptions(sitelinkId)
@@ -72,6 +78,11 @@ function EmployeeCommittedPayroll({
     commmittedRentals,
     storageCommissionRate
   );
+
+  const bonusAmount =
+    bonus && bonus.length > 0
+      ? bonus.reduce((prev, item) => prev + item.bonusAmount, 0)
+      : 0;
 
   const holidayHours =
     holiday && holiday.length > 0
@@ -101,17 +112,6 @@ function EmployeeCommittedPayroll({
     });
   }
 
-  if (isRefetching) {
-    return (
-      <div className="bg-gray-200 rounded-3xl">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-[250px]" />
-          <Skeleton className="h-4 w-[200px]" />
-        </div>
-      </div>
-    );
-  }
-
   async function updateVacation(selectedVacation: string) {
     await deleteVacation(selectedVacation);
     queryClient.invalidateQueries({
@@ -124,6 +124,24 @@ function EmployeeCommittedPayroll({
     queryClient.invalidateQueries({
       queryKey: ["committedHolidayHours", payPeriodId, sitelinkId, employeeId],
     });
+  }
+
+  async function updateBonus(selectedBonus: string) {
+    await deleteBonus(selectedBonus);
+    queryClient.invalidateQueries({
+      queryKey: ["committedBonus", payPeriodId, sitelinkId, employeeId],
+    });
+  }
+
+  if (isRefetching || holidayIsRefetching || bonusIsRefetching) {
+    return (
+      <div className="bg-gray-200 rounded-3xl">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[250px]" />
+          <Skeleton className="h-4 w-[200px]" />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -274,6 +292,41 @@ function EmployeeCommittedPayroll({
                   <div className="col-span-2">
                     {holidayEntry.holidayHoursType}
                   </div>
+                </div>
+              ))}
+            </HoverCardContent>
+          </HoverCard>
+        ) : (
+          <></>
+        )}
+        {bonus && bonus.length > 0 ? (
+          <HoverCard>
+            <HoverCardTrigger asChild>
+              <div className="cursor-pointer flex-1">
+                <div className="font-semibold">Bonus</div>
+                <div> ${bonusAmount.toFixed(2)}</div>
+              </div>
+            </HoverCardTrigger>
+            <HoverCardContent>
+              {bonus.map((bonusEntry) => (
+                <div key={bonusEntry.bonusId} className="grid grid-cols-7 ">
+                  <Button
+                    onClick={() => updateBonus(bonusEntry.bonusId)}
+                    variant="ghost"
+                    size="sm"
+                    className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
+                  >
+                    <CircleMinus className="h-4 w-4" />
+                    <span className="sr-only">Toggle</span>
+                  </Button>
+                  <div className="col-span-2">{bonusEntry.bonusAmount}</div>
+                  <div className="col-span-2">
+                    {new Date(bonusEntry.date).toLocaleDateString(undefined, {
+                      month: "2-digit",
+                      day: "2-digit",
+                    })}
+                  </div>
+                  <div className="col-span-2">{bonusEntry.bonusType}</div>
                 </div>
               ))}
             </HoverCardContent>

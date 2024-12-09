@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { tenantActivities } from "@/db/schema";
 import {
   employeesWhoWorked,
+  getCommitedBonus,
   getCommittedHolidayHours,
   getUnpaidActivitiesByEmployee,
 } from "@/lib/controllers/activityController";
@@ -55,6 +56,20 @@ export function committedHolidayHoursOptions(
         employeeId,
         payPeriodId
       );
+      return data;
+    },
+  });
+}
+
+export function commitedBonusOptions(
+  sitelinkId: string,
+  employeeId: string,
+  payPeriodId: string
+) {
+  return queryOptions({
+    queryKey: ["committedBonus", payPeriodId, sitelinkId, employeeId],
+    queryFn: async () => {
+      const data = await getCommitedBonus(sitelinkId, employeeId, payPeriodId);
       return data;
     },
   });
