@@ -174,7 +174,6 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
   if (!nextPayPeriodArray) {
     throw new Error("No pay period found for the given criteria.");
   }
-
   const { startDate, endDate } = nextPayPeriodArray[0];
   if (!endDate) {
     throw new Error("No End Date");
@@ -344,7 +343,10 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
       )
     );
 
+  console.log("🚀 ~ getUnpaidActivitiesByEmployee ~ result:", result);
+
   const employees = result.map((item) => {
+    console.log(item);
     const typedItem = {
       ...item,
       logins: item.logins as Logins[],

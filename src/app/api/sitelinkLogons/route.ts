@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       .charAt(0)
       .toLowerCase()}.${lastName.toLowerCase()}@advantageconsultingmanagement.com`;
 
-    if (sitelinkLogon.fullName === "Willey, Tabatha") {
+    if (sitelinkLogon.fullName.trim() === "Willey, Tabatha") {
       email = "tabby@advantageconsultingmanagement.com";
     }
 
