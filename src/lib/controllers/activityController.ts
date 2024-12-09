@@ -335,11 +335,11 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
     .where(
       and(
         eq(usersToFacilities.storageFacilityId, sitelinkId),
-        sql`${loginsSubquery.logins} IS NOT NULL AND ARRAY_LENGTH(${loginsSubquery.logins}, 1) > 0`
-        // and(
-        //   not(eq(usersToFacilities.position, "AREA_MANAGER")),
-        //   not(eq(usersToFacilities.position, "ACM_OFFICE"))
-        // )
+        sql`${loginsSubquery.logins} IS NOT NULL AND ARRAY_LENGTH(${loginsSubquery.logins}, 1) > 0`,
+        and(
+          not(eq(usersToFacilities.position, "AREA_MANAGER")),
+          not(eq(usersToFacilities.position, "ACM_OFFICE"))
+        )
       )
     );
 
@@ -394,10 +394,6 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
     }
     return prevList;
   }, []);
-  console.log(
-    "🚀 ~ getUnpaidActivitiesByEmployee ~ employeeList:",
-    employeeList
-  );
 
   const results = await db.query.tenantActivities.findMany({
     where: (tenantActivities, { eq, and, isNull }) =>
