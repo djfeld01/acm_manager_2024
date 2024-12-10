@@ -141,6 +141,20 @@
       "when": 1733759759960,
       "tag": "0019_dashing_mariko_yashida",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1733804436286,
+      "tag": "0020_worthless_wild_child",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1733804552037,
+      "tag": "0021_hot_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

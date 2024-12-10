@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { tenantActivities } from "@/db/schema";
+import { bonus, tenantActivities } from "@/db/schema";
 import { inArray } from "drizzle-orm";
 
 export async function mutateCommitActivityCommissionToPayroll(updates: {
@@ -15,4 +15,28 @@ export async function mutateCommitActivityCommissionToPayroll(updates: {
     .where(inArray(tenantActivities.Id, activitiesArray))
     .returning({ ids: tenantActivities.Id });
   return data;
+}
+
+export async function addBonus(
+  employeeId: string,
+  sitelinkId: string,
+  bonusType: string,
+  bonusAmount: number,
+  payPeriodId: string,
+  date: string,
+  bonusMonth: string
+) {
+  const response = await db
+    .insert(bonus)
+    .values({
+      employeeId,
+      facilityId: sitelinkId,
+      bonusType,
+      bonusAmount,
+      payPeriodId,
+      date,
+      bonusMonth,
+    })
+    .returning({ id: bonus.employeeId, type: bonus.bonusType });
+  console.log(response);
 }

@@ -87,7 +87,7 @@ export function caluclateReceivableBonus(
   position: string
 ) {
   if (
-    position <= "Manager" ||
+    position !== "MANAGER" ||
     receivableGoal <= 0 ||
     actualReceivable > receivableGoal
   ) {
@@ -109,7 +109,7 @@ export function calculateStorageBonus(
     return 0;
   }
 
-  if (position === "Assistant") {
+  if (position === "ASSISTANT") {
     return 33.34;
   }
 

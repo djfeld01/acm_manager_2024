@@ -451,8 +451,6 @@ export default async function YourPage() {
       dailyPayments.debit
     );
 
-  console.log("🚀 ~ YourPage ~ result:", result);
-
   return (
     <div className="container mx-auto p-4">
       {/* Banner Section */}

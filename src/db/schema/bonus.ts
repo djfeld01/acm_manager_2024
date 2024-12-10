@@ -17,7 +17,7 @@ const bonus = pgTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     date: date("date").notNull(),
-    bonusMonth: date("date"),
+    bonusMonth: date("bonus_month"),
     employeeId: varchar("employee_id").references(() => userDetails.id),
     facilityId: varchar("facility_id")
       .notNull()

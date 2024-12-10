@@ -40,9 +40,8 @@ function EmployeeCommittedPayroll({
 
   async function updateMileage(id: string) {
     const deletedMileage = await deleteMileage(id);
-
-    console.log(deletedMileage);
   }
+
   return (
     // <Collapsible open={isOpen} onOpenChange={setIsOpen}>
     <div className="bg-gray-200 rounded-3xl">

@@ -2,9 +2,11 @@ import { db } from "@/db";
 import { tenantActivities } from "@/db/schema";
 import {
   employeesWhoWorked,
-  getCommitedBonus,
+  getCommittedBonus,
+  getCommittedChristmasBonus,
   getCommittedHolidayHours,
   getUnpaidActivitiesByEmployee,
+  monthlyNumbers,
 } from "@/lib/controllers/activityController";
 import { getFacilityPageData } from "@/lib/controllers/facilityController";
 import { queryOptions, useMutation } from "@tanstack/react-query";
@@ -27,6 +29,7 @@ export function payrollPageDataOptions(sitelinkId: string) {
       const data = await getUnpaidActivitiesByEmployee(sitelinkId);
       return data;
     },
+    staleTime: Infinity,
   });
 }
 export function workingEmployees(sitelinkId: string) {
@@ -43,6 +46,19 @@ export function workingEmployees(sitelinkId: string) {
   });
 }
 
+export function getMonthlyNumbers(
+  sitelinkId: string,
+  lastDayOfMonthDate: string
+) {
+  return queryOptions({
+    queryKey: ["monthlyNumbers", sitelinkId],
+    queryFn: async () => {
+      const data = await monthlyNumbers(sitelinkId, lastDayOfMonthDate);
+      return data;
+    },
+    staleTime: Infinity,
+  });
+}
 export function committedHolidayHoursOptions(
   sitelinkId: string,
   employeeId: string,
@@ -61,7 +77,7 @@ export function committedHolidayHoursOptions(
   });
 }
 
-export function commitedBonusOptions(
+export function committedBonusOptions(
   sitelinkId: string,
   employeeId: string,
   payPeriodId: string
@@ -69,7 +85,25 @@ export function commitedBonusOptions(
   return queryOptions({
     queryKey: ["committedBonus", payPeriodId, sitelinkId, employeeId],
     queryFn: async () => {
-      const data = await getCommitedBonus(sitelinkId, employeeId, payPeriodId);
+      const data = await getCommittedBonus(sitelinkId, employeeId, payPeriodId);
+      return data;
+    },
+  });
+}
+
+export function committedChristmasBonusOptions(
+  sitelinkId: string,
+  employeeId: string,
+  payPeriodId: string
+) {
+  return queryOptions({
+    queryKey: ["committedChristmasBonus", payPeriodId, sitelinkId, employeeId],
+    queryFn: async () => {
+      const data = await getCommittedChristmasBonus(
+        sitelinkId,
+        employeeId,
+        payPeriodId
+      );
       return data;
     },
   });

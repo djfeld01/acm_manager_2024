@@ -29,7 +29,8 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import {
-  commitedBonusOptions,
+  committedBonusOptions,
+  committedChristmasBonusOptions,
   committedHolidayHoursOptions,
   payrollPageDataOptions,
 } from "@/app/queryHelpers/queryOptions";
@@ -51,8 +52,13 @@ function EmployeeCommittedPayroll({
   );
 
   const { data: bonus, isRefetching: bonusIsRefetching } = useQuery(
-    commitedBonusOptions(sitelinkId, employeeId, payPeriodId)
+    committedBonusOptions(sitelinkId, employeeId, payPeriodId)
   );
+  const { data: christmasBonus, isRefetching: christmasBonusIsRefetching } =
+    useQuery(
+      committedChristmasBonusOptions(sitelinkId, employeeId, payPeriodId)
+    );
+
   const { data: employeesData, isRefetching } = useSuspenseQuery(
     payrollPageDataOptions(sitelinkId)
   );
@@ -82,6 +88,11 @@ function EmployeeCommittedPayroll({
   const bonusAmount =
     bonus && bonus.length > 0
       ? bonus.reduce((prev, item) => prev + item.bonusAmount, 0)
+      : 0;
+
+  const christmasBonusAmount =
+    christmasBonus && christmasBonus.length > 0
+      ? christmasBonus.reduce((prev, item) => prev + item.bonusAmount, 0)
       : 0;
 
   const holidayHours =
@@ -133,7 +144,12 @@ function EmployeeCommittedPayroll({
     });
   }
 
-  if (isRefetching || holidayIsRefetching || bonusIsRefetching) {
+  if (
+    isRefetching ||
+    holidayIsRefetching ||
+    bonusIsRefetching ||
+    christmasBonusIsRefetching
+  ) {
     return (
       <div className="bg-gray-200 rounded-3xl">
         <div className="space-y-2">
@@ -267,7 +283,7 @@ function EmployeeCommittedPayroll({
             <HoverCardTrigger asChild>
               <div className="cursor-pointer flex-1">
                 <div className="font-semibold">Holiday</div>
-                <div> {holidayHours}</div>
+                <div> {holidayHours} hours</div>
               </div>
             </HoverCardTrigger>
             <HoverCardContent>
@@ -319,7 +335,9 @@ function EmployeeCommittedPayroll({
                     <CircleMinus className="h-4 w-4" />
                     <span className="sr-only">Toggle</span>
                   </Button>
-                  <div className="col-span-2">{bonusEntry.bonusAmount}</div>
+                  <div className="col-span-2">
+                    ${bonusEntry.bonusAmount.toFixed(2)}
+                  </div>
                   <div className="col-span-2">
                     {new Date(bonusEntry.date).toLocaleDateString(undefined, {
                       month: "2-digit",
@@ -327,6 +345,51 @@ function EmployeeCommittedPayroll({
                     })}
                   </div>
                   <div className="col-span-2">{bonusEntry.bonusType}</div>
+                </div>
+              ))}
+            </HoverCardContent>
+          </HoverCard>
+        ) : (
+          <></>
+        )}
+        {christmasBonus && christmasBonus.length > 0 ? (
+          <HoverCard>
+            <HoverCardTrigger asChild>
+              <div className="cursor-pointer flex-1">
+                <div className="font-semibold">Christmas Bonus</div>
+                <div> ${christmasBonusAmount.toFixed(2)}</div>
+              </div>
+            </HoverCardTrigger>
+            <HoverCardContent>
+              {christmasBonus.map((christmasBonusEntry) => (
+                <div
+                  key={christmasBonusEntry.bonusId}
+                  className="grid grid-cols-7 "
+                >
+                  <Button
+                    onClick={() => updateBonus(christmasBonusEntry.bonusId)}
+                    variant="ghost"
+                    size="sm"
+                    className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
+                  >
+                    <CircleMinus className="h-4 w-4" />
+                    <span className="sr-only">Toggle</span>
+                  </Button>
+                  <div className="col-span-2">
+                    {christmasBonusEntry.bonusAmount}
+                  </div>
+                  <div className="col-span-2">
+                    {new Date(christmasBonusEntry.date).toLocaleDateString(
+                      undefined,
+                      {
+                        month: "2-digit",
+                        day: "2-digit",
+                      }
+                    )}
+                  </div>
+                  <div className="col-span-2">
+                    {christmasBonusEntry.bonusType}
+                  </div>
                 </div>
               ))}
             </HoverCardContent>

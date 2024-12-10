@@ -9,6 +9,10 @@ import {
 import { db } from "@/db";
 import {
   bonus,
+  dailyManagementActivity,
+  dailyManagementOccupancy,
+  dailyManagementPaymentReceipt,
+  dailyManagementReceivable,
   holiday,
   mileage,
   payPeriod,
@@ -23,6 +27,7 @@ import {
 } from "@/db/schema";
 import monthlyGoals, { CreateMonthlyGoals } from "@/db/schema/monthlyGoals";
 import { Item } from "@radix-ui/react-dropdown-menu";
+import { lastDayOfMonth } from "date-fns";
 
 import {
   count,
@@ -165,10 +170,13 @@ export async function getActivitiesByMonth2(
 }
 
 export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
   const nextPayPeriodArray = await db
     .select()
     .from(payPeriod)
-    .where(gte(payPeriod.processingDate, new Date().toDateString()))
+    .where(gte(payPeriod.processingDate, yesterday.toDateString()))
     .limit(1)
     .orderBy(payPeriod.processingDate);
   if (!nextPayPeriodArray) {
@@ -343,10 +351,7 @@ export async function getUnpaidActivitiesByEmployee(sitelinkId: string) {
       )
     );
 
-  console.log("🚀 ~ getUnpaidActivitiesByEmployee ~ result:", result);
-
   const employees = result.map((item) => {
-    console.log(item);
     const typedItem = {
       ...item,
       logins: item.logins as Logins[],
@@ -546,20 +551,102 @@ export async function getCommittedHolidayHours(
   });
   return results;
 }
-export async function getCommitedBonus(
+export async function getCommittedBonus(
   sitelinkId: string,
   employeeId: string,
   payPeriodId: string
 ) {
   const results = await db.query.bonus.findMany({
-    where: (bonus, { eq, and }) =>
+    where: (bonus, { eq, and, not }) =>
       and(
         eq(bonus.facilityId, sitelinkId),
         eq(bonus.payPeriodId, payPeriodId),
-        eq(bonus.employeeId, employeeId)
+        eq(bonus.employeeId, employeeId),
+        not(eq(bonus.bonusType, "Christmas"))
       ),
   });
   return results;
+}
+
+export async function getCommittedChristmasBonus(
+  sitelinkId: string,
+  employeeId: string,
+  payPeriodId: string
+) {
+  const results = await db.query.bonus.findMany({
+    where: (bonus, { eq, and, not }) =>
+      and(
+        eq(bonus.facilityId, sitelinkId),
+        eq(bonus.payPeriodId, payPeriodId),
+        eq(bonus.employeeId, employeeId),
+        eq(bonus.bonusType, "Christmas")
+      ),
+  });
+  return results;
+}
+
+export async function monthlyNumbers(
+  sitelinkId: string,
+  lastDayOfMonthDate: string
+) {
+  const firstDayOfMonth = new Date(lastDayOfMonthDate);
+  firstDayOfMonth.setDate(1);
+  const firstDayOfMonthString = firstDayOfMonth.toDateString();
+
+  const results = await db.query.storageFacilities.findFirst({
+    where: (storageFacilities, { eq }) =>
+      eq(storageFacilities.sitelinkId, sitelinkId),
+    with: {
+      dailyManagementOccupancy: {
+        where: (dailyManagementOccupancy, { eq }) =>
+          eq(dailyManagementOccupancy.date, lastDayOfMonthDate),
+        columns: { unitOccupancy: true },
+      },
+      dailyManagementActivity: {
+        where: (dailyManagementActivity, { and, eq }) =>
+          and(
+            eq(dailyManagementActivity.date, lastDayOfMonthDate),
+            eq(dailyManagementActivity.activityType, "Move-Ins")
+          ),
+        columns: { monthlyTotal: true },
+      },
+      dailyManagementReceivable: {
+        where: (dailyManagementReceivable, { eq, and, lte }) =>
+          and(
+            eq(dailyManagementReceivable.date, lastDayOfMonthDate),
+            lte(dailyManagementReceivable.upperDayRange, 30)
+          ),
+        columns: { delinquentTotal: true },
+      },
+      dailyManagementPaymentReceipt: {
+        where: (dailyManagementPaymentReceipt, { eq, and }) =>
+          and(
+            eq(dailyManagementPaymentReceipt.date, lastDayOfMonthDate),
+            eq(dailyManagementPaymentReceipt.description, "Merchandise")
+          ),
+        columns: { monthlyAmount: true },
+      },
+      monthlyGoals: {
+        where: (monthlyGoals, { eq }) =>
+          eq(monthlyGoals.month, firstDayOfMonth),
+      },
+    },
+  });
+
+  return results;
+
+  // const rentals = await db.query.dailyManagementActivity.findFirst({
+  // where: (dailyManagementActivity, { and, eq }) =>
+  //   and(
+  //     eq(dailyManagementActivity.facilityId, sitelinkId),
+  //     eq(dailyManagementActivity.date, lastDayOfMonthDate),
+  //     eq(dailyManagementActivity.activityType, "Move-Ins")
+  //   ),
+  // columns: { monthlyTotal: true },
+  // });
+
+  // const retail= await db.query.dailyManagementPaymentReceipt.findFirst({where: (daily)})
+  // return { rentals: rentals?.monthlyTotal || 0 };
 }
 export async function employeesWhoWorked(
   sitelinkId: string,
@@ -569,6 +656,8 @@ export async function employeesWhoWorked(
   const results = await db
     .select({
       employeeId: userDetails.id,
+      employeeName: userDetails.fullName,
+      employeePosition: usersToFacilities.position,
       logins: sql`ARRAY_AGG(JSON_BUILD_OBJECT(
   'dateTime', ${sitelinkLogons.dateTime},
   'computerName', ${sitelinkLogons.computerName},
@@ -591,6 +680,6 @@ export async function employeesWhoWorked(
         lte(sitelinkLogons.dateTime, new Date(`${endDate}T11:59:59-05:00`))
       )
     )
-    .groupBy(userDetails.id);
+    .groupBy(userDetails.id, usersToFacilities.position);
   return results;
 }
