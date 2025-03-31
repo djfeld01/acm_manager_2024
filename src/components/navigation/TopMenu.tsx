@@ -17,7 +17,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { storageFacilities, usersToFacilities } from "@/db/schema";
 import { getFacilityConnections } from "@/lib/controllers/facilityController";
-
+import acmLogo from "@/public/images/acm_logo.svg";
 export default async function TopMenu() {
   const session = await auth();
   const locations = await getFacilityConnections(
@@ -31,7 +31,12 @@ export default async function TopMenu() {
           href="/"
           className="flex items-center gap-2 text-lg font-semibold md:text-base"
         >
-          <Package2 className="h-6 w-6" />
+          <Image
+            alt="Advantage Consulting & Management Logo"
+            src={acmLogo}
+            height={150}
+          />
+
           <span className="sr-only">ACM Dashboard</span>
         </Link>
         {/* <Link
@@ -100,7 +105,11 @@ export default async function TopMenu() {
               href="/"
               className="flex items-center gap-2 text-lg font-semibold"
             >
-              <Package2 className="h-6 w-6" />
+              <Image
+                alt="Advantage Consulting & Management Logo"
+                src={acmLogo}
+                height={150}
+              />
               <span className="sr-only">ACM Dashboard</span>
             </Link>
             <DropdownMenu>
@@ -208,7 +217,7 @@ export default async function TopMenu() {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        <ModeToggle />
+        {/* <ModeToggle /> */}
       </div>
     </header>
   );

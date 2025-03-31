@@ -25,7 +25,7 @@ async function page() {
       session?.user?.userDetailId || ""
     );
     return (
-      <div className="grid grid-cols-3">
+      <div className="grid grid-cols-2">
         {locations.map((location) => (
           <LocationCard
             nextPayPeriodId={nextPayPeriodId}

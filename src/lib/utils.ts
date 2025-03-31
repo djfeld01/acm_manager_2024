@@ -4,9 +4,6 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-
-// given a date Find if it was today, or yesterday, otherwise day of the week.
-
 export function getDateSentence(date: Date): String {
   const today = new Date();
   const todayString = today.toDateString();
@@ -156,3 +153,32 @@ export const holidays = [
   { display: "Thanksgiving", value: "thanksgiving" },
   { display: "Christmas", value: "christmas" },
 ];
+
+export function getWorkdaysLeftInMonth(holidays = []): number {
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+
+  // Convert holiday strings to Date objects
+  const holidayDates = holidays.map((dateStr) =>
+    new Date(dateStr).toDateString()
+  );
+
+  // Get the last day of the current month
+  const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+
+  let workdays = 0;
+
+  // Iterate from today to the last day of the month
+  for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
+    const date = new Date(currentYear, currentMonth, day);
+    const dayOfWeek = date.getDay();
+
+    // Check if the day is a workday and not a holiday
+    if (dayOfWeek !== 0 && !holidayDates.includes(date.toDateString())) {
+      workdays++;
+    }
+  }
+
+  return workdays;
+}

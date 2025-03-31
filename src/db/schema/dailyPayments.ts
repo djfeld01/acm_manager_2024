@@ -7,8 +7,9 @@ import {
   date,
   unique,
   real,
+  boolean,
 } from "drizzle-orm/pg-core";
-import { storageFacilities } from "@/db/schema";
+import { storageFacilities, transactionsToDailyPayments } from "@/db/schema";
 
 const dailyPayments = pgTable(
   "daily_payment",
@@ -25,6 +26,7 @@ const dailyPayments = pgTable(
     ach: real("ach"),
     dinersClub: real("diners_club"),
     debit: real("debit"),
+    fullyMatched: boolean("fully_matched").default(false),
   },
   (table) => ({
     dateIndex: index().on(table.date),
@@ -32,11 +34,15 @@ const dailyPayments = pgTable(
   })
 );
 
-export const dailyPaymentsRelations = relations(dailyPayments, ({ one }) => ({
-  facility: one(storageFacilities, {
-    fields: [dailyPayments.facilityId],
-    references: [storageFacilities.sitelinkId],
-  }),
-}));
+export const dailyPaymentsRelations = relations(
+  dailyPayments,
+  ({ one, many }) => ({
+    facility: one(storageFacilities, {
+      fields: [dailyPayments.facilityId],
+      references: [storageFacilities.sitelinkId],
+    }),
+    transactionsToDailyPayments: many(transactionsToDailyPayments),
+  })
+);
 
 export default dailyPayments;

@@ -32,16 +32,16 @@ export default function RootLayout({
         )}
       >
         <Providers>
-          <ThemeProvider
+          {/* <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
-          >
-            <TopMenu />
-            {children}
-            <Analytics />
-          </ThemeProvider>
+          > */}
+          <TopMenu />
+          {children}
+          <Analytics />
+          {/* </ThemeProvider> */}
           <Toaster />
           <ReactQueryDevtools initialIsOpen={false} />
         </Providers>
