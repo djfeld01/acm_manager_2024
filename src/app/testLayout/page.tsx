@@ -12,7 +12,6 @@ import {
   tenantActivities,
 } from "@/db/schema";
 import { and, between, desc, eq, lt, sql } from "drizzle-orm";
-// import { parse as parseOFX } from "ofx-js";
 
 function generatePayPeriods(startDate: string, endYear: number) {
   const payPeriods = [];

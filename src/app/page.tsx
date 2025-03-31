@@ -73,7 +73,7 @@ export default async function Dashboard() {
   // );
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <LocationCards todaysRentals={2} locationsNumbers={results} />
+      {/* <LocationCards todaysRentals={2} locationsNumbers={results} /> */}
     </div>
   );
 }

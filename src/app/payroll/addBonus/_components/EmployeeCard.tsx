@@ -65,7 +65,7 @@ function EmployeeCard({
         {employeeName}
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-3 gap-4 items-center mb-4">
+        <div className="grid grid-cols-3 gap-2 items-center mb-4">
           <div className="text-sm font-medium">Rental Bonus</div>
           <div className="text-right font-semibold">
             ${rentalsBonus.toFixed(2)}
@@ -83,8 +83,8 @@ function EmployeeCard({
                   "Rental",
                   rentalsBonus,
                   nextPayPeriodId,
-                  "11-30-2024",
-                  "11-01-2024"
+                  "12-31-2024",
+                  "12-01-2024"
                 );
                 alert("Added Rental Bonus");
               }}
@@ -94,7 +94,7 @@ function EmployeeCard({
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-4 items-center mb-4">
+        <div className="grid grid-cols-3 gap-2 items-center mb-4">
           <div className="text-sm font-medium">Receivable Bonus</div>
           <div className="text-right font-semibold">
             ${receivableBonus.toFixed(2)}
@@ -112,8 +112,8 @@ function EmployeeCard({
                   "Receivable",
                   receivableBonus,
                   nextPayPeriodId,
-                  "11-30-2024",
-                  "11-01-2024"
+                  "12-31-2024",
+                  "12-01-2024"
                 );
                 alert("Added receivable bonus");
               }}
@@ -123,7 +123,7 @@ function EmployeeCard({
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-4 items-center mb-4">
+        <div className="grid grid-cols-3 gap-2 items-center mb-4">
           <div className="text-sm font-medium">Retail Bonus</div>
           <div className="text-right font-semibold">
             ${retailBonus.toFixed(2)}
@@ -141,8 +141,8 @@ function EmployeeCard({
                   "Retail",
                   retailBonus,
                   nextPayPeriodId,
-                  "11-30-2024",
-                  "11-01-2024"
+                  "12-31-2024",
+                  "12-01-2024"
                 );
                 alert("Added Retail Bonus");
               }}

@@ -25,15 +25,18 @@ function LocationCard({
   nextPayPeriodId,
 }: LocationCardProps) {
   const queryClient = useQueryClient();
+  let endOfLastMonth = new Date();
+  endOfLastMonth.setUTCDate(0);
+  console.log("endoflastmonth", endOfLastMonth.toISOString());
   const { data: monthlyNumbers, isFetching: monthlyNumbersIsFetching } =
-    useQuery(getMonthlyNumbers(sitelinkId, "2024-11-30"));
+    useQuery(getMonthlyNumbers(sitelinkId, endOfLastMonth.toISOString()));
 
   const receivablesGoalNumber = Number(
-    monthlyNumbers?.monthlyGoals[0].collectionsGoal
+    monthlyNumbers?.monthlyGoals[0]?.collectionsGoal || 0
   );
 
   const retailGoalNumber =
-    Number(monthlyNumbers?.monthlyGoals[0].retailGoal) || 0;
+    Number(monthlyNumbers?.monthlyGoals[0]?.retailGoal) || 0;
   const receivableActual =
     monthlyNumbers?.dailyManagementReceivable.reduce(
       (prev, curr) => prev + curr.delinquentTotal,
@@ -60,7 +63,11 @@ function LocationCard({
     <Card className="p-4">
       <CardHeader className="font-semibold text-center text-xl mb-4 bg-slate-400 rounded-lg">
         {facilityName}
+        <div className=" text-center text-base font-light">
+          {endOfLastMonth.toLocaleString("default", { month: "long" })} Results
+        </div>
       </CardHeader>
+
       <CardContent>
         {/* Top Section: Goals and Actuals */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -70,13 +77,13 @@ function LocationCard({
             <div className="flex justify-between">
               <span className="text-sm font-light">Goal:</span>
               <span className="text-sm font-light">
-                {monthlyNumbers?.monthlyGoals[0].rentalGoal}
+                {monthlyNumbers?.monthlyGoals[0]?.rentalGoal}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm font-light">Actual:</span>
               <span className="text-sm font-light">
-                {monthlyNumbers?.dailyManagementActivity[0].monthlyTotal}
+                {monthlyNumbers?.dailyManagementActivity[0]?.monthlyTotal}
               </span>
             </div>
           </div>
@@ -87,14 +94,17 @@ function LocationCard({
             <div className="flex justify-between">
               <span className="text-sm font-light">Goal:</span>
               <span className="text-sm font-light">
-                ${monthlyNumbers?.monthlyGoals[0].retailGoal}
+                ${monthlyNumbers?.monthlyGoals[0]?.retailGoal}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm font-light">Actual:</span>
               <span className="text-sm font-light">
                 $
-                {monthlyNumbers?.dailyManagementPaymentReceipt[0].monthlyAmount}
+                {
+                  monthlyNumbers?.dailyManagementPaymentReceipt[0]
+                    ?.monthlyAmount
+                }
               </span>
             </div>
           </div>
@@ -126,15 +136,16 @@ function LocationCard({
                 receivableActual={receivableActual}
                 receivableGoal={receivablesGoalNumber}
                 rentalActual={
-                  monthlyNumbers?.dailyManagementActivity[0].monthlyTotal || 0
+                  monthlyNumbers?.dailyManagementActivity[0]?.monthlyTotal || 0
                 }
-                rentalGoal={monthlyNumbers?.monthlyGoals[0].rentalGoal || 0}
+                rentalGoal={monthlyNumbers?.monthlyGoals[0]?.rentalGoal || 0}
                 occupancy={
-                  monthlyNumbers?.dailyManagementOccupancy[0].unitOccupancy || 0
+                  monthlyNumbers?.dailyManagementOccupancy[0]?.unitOccupancy ||
+                  0
                 }
                 retailActual={
                   monthlyNumbers?.dailyManagementPaymentReceipt[0]
-                    .monthlyAmount || 0
+                    ?.monthlyAmount || 0
                 }
                 employeeName={employee?.employeeName || ""}
                 retailGoal={retailGoalNumber}
@@ -150,6 +161,3 @@ function LocationCard({
 }
 
 export default LocationCard;
-function payrollPageDataOptions(sitelinkId: string): any {
-  throw new Error("Function not implemented.");
-}

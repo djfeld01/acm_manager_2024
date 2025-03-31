@@ -91,3 +91,25 @@ export {
   default as dailyManagementPaymentReceipt,
   dailyManagementPaymentReceiptRelations,
 } from "@/db/schema/dailyManagementPaymentReceipt";
+
+export {
+  default as bankAccount,
+  depositTypes,
+  bankAccountRelations,
+} from "@/db/schema/bankAccount";
+
+export {
+  default as bankTransaction,
+  bankTransactionRelation,
+} from "@/db/schema/bankTransaction";
+
+export {
+  default as transactionsToDailyPayments,
+  transactionsToDailyPaymentsRelations,
+  connectionTypes,
+} from "@/db/schema/transactionsToDailyPayments";
+
+export {
+  default as bankBalance,
+  bankBalanceRelations,
+} from "@/db/schema/bankBalance";

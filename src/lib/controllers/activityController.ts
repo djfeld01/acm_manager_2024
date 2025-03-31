@@ -590,7 +590,7 @@ export async function monthlyNumbers(
   lastDayOfMonthDate: string
 ) {
   const firstDayOfMonth = new Date(lastDayOfMonthDate);
-  firstDayOfMonth.setDate(1);
+  firstDayOfMonth.setUTCDate(1);
   const firstDayOfMonthString = firstDayOfMonth.toDateString();
 
   const results = await db.query.storageFacilities.findFirst({
@@ -632,7 +632,7 @@ export async function monthlyNumbers(
       },
     },
   });
-
+  console.log(results);
   return results;
 
   // const rentals = await db.query.dailyManagementActivity.findFirst({
