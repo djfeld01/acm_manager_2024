@@ -29,7 +29,7 @@ const bankTransaction = pgTable(
     transactionDate: date("transaction_date").notNull().defaultNow(),
     transactionType: depositTypes("transaction_type").notNull(),
     transactionAmount: numeric("transaction_amount").notNull(),
-    fullyMatched: boolean("fully_matched").default(false),
+    committed: boolean("committed").default(false),
   },
   (t) => ({
     dateIndex: index().on(t.transactionDate),

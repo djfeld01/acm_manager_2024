@@ -1,1 +1,0 @@
-ALTER TABLE "daily_payment" ADD COLUMN "fully_matched" boolean DEFAULT false;

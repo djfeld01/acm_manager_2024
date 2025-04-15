@@ -1,5 +1,5 @@
 {
-  "id": "cf54c769-4907-4fe7-8f94-414630b6c53f",
+  "id": "4a88ecf2-c2bf-42c6-aa48-968e362ef201",
   "prevId": "34935201-629d-4ebf-ac9b-5fc83ff53470",
   "version": "7",
   "dialect": "postgresql",
@@ -100,7 +100,264 @@
           ]
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.bank_account": {
+      "name": "bank_account",
+      "schema": "",
+      "columns": {
+        "bank_account_id": {
+          "name": "bank_account_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sitelink_id": {
+          "name": "sitelink_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_name": {
+          "name": "bank_name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_account_number": {
+          "name": "bank_account_number",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_routing_number": {
+          "name": "bank_routing_number",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_account_type": {
+          "name": "bank_account_type",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deposit_type": {
+          "name": "deposit_type",
+          "type": "deposit_types",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'all'"
+        },
+        "operating_account": {
+          "name": "operating_account",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bank_account_sitelink_id_storage_facility_sitelink_id_fk": {
+          "name": "bank_account_sitelink_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "bank_account",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "sitelink_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "bank_account_bank_account_number_unique": {
+          "name": "bank_account_bank_account_number_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "bank_account_number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.bank_balance": {
+      "name": "bank_balance",
+      "schema": "",
+      "columns": {
+        "bank_account_id": {
+          "name": "bank_account_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "balance": {
+          "name": "balance",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bank_balance_bank_account_id_bank_account_bank_account_id_fk": {
+          "name": "bank_balance_bank_account_id_bank_account_bank_account_id_fk",
+          "tableFrom": "bank_balance",
+          "tableTo": "bank_account",
+          "columnsFrom": [
+            "bank_account_id"
+          ],
+          "columnsTo": [
+            "bank_account_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "bank_balance_bank_account_id_date_pk": {
+          "name": "bank_balance_bank_account_id_date_pk",
+          "columns": [
+            "bank_account_id",
+            "date"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.bank_transaction": {
+      "name": "bank_transaction",
+      "schema": "",
+      "columns": {
+        "bank_transaction_id": {
+          "name": "bank_transaction_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "downloaded_id": {
+          "name": "downloaded_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_account_id": {
+          "name": "bank_account_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transaction_date": {
+          "name": "transaction_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "transaction_type": {
+          "name": "transaction_type",
+          "type": "deposit_types",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transaction_amount": {
+          "name": "transaction_amount",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "committed": {
+          "name": "committed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "bank_transaction_transaction_date_index": {
+          "name": "bank_transaction_transaction_date_index",
+          "columns": [
+            {
+              "expression": "transaction_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bank_transaction_bank_account_id_index": {
+          "name": "bank_transaction_bank_account_id_index",
+          "columns": [
+            {
+              "expression": "bank_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "bank_transaction_bank_account_id_bank_account_bank_account_id_fk": {
+          "name": "bank_transaction_bank_account_id_bank_account_bank_account_id_fk",
+          "tableFrom": "bank_transaction",
+          "tableTo": "bank_account",
+          "columnsFrom": [
+            "bank_account_id"
+          ],
+          "columnsTo": [
+            "bank_account_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "bank_transaction_bank_account_id_downloaded_id_transaction_amount_transaction_date_unique": {
+          "name": "bank_transaction_bank_account_id_downloaded_id_transaction_amount_transaction_date_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "bank_account_id",
+            "downloaded_id",
+            "transaction_amount",
+            "transaction_date"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.bonus": {
       "name": "bonus",
@@ -118,8 +375,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "month": {
-          "name": "month",
+        "bonus_month": {
+          "name": "bonus_month",
           "type": "date",
           "primaryKey": false,
           "notNull": false
@@ -227,7 +484,10 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.daily_management_activity": {
       "name": "daily_management_activity",
@@ -330,7 +590,10 @@
           ]
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.daily_management_occupancy": {
       "name": "daily_management_occupancy",
@@ -480,7 +743,10 @@
           ]
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.daily_management_payment_receipt": {
       "name": "daily_management_payment_receipt",
@@ -583,7 +849,10 @@
           ]
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.daily_management_receivable": {
       "name": "daily_management_receivable",
@@ -681,7 +950,10 @@
           ]
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.daily_payment": {
       "name": "daily_payment",
@@ -758,6 +1030,20 @@
           "type": "real",
           "primaryKey": false,
           "notNull": false
+        },
+        "cash_check_committed": {
+          "name": "cash_check_committed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "credit_card_committed": {
+          "name": "credit_card_committed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
         }
       },
       "indexes": {
@@ -788,7 +1074,10 @@
             "facility_id"
           ]
         }
-      }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.holiday": {
       "name": "holiday",
@@ -911,7 +1200,10 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.mileage": {
       "name": "mileage",
@@ -1033,7 +1325,10 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.monthly_goal": {
       "name": "monthly_goal",
@@ -1096,7 +1391,10 @@
           ]
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.pay_period": {
       "name": "pay_period",
@@ -1151,7 +1449,10 @@
             "start_date"
           ]
         }
-      }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.payrollNote": {
       "name": "payrollNote",
@@ -1234,7 +1535,10 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.quickbooks_balance": {
       "name": "quickbooks_balance",
@@ -1285,7 +1589,10 @@
           ]
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.session": {
       "name": "session",
@@ -1327,7 +1634,10 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.sitelink_logon": {
       "name": "sitelink_logon",
@@ -1383,7 +1693,10 @@
           ]
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.storage_facility": {
       "name": "storage_facility",
@@ -1514,7 +1827,10 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.tenant_activity": {
       "name": "tenant_activity",
@@ -1746,7 +2062,95 @@
             "unit_name"
           ]
         }
-      }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.transactions_to_daily_payments": {
+      "name": "transactions_to_daily_payments",
+      "schema": "",
+      "columns": {
+        "bank_transaction_id": {
+          "name": "bank_transaction_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "daily_payment_id": {
+          "name": "daily_payment_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount": {
+          "name": "amount",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deposit_difference": {
+          "name": "deposit_difference",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "connection_type": {
+          "name": "connection_type",
+          "type": "connection_types",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "transactions_to_daily_payments_bank_transaction_id_bank_transaction_bank_transaction_id_fk": {
+          "name": "transactions_to_daily_payments_bank_transaction_id_bank_transaction_bank_transaction_id_fk",
+          "tableFrom": "transactions_to_daily_payments",
+          "tableTo": "bank_transaction",
+          "columnsFrom": [
+            "bank_transaction_id"
+          ],
+          "columnsTo": [
+            "bank_transaction_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "transactions_to_daily_payments_daily_payment_id_daily_payment_daily_payment_id_fk": {
+          "name": "transactions_to_daily_payments_daily_payment_id_daily_payment_daily_payment_id_fk",
+          "tableFrom": "transactions_to_daily_payments",
+          "tableTo": "daily_payment",
+          "columnsFrom": [
+            "daily_payment_id"
+          ],
+          "columnsTo": [
+            "daily_payment_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "transactions_to_daily_payments_bank_transaction_id_daily_payment_id_pk": {
+          "name": "transactions_to_daily_payments_bank_transaction_id_daily_payment_id_pk",
+          "columns": [
+            "bank_transaction_id",
+            "daily_payment_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.user_detail": {
       "name": "user_detail",
@@ -1860,7 +2264,10 @@
             "paycor_employee_id"
           ]
         }
-      }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.user": {
       "name": "user",
@@ -1928,7 +2335,10 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.user_to_facilities": {
       "name": "user_to_facilities",
@@ -2018,7 +2428,10 @@
             "sitelink_employee_id"
           ]
         }
-      }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.vacation": {
       "name": "vacation",
@@ -2140,7 +2553,10 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.verificationToken": {
       "name": "verificationToken",
@@ -2176,7 +2592,10 @@
           ]
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -2187,6 +2606,25 @@
         "MoveIn",
         "MoveOut",
         "Transfer"
+      ]
+    },
+    "public.connection_types": {
+      "name": "connection_types",
+      "schema": "public",
+      "values": [
+        "cash",
+        "creditCard"
+      ]
+    },
+    "public.deposit_types": {
+      "name": "deposit_types",
+      "schema": "public",
+      "values": [
+        "all",
+        "cash",
+        "creditCard",
+        "truck",
+        "other"
       ]
     },
     "public.holiday_type": {
@@ -2245,6 +2683,9 @@
   },
   "schemas": {},
   "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},

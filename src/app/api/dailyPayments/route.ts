@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       debit: dailyPayments.debit,
     };
   });
-
+  console.log("🚀 ~ POST ~ body:", body);
   //   const data = {
   //     ...body,
   //     date: body.date.toISOString(), // Convert Date to string
