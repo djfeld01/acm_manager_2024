@@ -1,1 +1,0 @@
-ALTER TABLE "bonus" RENAME COLUMN "month" TO "bonus_month";

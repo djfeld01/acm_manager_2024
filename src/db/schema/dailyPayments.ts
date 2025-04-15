@@ -26,7 +26,8 @@ const dailyPayments = pgTable(
     ach: real("ach"),
     dinersClub: real("diners_club"),
     debit: real("debit"),
-    fullyMatched: boolean("fully_matched").default(false),
+    cashCheckCommitted: boolean("cash_check_committed").default(false),
+    creditCardCommitted: boolean("credit_card_committed").default(false),
   },
   (table) => ({
     dateIndex: index().on(table.date),
