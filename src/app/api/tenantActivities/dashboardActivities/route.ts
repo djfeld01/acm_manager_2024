@@ -16,8 +16,6 @@ export async function GET(req: NextRequest) {
     findMondayDate.getDay() +
     (findMondayDate.getDay() === 0 ? -6 : 1); // adjust when day is sunday
   const mondayDate = new Date(findMondayDate.setDate(monday));
-  console.log("monday", mondayDate.toDateString());
-  console.log("today", today.toDateString());
 
   const result = await db.query.storageFacilities.findMany({
     with: {
@@ -91,7 +89,9 @@ export async function GET(req: NextRequest) {
     message: "GET route is working!",
     response,
     arrayResponse,
-    timestamp: mondayDate.toDateString(),
+    timestamp: new Date().toISOString(),
+    today: today.toDateString(),
+    monday: mondayDate.toDateString(),
   };
 
   return NextResponse.json(data);
