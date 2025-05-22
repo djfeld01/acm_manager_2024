@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { dailyManagementActivity, dailyManagementOccupancy } from "@/db/schema";
+import { isSunday } from "date-fns";
 import { and, asc, desc, eq, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -13,12 +14,10 @@ export async function GET(req: NextRequest) {
     today = new Date(year, month - 1, day);
   }
   // Example: Fetch data or perform logic here
-  const findMondayDate = new Date(today);
-  const monday =
-    findMondayDate.getDate() -
-    findMondayDate.getDay() +
-    (findMondayDate.getDay() === 0 ? -6 : 1); // adjust when day is sunday
-  const mondayDate = new Date(findMondayDate.setDate(monday));
+  const findSundayDate = new Date(today);
+  const dayOfWeek = findSundayDate.getDay();
+  const sunday = findSundayDate.getDate() - dayOfWeek;
+  const sundayDate = new Date(findSundayDate.setDate(sunday));
 
   const result = await db.query.storageFacilities.findMany({
     with: {
@@ -26,7 +25,7 @@ export async function GET(req: NextRequest) {
         where: and(
           or(
             eq(dailyManagementActivity.date, today.toDateString()),
-            eq(dailyManagementActivity.date, mondayDate.toDateString())
+            eq(dailyManagementActivity.date, sundayDate.toDateString())
           ),
           or(
             eq(dailyManagementActivity.activityType, "Move-Outs"),
@@ -94,7 +93,7 @@ export async function GET(req: NextRequest) {
     arrayResponse,
     timestamp: new Date().toISOString(),
     today: today.toDateString(),
-    monday: mondayDate.toDateString(),
+    monday: sundayDate.toDateString(),
   };
 
   return NextResponse.json(data);
