@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { tenantActivities } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 
 export type TenantActivityType = {
   facilityId: string;
@@ -77,6 +78,12 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const res = await db.query.tenantActivities.findMany({ limit: 100 });
+  const res = await db.query.tenantActivities.findMany({
+    where: and(
+      eq(tenantActivities.activityType, "MoveIn"),
+      eq(tenantActivities.leadSource, "StoragePug Website Rental")
+    ),
+    limit: 100,
+  });
   return NextResponse.json(res);
 }
