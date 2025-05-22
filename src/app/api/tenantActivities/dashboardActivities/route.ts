@@ -6,11 +6,14 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
   const todayParam: string | null = req.nextUrl.searchParams.get("today");
   let today = new Date();
+
   if (todayParam) {
-    today = new Date(todayParam);
+    const [year, month, day] = todayParam.split("-").map(Number);
+    // month is 0-based in JS Date
+    today = new Date(year, month - 1, day);
   }
   // Example: Fetch data or perform logic here
-  const findMondayDate = new Date();
+  const findMondayDate = new Date(today);
   const monday =
     findMondayDate.getDate() -
     findMondayDate.getDay() +
