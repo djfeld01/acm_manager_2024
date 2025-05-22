@@ -1,0 +1,98 @@
+import { db } from "@/db";
+import { dailyManagementActivity, dailyManagementOccupancy } from "@/db/schema";
+import { and, asc, desc, eq, or } from "drizzle-orm";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(req: NextRequest) {
+  const todayParam: string | null = req.nextUrl.searchParams.get("today");
+  let today = new Date();
+  if (todayParam) {
+    today = new Date(todayParam);
+  }
+  // Example: Fetch data or perform logic here
+  const findMondayDate = new Date();
+  const monday =
+    findMondayDate.getDate() -
+    findMondayDate.getDay() +
+    (findMondayDate.getDay() === 0 ? -6 : 1); // adjust when day is sunday
+  const mondayDate = new Date(findMondayDate.setDate(monday));
+  console.log("monday", mondayDate.toDateString());
+  console.log("today", today.toDateString());
+
+  const result = await db.query.storageFacilities.findMany({
+    with: {
+      dailyManagementActivity: {
+        where: and(
+          or(
+            eq(dailyManagementActivity.date, today.toDateString()),
+            eq(dailyManagementActivity.date, mondayDate.toDateString())
+          ),
+          or(
+            eq(dailyManagementActivity.activityType, "Move-Outs"),
+            eq(dailyManagementActivity.activityType, "Move-Ins")
+          )
+        ),
+        orderBy: [
+          asc(dailyManagementActivity.activityType),
+          desc(dailyManagementActivity.date),
+        ],
+      },
+      dailyManagementOccupancy: {
+        where: eq(dailyManagementOccupancy.date, today.toDateString()),
+      },
+    },
+  });
+
+  const response = result.map((facility) => {
+    const dailyRentals = facility.dailyManagementActivity[0]?.dailyTotal;
+    const monthlyRentals = facility.dailyManagementActivity[0]?.monthlyTotal;
+    const weeklyRentals =
+      facility.dailyManagementActivity[0]?.yearlyTotal -
+      facility.dailyManagementActivity[1]?.yearlyTotal;
+    const monthlyMoveouts = facility.dailyManagementActivity[3]?.monthlyTotal;
+    const financialOccupancy =
+      facility.dailyManagementOccupancy[0]?.financialOccupancy;
+    const unitOccupancy = facility.dailyManagementOccupancy[0]?.unitOccupancy;
+    const squareFootageOccupancy =
+      facility.dailyManagementOccupancy[0]?.squareFootageOccupancy;
+
+    return {
+      abbreviatedName: facility.facilityAbbreviation,
+      dailyRentals,
+      monthlyRentals,
+      weeklyRentals,
+      monthlyMoveouts,
+      financialOccupancy,
+      unitOccupancy,
+      squareFootageOccupancy,
+    };
+  });
+  const arrayResponse = response.map((location) => [
+    location.abbreviatedName,
+    location.dailyRentals,
+    location.monthlyRentals,
+    location.weeklyRentals,
+    location.monthlyMoveouts,
+    location.financialOccupancy,
+    location.unitOccupancy,
+    location.squareFootageOccupancy,
+  ]);
+  arrayResponse.unshift([
+    "Facility",
+    "Daily Rentals",
+    "Monthly Rentals",
+    "Weekly Rentals",
+    "Monthly Moveouts",
+    "Financial Occupancy",
+    "Unit Occupancy",
+    "Square Footage Occupancy",
+  ]);
+  const data = {
+    message: "GET route is working!",
+    response,
+    arrayResponse,
+    timestamp: mondayDate.toDateString(),
+  };
+
+  return NextResponse.json(data);
+}
