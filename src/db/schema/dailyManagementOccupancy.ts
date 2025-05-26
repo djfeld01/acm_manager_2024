@@ -21,6 +21,7 @@ const dailyManagementOccupancy = pgTable(
     date: date("date").notNull(),
     unitOccupancy: real("unit_occupancy"),
     financialOccupancy: real("financial_occupancy"),
+    occupiedVariance: real("occupied_variance"),
     squareFootageOccupancy: real("square_footage_occupancy"),
     occupiedUnits: real("occupied_units"),
     vacantUnits: real("vacant_units"),
