@@ -13,6 +13,7 @@ export type SitelinkManagementDailyOccupancy = {
   facilityId: string;
   date: string;
   unitOccupancy: number;
+  occupiedVariance: number;
   financialOccupancy: number;
   squareFootageOccupancy: number;
   occupiedUnits: number;
@@ -93,6 +94,7 @@ export async function POST(req: NextRequest) {
       unitOccupancy: facilityOccupancy.unitOccupancy / 100,
       squareFootageOccupancy: facilityOccupancy.squareFootageOccupancy / 100,
       financialOccupancy: facilityOccupancy.financialOccupancy / 100,
+      occupiedVariance: facilityOccupancy.occupiedVariance,
       occupiedUnits: facilityOccupancy.occupiedUnits,
       vacantUnits: facilityOccupancy.vacantUnits,
       complimentaryUnits: facilityOccupancy.complimentaryUnits,
@@ -219,6 +221,7 @@ export async function POST(req: NextRequest) {
         // Update all the numeric fields using excluded
         unitOccupancy: sql.raw(`excluded.unit_occupancy`),
         financialOccupancy: sql.raw(`excluded.financial_occupancy`),
+        occupiedVariance: sql.raw(`excluded.occupied_variance`),
         squareFootageOccupancy: sql.raw(`excluded.square_footage_occupancy`),
         occupiedUnits: sql.raw(`excluded.occupied_units`),
         vacantUnits: sql.raw(`excluded.vacant_units`),
@@ -250,6 +253,8 @@ export async function GET(req: NextRequest) {
     await db.execute(sql`SELECT DISTINCT ON (facility_id, date_trunc('month', date)) 
     facility_id,
     date,
+    financial_occupancy,
+    square_footage_occupancy,
     unit_occupancy,
     date_updated
 FROM daily_management_occupancy
