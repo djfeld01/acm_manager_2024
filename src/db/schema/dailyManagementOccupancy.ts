@@ -22,6 +22,8 @@ const dailyManagementOccupancy = pgTable(
     unitOccupancy: real("unit_occupancy"),
     financialOccupancy: real("financial_occupancy"),
     occupiedVariance: real("occupied_variance"),
+    rentPotential: real("rent_potential"),
+    rentActual: real("rent_actual"),
     squareFootageOccupancy: real("square_footage_occupancy"),
     occupiedUnits: real("occupied_units"),
     vacantUnits: real("vacant_units"),

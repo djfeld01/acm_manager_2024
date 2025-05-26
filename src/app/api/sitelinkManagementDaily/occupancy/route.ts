@@ -15,6 +15,8 @@ export type SitelinkManagementDailyOccupancy = {
   unitOccupancy: number;
   occupiedVariance: number;
   financialOccupancy: number;
+  rentPotential: number;
+  rentActual: number;
   squareFootageOccupancy: number;
   occupiedUnits: number;
   vacantUnits: number;
@@ -95,6 +97,8 @@ export async function POST(req: NextRequest) {
       squareFootageOccupancy: facilityOccupancy.squareFootageOccupancy / 100,
       financialOccupancy: facilityOccupancy.financialOccupancy / 100,
       occupiedVariance: facilityOccupancy.occupiedVariance,
+      rentPotential: facilityOccupancy.rentPotential,
+      rentActual: facilityOccupancy.rentActual,
       occupiedUnits: facilityOccupancy.occupiedUnits,
       vacantUnits: facilityOccupancy.vacantUnits,
       complimentaryUnits: facilityOccupancy.complimentaryUnits,
@@ -222,6 +226,8 @@ export async function POST(req: NextRequest) {
         unitOccupancy: sql.raw(`excluded.unit_occupancy`),
         financialOccupancy: sql.raw(`excluded.financial_occupancy`),
         occupiedVariance: sql.raw(`excluded.occupied_variance`),
+        rentPotential: sql.raw(`excluded.rent_potential`),
+        rentActual: sql.raw(`excluded.rent_actual`),
         squareFootageOccupancy: sql.raw(`excluded.square_footage_occupancy`),
         occupiedUnits: sql.raw(`excluded.occupied_units`),
         vacantUnits: sql.raw(`excluded.vacant_units`),
