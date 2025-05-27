@@ -4,6 +4,7 @@ import {
   dailyManagementOccupancy,
   dailyManagementPaymentReceipt,
   dailyManagementReceivable,
+  dailyManagementSundries,
 } from "@/db/schema";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { interval } from "drizzle-orm/pg-core";
@@ -55,11 +56,22 @@ export type SitelinkManagementPaymentReceipt = {
   yearlyAmount: number;
 }[];
 
+export type SitelinkManagementDailySundries = {
+  facilityId: string;
+  date: string;
+  sortId: number;
+  sundryType: string;
+  dailyTotal: number;
+  monthlyTotal: number;
+  yearlyTotal: number;
+}[];
+
 export type BodyType = {
   occupancy: SitelinkManagementDailyOccupancy;
   receivable: SitelinkManagementDailyReceivable;
   activity: SitelinkManagementDailyActivity;
   paymentReceipt: SitelinkManagementPaymentReceipt;
+  sundries: SitelinkManagementDailySundries;
 };
 
 function getDayRange(period: string) {
@@ -87,7 +99,7 @@ function getDayRange(period: string) {
 
 export async function POST(req: NextRequest) {
   const body: BodyType = await req.json();
-  const { occupancy, receivable, activity, paymentReceipt } = body;
+  const { occupancy, receivable, activity, paymentReceipt, sundries } = body;
 
   const occupancyToInsert = occupancy.map((facilityOccupancy) => {
     return {
@@ -145,6 +157,20 @@ export async function POST(req: NextRequest) {
     };
   });
 
+  const sundriesToInsert = sundries.map((facilitySundries) => {
+    return {
+      facilityId: facilitySundries.facilityId,
+      date: facilitySundries.date,
+      sundryType: facilitySundries.sundryType,
+      dailyTotal: facilitySundries.dailyTotal,
+      monthlyTotal: facilitySundries.monthlyTotal,
+      yearlyTotal: facilitySundries.yearlyTotal,
+      sortId: facilitySundries.sortId,
+      dateCreated: new Date(),
+      dateUpdated: new Date(),
+    };
+  });
+
   const paymentReceiptToInsert = paymentReceipt.map((paymentReceipt) => {
     return {
       facilityId: paymentReceipt.facilityId,
@@ -184,6 +210,24 @@ export async function POST(req: NextRequest) {
         dailyManagementActivity.facilityId,
         dailyManagementActivity.date,
         dailyManagementActivity.activityType,
+      ],
+      set: {
+        dailyTotal: sql.raw(`excluded.daily_total`),
+        monthlyTotal: sql.raw(`excluded.monthly_total`),
+        yearlyTotal: sql.raw(`excluded.yearly_total`),
+        sortId: sql.raw(`excluded.sort_id`),
+        dateUpdated: new Date(),
+      },
+    });
+
+  await db
+    .insert(dailyManagementSundries)
+    .values(sundriesToInsert)
+    .onConflictDoUpdate({
+      target: [
+        dailyManagementSundries.facilityId,
+        dailyManagementSundries.date,
+        dailyManagementSundries.sundryType,
       ],
       set: {
         dailyTotal: sql.raw(`excluded.daily_total`),
