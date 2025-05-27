@@ -113,3 +113,8 @@ export {
   default as bankBalance,
   bankBalanceRelations,
 } from "@/db/schema/bankBalance";
+
+export {
+  default as dailyManagementSundries,
+  dailyManagementSundriesRelations,
+} from "@/db/schema/dailyManagementSundries";
