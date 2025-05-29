@@ -13,26 +13,26 @@ import { NextRequest, NextResponse } from "next/server";
 
 type FacilityData = {
   abbreviatedName: string;
-  yearlyCalls: number;
-  yearlyRentals: number;
-  yearlyMoveouts: number;
-  rangeCalls: number;
-  rangeRentals: number;
-  rangeMoveouts: number;
-  receivablesZeroToThirty: number;
-  receivableThirtyToSixty: number;
-  receivableSixtyToNinety: number;
-  receivableNinetyToOneTwenty: number;
-  receivableOneTwentyPlus: number;
-  rentPotential: number;
-  rentActual: number;
-  occupiedVariance: number;
-  totalUnits: number;
-  occupiedUnits: number;
-  unitOccupancy: number;
-  squareFootPotential: number;
-  squareFootActual: number;
-  squareFootageOccupancy: number;
+  yearlyCalls: number | null;
+  yearlyRentals: number | null;
+  yearlyMoveouts: number | null;
+  rangeCalls: number | null;
+  rangeRentals: number | null;
+  rangeMoveouts: number | null;
+  receivablesZeroToThirty: number | null;
+  receivableThirtyToSixty: number | null;
+  receivableSixtyToNinety: number | null;
+  receivableNinetyToOneTwenty: number | null;
+  receivableOneTwentyPlus: number | null;
+  rentPotential: number | null;
+  rentActual: number | null;
+  occupiedVariance: number | null;
+  totalUnits: number | null;
+  occupiedUnits: number | null;
+  unitOccupancy: number | null;
+  squareFootPotential: number | null;
+  squareFootActual: number | null;
+  squareFootageOccupancy: number | null;
 };
 
 function pivotFacilitiesData(
@@ -51,7 +51,7 @@ function pivotFacilitiesData(
   ];
 
   const rows: (string | number)[][] = metrics.map((metric) => {
-    return [metric, ...facilitiesData.map((f) => f[metric])];
+    return [metric, ...facilitiesData.map((f) => f[metric] ?? "")];
   });
 
   return [headerRow, ...rows];
