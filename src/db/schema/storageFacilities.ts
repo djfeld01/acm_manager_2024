@@ -17,6 +17,7 @@ import {
   dailyManagementActivity,
   dailyManagementReceivable,
   bankAccount,
+  dailyManagementSundries,
 } from "@/db/schema";
 import dailyManagementPaymentReceipt from "./dailyManagementPaymentReceipt";
 
@@ -60,6 +61,7 @@ export const storageFacilitiesRelations = relations(
     dailyManagementActivity: many(dailyManagementActivity),
     dailyManagementReceivable: many(dailyManagementReceivable),
     dailyManagementPaymentReceipt: many(dailyManagementPaymentReceipt),
+    dailyManagementSundries: many(dailyManagementSundries),
     bankAccount: many(bankAccount),
   })
 );
