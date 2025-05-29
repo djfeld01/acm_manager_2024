@@ -110,6 +110,7 @@ export async function GET(req: NextRequest) {
         ),
       },
     },
+    orderBy: asc(storageFacilities.facilityAbbreviation),
   });
 
   const response = result.map((facility) => {
