@@ -36,24 +36,96 @@ type FacilityData = {
   squareFootageOccupancy: number | null;
 };
 
+const GROUPS: Record<string, { label: string; keys: (keyof FacilityData)[] }> =
+  {
+    ytd: {
+      label: "YTD Activities",
+      keys: ["yearlyCalls", "yearlyRentals", "yearlyMoveouts"],
+    },
+    range: {
+      label: "Range Activities",
+      keys: ["rangeCalls", "rangeRentals", "rangeMoveouts"],
+    },
+    receivables: {
+      label: "Receivables",
+      keys: [
+        "receivablesZeroToThirty",
+        "receivableThirtyToSixty",
+        "receivableSixtyToNinety",
+        "receivableNinetyToOneTwenty",
+        "receivableOneTwentyPlus",
+      ],
+    },
+    rent: {
+      label: "Rent",
+      keys: ["rentPotential", "rentActual"],
+    },
+    variance: {
+      label: "Variance",
+      keys: ["occupiedVariance"],
+    },
+    units: {
+      label: "Unit Occupancy",
+      keys: ["totalUnits", "occupiedUnits", "unitOccupancy"],
+    },
+    sqft: {
+      label: "Square Foot Occupancy",
+      keys: [
+        "squareFootPotential",
+        "squareFootActual",
+        "squareFootageOccupancy",
+      ],
+    },
+  };
+
+// Custom labels for display
+const LABELS: Partial<Record<keyof FacilityData, string>> = {
+  yearlyCalls: "Calls - YTD",
+  yearlyRentals: "Rentals - YTD",
+  yearlyMoveouts: "Moveouts - YTD",
+  rangeCalls: "Calls - Range",
+  rangeRentals: "Rentals - Range",
+  rangeMoveouts: "Moveouts - Range",
+  receivablesZeroToThirty: "0–30 Days",
+  receivableThirtyToSixty: "31–60 Days",
+  receivableSixtyToNinety: "61–90 Days",
+  receivableNinetyToOneTwenty: "91–120 Days",
+  receivableOneTwentyPlus: "120+ Days",
+  rentPotential: "Rent - Potential",
+  rentActual: "Rent - Actual",
+  occupiedVariance: "Occupied Variance",
+  totalUnits: "Total Units",
+  occupiedUnits: "Occupied Units",
+  unitOccupancy: "Unit Occupancy %",
+  squareFootPotential: "SqFt - Potential",
+  squareFootActual: "SqFt - Actual",
+  squareFootageOccupancy: "SqFt Occupancy %",
+};
+
 function pivotFacilitiesData(
   facilitiesData: FacilityData[]
 ): (string | number)[][] {
   if (facilitiesData.length === 0) return [];
-
-  const metrics = Object.keys(facilitiesData[0]).filter(
-    (key): key is keyof Omit<FacilityData, "abbreviatedName"> =>
-      key !== "abbreviatedName"
-  );
 
   const headerRow: (string | number)[] = [
     "Metric",
     ...facilitiesData.map((f) => f.abbreviatedName),
   ];
 
-  const rows: (string | number)[][] = metrics.map((metric) => {
-    return [metric, ...facilitiesData.map((f) => f[metric] ?? "")];
-  });
+  const rows: (string | number)[][] = [];
+
+  for (const group of Object.values(GROUPS)) {
+    rows.push([group.label, ...new Array(facilitiesData.length).fill("")]);
+
+    for (const key of group.keys) {
+      const label = LABELS[key] ?? key;
+      const row: (string | number)[] = [
+        label,
+        ...facilitiesData.map((f) => f[key]),
+      ];
+      rows.push(row);
+    }
+  }
 
   return [headerRow, ...rows];
 }
