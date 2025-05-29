@@ -11,14 +11,46 @@ import { and, asc, between, desc, eq, or } from "drizzle-orm";
 import { BetweenHorizonalStart } from "lucide-react";
 import { NextRequest, NextResponse } from "next/server";
 
-function pivotFacilitiesData(facilitiesData) {
+type FacilityData = {
+  abbreviatedName: string;
+  yearlyCalls: number;
+  yearlyRentals: number;
+  yearlyMoveouts: number;
+  rangeCalls: number;
+  rangeRentals: number;
+  rangeMoveouts: number;
+  receivablesZeroToThirty: number;
+  receivableThirtyToSixty: number;
+  receivableSixtyToNinety: number;
+  receivableNinetyToOneTwenty: number;
+  receivableOneTwentyPlus: number;
+  rentPotential: number;
+  rentActual: number;
+  occupiedVariance: number;
+  totalUnits: number;
+  occupiedUnits: number;
+  unitOccupancy: number;
+  squareFootPotential: number;
+  squareFootActual: number;
+  squareFootageOccupancy: number;
+};
+
+function pivotFacilitiesData(
+  facilitiesData: FacilityData[]
+): (string | number)[][] {
+  if (facilitiesData.length === 0) return [];
+
   const metrics = Object.keys(facilitiesData[0]).filter(
-    (key) => key !== "abbreviatedName"
+    (key): key is keyof Omit<FacilityData, "abbreviatedName"> =>
+      key !== "abbreviatedName"
   );
 
-  const headerRow = ["Metric", ...facilitiesData.map((f) => f.abbreviatedName)];
+  const headerRow: (string | number)[] = [
+    "Metric",
+    ...facilitiesData.map((f) => f.abbreviatedName),
+  ];
 
-  const rows = metrics.map((metric) => {
+  const rows: (string | number)[][] = metrics.map((metric) => {
     return [metric, ...facilitiesData.map((f) => f[metric])];
   });
 
