@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
         ),
       },
     },
-    orderBy: asc(storageFacilities.facilityAbbreviation),
+    orderBy: asc(storageFacilities.sitelinkId),
   });
 
   const response = result.map((facility) => {
