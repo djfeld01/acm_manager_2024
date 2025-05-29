@@ -121,7 +121,7 @@ function pivotFacilitiesData(
       const label = LABELS[key] ?? key;
       const row: (string | number)[] = [
         label,
-        ...facilitiesData.map((f) => f[key]),
+        ...facilitiesData.map((f) => f[key] ?? ""),
       ];
       rows.push(row);
     }
