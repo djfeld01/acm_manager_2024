@@ -4,6 +4,7 @@ import {
   dailyManagementOccupancy,
   dailyManagementReceivable,
   dailyManagementSundries,
+  storageFacilities,
 } from "@/db/schema";
 import { fail } from "assert";
 import { isSunday } from "date-fns";
@@ -77,6 +78,7 @@ export async function GET(req: NextRequest) {
   }
 
   const result = await db.query.storageFacilities.findMany({
+    where: eq(storageFacilities.currentClient, true),
     with: {
       dailyManagementActivity: {
         where: and(
