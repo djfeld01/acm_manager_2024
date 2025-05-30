@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 
   const response = result.map((facility) => {
     const dailyRentals = facility.dailyManagementActivity[0]?.dailyTotal;
-    const monthlyRentals = facility.dailyManagementActivity[1]?.monthlyTotal;
+    const monthlyRentals = facility.dailyManagementActivity[0]?.monthlyTotal;
     const weeklyRentals =
       facility.dailyManagementActivity[0]?.yearlyTotal -
       facility.dailyManagementActivity[1]?.yearlyTotal;
