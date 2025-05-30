@@ -680,6 +680,7 @@ export async function employeesWhoWorked(
         lte(sitelinkLogons.dateTime, new Date(`${endDate}T11:59:59-05:00`))
       )
     )
-    .groupBy(userDetails.id, usersToFacilities.position);
+    .groupBy(userDetails.id, usersToFacilities.position)
+    .orderBy(asc(usersToFacilities.position));
   return results;
 }

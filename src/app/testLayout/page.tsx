@@ -6,10 +6,6 @@ import {
   dailyManagementPaymentReceipt,
   dailyManagementReceivable,
   dailyPayments,
-  monthlyGoals,
-  payPeriod,
-  sitelinkLogons,
-  tenantActivities,
 } from "@/db/schema";
 import { and, between, desc, eq, lt, sql } from "drizzle-orm";
 

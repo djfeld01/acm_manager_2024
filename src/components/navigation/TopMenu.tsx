@@ -48,6 +48,33 @@ export default async function TopMenu() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="text-muted-foreground hover:text-foreground cursor-pointer">
+              Deposits
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center">
+            {locations.length > 0 ? (
+              locations.map((location) => (
+                <DropdownMenuItem key={location.sitelinkId}>
+                  <Link
+                    href={`/dailyPaymentsTable/${location.sitelinkId}`}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    {location.facilityAbbreviation}
+                  </Link>
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem>
+                <DropdownMenuLabel>
+                  <Link href="/api/auth/signin">Login</Link>
+                </DropdownMenuLabel>
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="text-muted-foreground hover:text-foreground cursor-pointer">
               Locations
             </div>
           </DropdownMenuTrigger>
@@ -112,6 +139,33 @@ export default async function TopMenu() {
               />
               <span className="sr-only">ACM Dashboard</span>
             </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="text-muted-foreground hover:text-foreground cursor-pointer">
+                  Deposits
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                {locations.length > 0 ? (
+                  locations.map((location) => (
+                    <DropdownMenuItem key={location.sitelinkId}>
+                      <Link
+                        href={`/dailyPaymentsTable/${location.sitelinkId}`}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        {location.facilityAbbreviation}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem>
+                    <DropdownMenuLabel>
+                      <Link href="/api/auth/signin">Login</Link>
+                    </DropdownMenuLabel>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <div className="text-muted-foreground hover:text-foreground cursor-pointer">

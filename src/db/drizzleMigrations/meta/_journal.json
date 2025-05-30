@@ -148,6 +148,34 @@
       "when": 1744499996290,
       "tag": "0020_bumpy_quicksilver",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1748230779678,
+      "tag": "0021_closed_shatterstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1748271850078,
+      "tag": "0022_ordinary_absorbing_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1748378936262,
+      "tag": "0023_futuristic_skreet",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1748379888531,
+      "tag": "0024_slippery_black_knight",
+      "breakpoints": true
     }
   ]
 }

@@ -1,9 +1,16 @@
 import { db } from "@/db";
-import { dailyPayments, bankTransaction, bankAccount } from "@/db/schema";
+import {
+  dailyPayments,
+  bankTransaction,
+  bankAccount,
+  storageFacilities,
+} from "@/db/schema";
 import { BankTransaction, Payment, columns } from "./columns";
 import { DataTable } from "./data-table";
 import { auth } from "@/auth";
 import { sql, desc, eq, and } from "drizzle-orm";
+import { Row } from "@tanstack/react-table";
+import LocationHeader from "@/app/location2/_components/LocationHeader";
 
 async function getData(sitelinkId: string): Promise<Payment[]> {
   const session = await auth();
@@ -12,8 +19,10 @@ async function getData(sitelinkId: string): Promise<Payment[]> {
   }
   const { user } = session;
 
+  //const committedPayments = await db.select({});
   const unmatchedDailyPayments = await db
     .select({
+      dailyPaymentId: dailyPayments.Id,
       sitelinkDate: dailyPayments.date,
       facilityId: dailyPayments.facilityId,
       cash: dailyPayments.cash,
@@ -77,29 +86,12 @@ async function getData(sitelinkId: string): Promise<Payment[]> {
         eq(bankAccount.sitelinkId, dailyPayments.facilityId)
       )
     )
+
     .where(eq(dailyPayments.facilityId, sitelinkId))
     .groupBy(dailyPayments.Id)
     .orderBy(desc(dailyPayments.date));
 
-  // const unmatchedBankTransactions = await db.query.bankAccount.findMany({
-  //   where: (bankAccount, { and, eq, or }) =>
-  //     and(
-  //       eq(bankAccount.sitelinkId, sitelinkId),
-  //       or(
-  //         eq(bankAccount.bankAccountType, "all"),
-  //         eq(bankAccount.bankAccountType, "cash"),
-  //         eq(bankAccount.bankAccountType, "creditCard")
-  //       )
-  //     ),
-  //   with: { bankTransactions: true },
-  // });
-
-  // const potentialMatchedTransactions= unmatchedBankTransactions.map((dp)=>{
-  //   const potentialMatch= unmatchedBankTransactions[0].bankTransactions.filter((bt) =>
-  //     Math.abs(new Date(bt.) - new Date(dp.date)) <= 10 * 86400000
-
-  // })
-
+  console.log("unmatchedDailyPayments", unmatchedDailyPayments);
   const transformedPayments: Payment[] = unmatchedDailyPayments.map(
     (payment) => {
       const bankTransactions = payment.bankTransactions as BankTransaction[];
@@ -107,20 +99,21 @@ async function getData(sitelinkId: string): Promise<Payment[]> {
         (transaction) => transaction.transactionType === "cash"
       );
 
-      const hasCashBankTransaction =
-        cashBankTransactions.length > 0 ||
-        Number(payment.cashCheckDeposit) === 0;
+      const hasCashBankTransaction = cashBankTransactions.length > 0;
+      // ||
+      // Number(payment.cashCheckDeposit) === 0;
 
       const creditCardTransactions = bankTransactions.filter(
         (transaction) => transaction.transactionType === "creditCard"
       );
 
-      const hasCreditCardBankTransaction =
-        creditCardTransactions.length > 0 ||
-        Number(payment.creditCardDeposit) === 0;
+      const hasCreditCardBankTransaction = creditCardTransactions.length > 0;
+      // ||
+      // Number(payment.creditCardDeposit) === 0;
 
       return {
-        sitelinkDate: new Date(payment.sitelinkDate), // Convert string to Date
+        dailyPaymentId: payment.dailyPaymentId,
+        sitelinkDate: new Date(`${payment.sitelinkDate}T00:00:00`), // Convert string to Date
         facilityId: payment.facilityId,
         cash: payment.cash ?? 0, // Provide default values for null
         check: payment.check ?? 0,
@@ -142,8 +135,25 @@ async function getData(sitelinkId: string): Promise<Payment[]> {
       };
     }
   );
-  console.log(transformedPayments[22]);
   return transformedPayments;
+}
+
+async function renderSubComponent({ row }: { row: Row<Payment> }) {
+  "use server";
+  const { cashBankTransactions, creditCardTransactions } =
+    row.original as Payment;
+  return (
+    <div className="grid gap-4">
+      <div className="grid grid-cols-2 gap-4">
+        <h3 className="text-lg font-bold">Cash Bank Transactions</h3>
+        <h3 className="text-lg font-bold">Credit Card Bank Transactions</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <DataTable columns={columns} data={cashBankTransactions} />
+        <DataTable columns={columns} data={creditCardTransactions} />
+      </div>
+    </div>
+  );
 }
 
 export default async function dailyPaymentsPage({
@@ -162,7 +172,12 @@ export default async function dailyPaymentsPage({
 
   return (
     <div className="container mx-auto py-10">
-      <DataTable columns={columns} data={data} />
+      <LocationHeader facilityId={sitelinkId} />
+      <DataTable
+        columns={columns}
+        data={data}
+        // renderSubComponent={renderSubComponent}
+      />
     </div>
   );
 }

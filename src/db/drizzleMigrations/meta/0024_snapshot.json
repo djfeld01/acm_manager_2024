@@ -1,0 +1,2818 @@
+{
+  "id": "fb6d9f29-cab1-4c8e-bff1-0fff4a29f57a",
+  "prevId": "7a9f3eb9-f948-4ddc-8609-77f9dc8bfe63",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.account": {
+      "name": "account",
+      "schema": "",
+      "columns": {
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "providerAccountId": {
+          "name": "providerAccountId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "token_type": {
+          "name": "token_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_token": {
+          "name": "id_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "session_state": {
+          "name": "session_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "account_userId_user_id_fk": {
+          "name": "account_userId_user_id_fk",
+          "tableFrom": "account",
+          "tableTo": "user",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "account_provider_providerAccountId_pk": {
+          "name": "account_provider_providerAccountId_pk",
+          "columns": [
+            "provider",
+            "providerAccountId"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.bank_account": {
+      "name": "bank_account",
+      "schema": "",
+      "columns": {
+        "bank_account_id": {
+          "name": "bank_account_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sitelink_id": {
+          "name": "sitelink_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_name": {
+          "name": "bank_name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_account_number": {
+          "name": "bank_account_number",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_routing_number": {
+          "name": "bank_routing_number",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_account_type": {
+          "name": "bank_account_type",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deposit_type": {
+          "name": "deposit_type",
+          "type": "deposit_types",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'all'"
+        },
+        "operating_account": {
+          "name": "operating_account",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bank_account_sitelink_id_storage_facility_sitelink_id_fk": {
+          "name": "bank_account_sitelink_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "bank_account",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "sitelink_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "bank_account_bank_account_number_unique": {
+          "name": "bank_account_bank_account_number_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "bank_account_number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.bank_balance": {
+      "name": "bank_balance",
+      "schema": "",
+      "columns": {
+        "bank_account_id": {
+          "name": "bank_account_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "balance": {
+          "name": "balance",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bank_balance_bank_account_id_bank_account_bank_account_id_fk": {
+          "name": "bank_balance_bank_account_id_bank_account_bank_account_id_fk",
+          "tableFrom": "bank_balance",
+          "tableTo": "bank_account",
+          "columnsFrom": [
+            "bank_account_id"
+          ],
+          "columnsTo": [
+            "bank_account_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "bank_balance_bank_account_id_date_pk": {
+          "name": "bank_balance_bank_account_id_date_pk",
+          "columns": [
+            "bank_account_id",
+            "date"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.bank_transaction": {
+      "name": "bank_transaction",
+      "schema": "",
+      "columns": {
+        "bank_transaction_id": {
+          "name": "bank_transaction_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "downloaded_id": {
+          "name": "downloaded_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_account_id": {
+          "name": "bank_account_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transaction_date": {
+          "name": "transaction_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "transaction_type": {
+          "name": "transaction_type",
+          "type": "deposit_types",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transaction_amount": {
+          "name": "transaction_amount",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "committed": {
+          "name": "committed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "bank_transaction_transaction_date_index": {
+          "name": "bank_transaction_transaction_date_index",
+          "columns": [
+            {
+              "expression": "transaction_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bank_transaction_bank_account_id_index": {
+          "name": "bank_transaction_bank_account_id_index",
+          "columns": [
+            {
+              "expression": "bank_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "bank_transaction_bank_account_id_bank_account_bank_account_id_fk": {
+          "name": "bank_transaction_bank_account_id_bank_account_bank_account_id_fk",
+          "tableFrom": "bank_transaction",
+          "tableTo": "bank_account",
+          "columnsFrom": [
+            "bank_account_id"
+          ],
+          "columnsTo": [
+            "bank_account_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "bank_transaction_bank_account_id_downloaded_id_transaction_amount_transaction_date_unique": {
+          "name": "bank_transaction_bank_account_id_downloaded_id_transaction_amount_transaction_date_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "bank_account_id",
+            "downloaded_id",
+            "transaction_amount",
+            "transaction_date"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.bonus": {
+      "name": "bonus",
+      "schema": "",
+      "columns": {
+        "bonus_id": {
+          "name": "bonus_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bonus_month": {
+          "name": "bonus_month",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bonus_amount": {
+          "name": "bonus_amount",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bonus_type": {
+          "name": "bonus_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bonus_note": {
+          "name": "bonus_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bonus_has_been_paid": {
+          "name": "bonus_has_been_paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "bonus_date_index": {
+          "name": "bonus_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "bonus_employee_id_user_detail_id_fk": {
+          "name": "bonus_employee_id_user_detail_id_fk",
+          "tableFrom": "bonus",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bonus_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "bonus_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "bonus",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "bonus_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "bonus_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "bonus",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.daily_management_activity": {
+      "name": "daily_management_activity",
+      "schema": "",
+      "columns": {
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activityType": {
+          "name": "activityType",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "daily_total": {
+          "name": "daily_total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "monthly_total": {
+          "name": "monthly_total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "yearly_total": {
+          "name": "yearly_total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_id": {
+          "name": "sort_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_created": {
+          "name": "date_created",
+          "type": "timestamp (6) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_updated": {
+          "name": "date_updated",
+          "type": "timestamp (6) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "daily_management_activity_date_index": {
+          "name": "daily_management_activity_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "daily_management_activity_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "daily_management_activity_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "daily_management_activity",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "daily_management_activity_facility_id_date_activityType_pk": {
+          "name": "daily_management_activity_facility_id_date_activityType_pk",
+          "columns": [
+            "facility_id",
+            "date",
+            "activityType"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.daily_management_occupancy": {
+      "name": "daily_management_occupancy",
+      "schema": "",
+      "columns": {
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_occupancy": {
+          "name": "unit_occupancy",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "financial_occupancy": {
+          "name": "financial_occupancy",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occupied_variance": {
+          "name": "occupied_variance",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rent_potential": {
+          "name": "rent_potential",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rent_actual": {
+          "name": "rent_actual",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "square_footage_occupancy": {
+          "name": "square_footage_occupancy",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occupied_units": {
+          "name": "occupied_units",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vacant_units": {
+          "name": "vacant_units",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "complimentary_units": {
+          "name": "complimentary_units",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unrentable_units": {
+          "name": "unrentable_units",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_units": {
+          "name": "total_units",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occupied_square_footage": {
+          "name": "occupied_square_footage",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vacant_square_footage": {
+          "name": "vacant_square_footage",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "complimentary_square_footage": {
+          "name": "complimentary_square_footage",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unrentable_square_footage": {
+          "name": "unrentable_square_footage",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_square_footage": {
+          "name": "total_square_footage",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_created": {
+          "name": "date_created",
+          "type": "timestamp (6) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_updated": {
+          "name": "date_updated",
+          "type": "timestamp (6) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "daily_management_occupancy_date_index": {
+          "name": "daily_management_occupancy_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "daily_management_occupancy_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "daily_management_occupancy_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "daily_management_occupancy",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "daily_management_occupancy_facility_id_date_pk": {
+          "name": "daily_management_occupancy_facility_id_date_pk",
+          "columns": [
+            "facility_id",
+            "date"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.daily_management_payment_receipt": {
+      "name": "daily_management_payment_receipt",
+      "schema": "",
+      "columns": {
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "desription": {
+          "name": "desription",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_id": {
+          "name": "sort_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "daily_amount": {
+          "name": "daily_amount",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "monthly_amount": {
+          "name": "monthly_amount",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "yearly_amount": {
+          "name": "yearly_amount",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date_created": {
+          "name": "date_created",
+          "type": "timestamp (6) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_updated": {
+          "name": "date_updated",
+          "type": "timestamp (6) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "daily_management_payment_receipt_date_index": {
+          "name": "daily_management_payment_receipt_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "daily_management_payment_receipt_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "daily_management_payment_receipt_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "daily_management_payment_receipt",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "daily_management_payment_receipt_facility_id_date_desription_pk": {
+          "name": "daily_management_payment_receipt_facility_id_date_desription_pk",
+          "columns": [
+            "facility_id",
+            "date",
+            "desription"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.daily_management_receivable": {
+      "name": "daily_management_receivable",
+      "schema": "",
+      "columns": {
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "delinquent_total": {
+          "name": "delinquent_total",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "delinquent_units": {
+          "name": "delinquent_units",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lower_day_range": {
+          "name": "lower_day_range",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "upper_day_range": {
+          "name": "upper_day_range",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date_created": {
+          "name": "date_created",
+          "type": "timestamp (6) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_updated": {
+          "name": "date_updated",
+          "type": "timestamp (6) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "daily_management_receivable_date_index": {
+          "name": "daily_management_receivable_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "daily_management_receivable_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "daily_management_receivable_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "daily_management_receivable",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "daily_management_receivable_facility_id_date_lower_day_range_upper_day_range_pk": {
+          "name": "daily_management_receivable_facility_id_date_lower_day_range_upper_day_range_pk",
+          "columns": [
+            "facility_id",
+            "date",
+            "lower_day_range",
+            "upper_day_range"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.daily_management_sundries": {
+      "name": "daily_management_sundries",
+      "schema": "",
+      "columns": {
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sundryType": {
+          "name": "sundryType",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "daily_total": {
+          "name": "daily_total",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "monthly_total": {
+          "name": "monthly_total",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "yearly_total": {
+          "name": "yearly_total",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_id": {
+          "name": "sort_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_created": {
+          "name": "date_created",
+          "type": "timestamp (6) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_updated": {
+          "name": "date_updated",
+          "type": "timestamp (6) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "daily_management_sundries_date_index": {
+          "name": "daily_management_sundries_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "daily_management_sundries_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "daily_management_sundries_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "daily_management_sundries",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "daily_management_sundries_facility_id_date_sundryType_pk": {
+          "name": "daily_management_sundries_facility_id_date_sundryType_pk",
+          "columns": [
+            "facility_id",
+            "date",
+            "sundryType"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.daily_payment": {
+      "name": "daily_payment",
+      "schema": "",
+      "columns": {
+        "daily_payment_id": {
+          "name": "daily_payment_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cash": {
+          "name": "cash",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "check": {
+          "name": "check",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visa": {
+          "name": "visa",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mastercard": {
+          "name": "mastercard",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "american_express": {
+          "name": "american_express",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "discover": {
+          "name": "discover",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ach": {
+          "name": "ach",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "diners_club": {
+          "name": "diners_club",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "debit": {
+          "name": "debit",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cash_check_committed": {
+          "name": "cash_check_committed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "credit_card_committed": {
+          "name": "credit_card_committed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "daily_payment_date_index": {
+          "name": "daily_payment_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "daily_payment_date_facility_id_unique": {
+          "name": "daily_payment_date_facility_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "date",
+            "facility_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.holiday": {
+      "name": "holiday",
+      "schema": "",
+      "columns": {
+        "holiday_id": {
+          "name": "holiday_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "holiday_hours": {
+          "name": "holiday_hours",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 8
+        },
+        "holiday_hours_type": {
+          "name": "holiday_hours_type",
+          "type": "holiday_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "holiday_note": {
+          "name": "holiday_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "holiday_has_been_paid": {
+          "name": "holiday_has_been_paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "holiday_date_index": {
+          "name": "holiday_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "holiday_employee_id_user_detail_id_fk": {
+          "name": "holiday_employee_id_user_detail_id_fk",
+          "tableFrom": "holiday",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "holiday_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "holiday_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "holiday",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "holiday_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "holiday_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "holiday",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.mileage": {
+      "name": "mileage",
+      "schema": "",
+      "columns": {
+        "mileage_id": {
+          "name": "mileage_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mileage": {
+          "name": "mileage",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mileage_rate": {
+          "name": "mileage_rate",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0.35
+        },
+        "mileage_note": {
+          "name": "mileage_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mileage_has_been_paid": {
+          "name": "mileage_has_been_paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "mileage_date_index": {
+          "name": "mileage_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "mileage_employee_id_user_detail_id_fk": {
+          "name": "mileage_employee_id_user_detail_id_fk",
+          "tableFrom": "mileage",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mileage_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "mileage_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "mileage",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mileage_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "mileage_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "mileage",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.monthly_goal": {
+      "name": "monthly_goal",
+      "schema": "",
+      "columns": {
+        "month": {
+          "name": "month",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "sitelink_id": {
+          "name": "sitelink_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "collections_goal": {
+          "name": "collections_goal",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "retail_goal": {
+          "name": "retail_goal",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rental_goal": {
+          "name": "rental_goal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "monthly_goal_sitelink_id_storage_facility_sitelink_id_fk": {
+          "name": "monthly_goal_sitelink_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "monthly_goal",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "sitelink_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "monthly_goal_month_sitelink_id_pk": {
+          "name": "monthly_goal_month_sitelink_id_pk",
+          "columns": [
+            "month",
+            "sitelink_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pay_period": {
+      "name": "pay_period",
+      "schema": "",
+      "columns": {
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_date": {
+          "name": "end_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paycheck_date": {
+          "name": "paycheck_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "processing_date": {
+          "name": "processing_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "pay_period_status_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "pay_period_start_date_unique": {
+          "name": "pay_period_start_date_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "start_date"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.payrollNote": {
+      "name": "payrollNote",
+      "schema": "",
+      "columns": {
+        "payrollNote_id": {
+          "name": "payrollNote_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "payrollNote_date_index": {
+          "name": "payrollNote_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "payrollNote_employee_id_user_detail_id_fk": {
+          "name": "payrollNote_employee_id_user_detail_id_fk",
+          "tableFrom": "payrollNote",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "payrollNote_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "payrollNote_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "payrollNote",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.quickbooks_balance": {
+      "name": "quickbooks_balance",
+      "schema": "",
+      "columns": {
+        "sitelink_id": {
+          "name": "sitelink_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "balance": {
+          "name": "balance",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "quickbooks_balance_sitelink_id_storage_facility_sitelink_id_fk": {
+          "name": "quickbooks_balance_sitelink_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "quickbooks_balance",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "sitelink_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "quickbooks_balance_sitelink_id_date_pk": {
+          "name": "quickbooks_balance_sitelink_id_date_pk",
+          "columns": [
+            "sitelink_id",
+            "date"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.session": {
+      "name": "session",
+      "schema": "",
+      "columns": {
+        "sessionToken": {
+          "name": "sessionToken",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires": {
+          "name": "expires",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "session_userId_user_id_fk": {
+          "name": "session_userId_user_id_fk",
+          "tableFrom": "session",
+          "tableTo": "user",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sitelink_logon": {
+      "name": "sitelink_logon",
+      "schema": "",
+      "columns": {
+        "sitelink_employee_id": {
+          "name": "sitelink_employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date_time": {
+          "name": "date_time",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "computer_name": {
+          "name": "computer_name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "computer_ip": {
+          "name": "computer_ip",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "sitelink_logon_sitelink_employee_id_user_to_facilities_sitelink_employee_id_fk": {
+          "name": "sitelink_logon_sitelink_employee_id_user_to_facilities_sitelink_employee_id_fk",
+          "tableFrom": "sitelink_logon",
+          "tableTo": "user_to_facilities",
+          "columnsFrom": [
+            "sitelink_employee_id"
+          ],
+          "columnsTo": [
+            "sitelink_employee_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "sitelink_logon_date_time_sitelink_employee_id_pk": {
+          "name": "sitelink_logon_date_time_sitelink_employee_id_pk",
+          "columns": [
+            "date_time",
+            "sitelink_employee_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.storage_facility": {
+      "name": "storage_facility",
+      "schema": "",
+      "columns": {
+        "sitelink_id": {
+          "name": "sitelink_id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sitelink_site_code": {
+          "name": "sitelink_site_code",
+          "type": "varchar(4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "paycor_number": {
+          "name": "paycor_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "facility_name": {
+          "name": "facility_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "street_address": {
+          "name": "street_address",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "zip_code": {
+          "name": "zip_code",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "city": {
+          "name": "city",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "facility_abbreviation": {
+          "name": "facility_abbreviation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phone_number": {
+          "name": "phone_number",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "twilio_number": {
+          "name": "twilio_number",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "website": {
+          "name": "website",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "domain_registrar": {
+          "name": "domain_registrar",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_client": {
+          "name": "current_client",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "storage_commission_rate": {
+          "name": "storage_commission_rate",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 5
+        },
+        "insurance_commission_rate": {
+          "name": "insurance_commission_rate",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1.5
+        }
+      },
+      "indexes": {
+        "storage_facility_facility_name_index": {
+          "name": "storage_facility_facility_name_index",
+          "columns": [
+            {
+              "expression": "facility_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tenant_activity": {
+      "name": "tenant_activity",
+      "schema": "",
+      "columns": {
+        "tenant_activity_id": {
+          "name": "tenant_activity_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activity_type": {
+          "name": "activity_type",
+          "type": "activity_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tenant_name": {
+          "name": "tenant_name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_name": {
+          "name": "unit_name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_width": {
+          "name": "unit_width",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_length": {
+          "name": "unit_length",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_size": {
+          "name": "unit_size",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_type": {
+          "name": "unit_type",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_area": {
+          "name": "unit_area",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "move_in_rental_rate": {
+          "name": "move_in_rental_rate",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "move_in_variance": {
+          "name": "move_in_variance",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tenant_sitelink_id": {
+          "name": "tenant_sitelink_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tenant_address": {
+          "name": "tenant_address",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tenant_city": {
+          "name": "tenant_city",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tenant_state": {
+          "name": "tenant_state",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tenant_zip_code": {
+          "name": "tenant_zip_code",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tenant_email": {
+          "name": "tenant_email",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "move_in_discount_plan": {
+          "name": "move_in_discount_plan",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "move_out_days_rented": {
+          "name": "move_out_days_rented",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "employee_initials": {
+          "name": "employee_initials",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "has_insurance": {
+          "name": "has_insurance",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "insurance_amount": {
+          "name": "insurance_amount",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lead_source": {
+          "name": "lead_source",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "commission_has_been_paid": {
+          "name": "commission_has_been_paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "tenant_activity_date_index": {
+          "name": "tenant_activity_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tenant_activity_employee_id_user_detail_id_fk": {
+          "name": "tenant_activity_employee_id_user_detail_id_fk",
+          "tableFrom": "tenant_activity",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tenant_activity_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "tenant_activity_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "tenant_activity",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tenant_activity_date_unit_name_unique": {
+          "name": "tenant_activity_date_unit_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "date",
+            "unit_name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.transactions_to_daily_payments": {
+      "name": "transactions_to_daily_payments",
+      "schema": "",
+      "columns": {
+        "bank_transaction_id": {
+          "name": "bank_transaction_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "daily_payment_id": {
+          "name": "daily_payment_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount": {
+          "name": "amount",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deposit_difference": {
+          "name": "deposit_difference",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "connection_type": {
+          "name": "connection_type",
+          "type": "connection_types",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "transactions_to_daily_payments_bank_transaction_id_bank_transaction_bank_transaction_id_fk": {
+          "name": "transactions_to_daily_payments_bank_transaction_id_bank_transaction_bank_transaction_id_fk",
+          "tableFrom": "transactions_to_daily_payments",
+          "tableTo": "bank_transaction",
+          "columnsFrom": [
+            "bank_transaction_id"
+          ],
+          "columnsTo": [
+            "bank_transaction_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "transactions_to_daily_payments_daily_payment_id_daily_payment_daily_payment_id_fk": {
+          "name": "transactions_to_daily_payments_daily_payment_id_daily_payment_daily_payment_id_fk",
+          "tableFrom": "transactions_to_daily_payments",
+          "tableTo": "daily_payment",
+          "columnsFrom": [
+            "daily_payment_id"
+          ],
+          "columnsTo": [
+            "daily_payment_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "transactions_to_daily_payments_bank_transaction_id_daily_payment_id_pk": {
+          "name": "transactions_to_daily_payments_bank_transaction_id_daily_payment_id_pk",
+          "columns": [
+            "bank_transaction_id",
+            "daily_payment_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user_detail": {
+      "name": "user_detail",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_name": {
+          "name": "full_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "\"user_detail\".\"last_name\" || ', ' || \"user_detail\".\"first_name\"",
+            "type": "stored"
+          }
+        },
+        "initials": {
+          "name": "initials",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "LEFT(\"user_detail\".\"first_name\",1) || LEFT(\"user_detail\".\"last_name\",1)",
+            "type": "stored"
+          }
+        },
+        "paycor_employee_id": {
+          "name": "paycor_employee_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "supervisor_id": {
+          "name": "supervisor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hire_date": {
+          "name": "hire_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "termination_date": {
+          "name": "termination_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active_employee": {
+          "name": "is_active_employee",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_detail_supervisor_id_user_detail_id_fk": {
+          "name": "user_detail_supervisor_id_user_detail_id_fk",
+          "tableFrom": "user_detail",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "supervisor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_detail_email_unique": {
+          "name": "user_detail_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        },
+        "user_detail_paycor_employee_id_unique": {
+          "name": "user_detail_paycor_employee_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "paycor_employee_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user": {
+      "name": "user",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "emailVerified": {
+          "name": "emailVerified",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "role": {
+          "name": "role",
+          "type": "role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'USER'"
+        },
+        "user_detail_id": {
+          "name": "user_detail_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_user_detail_id_user_detail_id_fk": {
+          "name": "user_user_detail_id_user_detail_id_fk",
+          "tableFrom": "user",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "user_detail_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user_to_facilities": {
+      "name": "user_to_facilities",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "storage_facility_id": {
+          "name": "storage_facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sitelink_employee_id": {
+          "name": "sitelink_employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "primary_site": {
+          "name": "primary_site",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rents_units": {
+          "name": "rents_units",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "position": {
+          "name": "position",
+          "type": "position",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_to_facilities_user_id_user_detail_id_fk": {
+          "name": "user_to_facilities_user_id_user_detail_id_fk",
+          "tableFrom": "user_to_facilities",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "user_to_facilities_storage_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "user_to_facilities_storage_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "user_to_facilities",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "storage_facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "user_to_facilities_storage_facility_id_user_id_pk": {
+          "name": "user_to_facilities_storage_facility_id_user_id_pk",
+          "columns": [
+            "storage_facility_id",
+            "user_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "user_to_facilities_sitelink_employee_id_unique": {
+          "name": "user_to_facilities_sitelink_employee_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "sitelink_employee_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.vacation": {
+      "name": "vacation",
+      "schema": "",
+      "columns": {
+        "vacation_id": {
+          "name": "vacation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vacation_hours": {
+          "name": "vacation_hours",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vacation_hours_type": {
+          "name": "vacation_hours_type",
+          "type": "vacation_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vacation_note": {
+          "name": "vacation_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pay_period_id": {
+          "name": "pay_period_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vacation_has_been_paid": {
+          "name": "vacation_has_been_paid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        }
+      },
+      "indexes": {
+        "vacation_date_index": {
+          "name": "vacation_date_index",
+          "columns": [
+            {
+              "expression": "date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "vacation_employee_id_user_detail_id_fk": {
+          "name": "vacation_employee_id_user_detail_id_fk",
+          "tableFrom": "vacation",
+          "tableTo": "user_detail",
+          "columnsFrom": [
+            "employee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "vacation_facility_id_storage_facility_sitelink_id_fk": {
+          "name": "vacation_facility_id_storage_facility_sitelink_id_fk",
+          "tableFrom": "vacation",
+          "tableTo": "storage_facility",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "sitelink_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "vacation_pay_period_id_pay_period_pay_period_id_fk": {
+          "name": "vacation_pay_period_id_pay_period_pay_period_id_fk",
+          "tableFrom": "vacation",
+          "tableTo": "pay_period",
+          "columnsFrom": [
+            "pay_period_id"
+          ],
+          "columnsTo": [
+            "pay_period_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.verificationToken": {
+      "name": "verificationToken",
+      "schema": "",
+      "columns": {
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires": {
+          "name": "expires",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "verificationToken_identifier_token_pk": {
+          "name": "verificationToken_identifier_token_pk",
+          "columns": [
+            "identifier",
+            "token"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.activity_type": {
+      "name": "activity_type",
+      "schema": "public",
+      "values": [
+        "MoveIn",
+        "MoveOut",
+        "Transfer"
+      ]
+    },
+    "public.connection_types": {
+      "name": "connection_types",
+      "schema": "public",
+      "values": [
+        "cash",
+        "creditCard"
+      ]
+    },
+    "public.deposit_types": {
+      "name": "deposit_types",
+      "schema": "public",
+      "values": [
+        "all",
+        "cash",
+        "creditCard",
+        "truck",
+        "other"
+      ]
+    },
+    "public.holiday_type": {
+      "name": "holiday_type",
+      "schema": "public",
+      "values": [
+        "christmas",
+        "thanksgiving",
+        "newYear",
+        "memorialDay",
+        "laborDay",
+        "fourthOfJuly"
+      ]
+    },
+    "public.pay_period_status_enum": {
+      "name": "pay_period_status_enum",
+      "schema": "public",
+      "values": [
+        "Completed",
+        "In Process",
+        "Current",
+        "Future"
+      ]
+    },
+    "public.position": {
+      "name": "position",
+      "schema": "public",
+      "values": [
+        "ACM_OFFICE",
+        "AREA_MANAGER",
+        "MANAGER",
+        "ASSISTANT",
+        "STORE_OWNER"
+      ]
+    },
+    "public.role": {
+      "name": "role",
+      "schema": "public",
+      "values": [
+        "USER",
+        "MANAGER",
+        "ASSISTANT",
+        "OWNER",
+        "ADMIN",
+        "SUPERVISOR"
+      ]
+    },
+    "public.vacation_type": {
+      "name": "vacation_type",
+      "schema": "public",
+      "values": [
+        "USED",
+        "EARNED"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -1,0 +1,1 @@
+ALTER TABLE "daily_management_sundries" DROP COLUMN "sort_number";

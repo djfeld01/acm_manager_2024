@@ -6,10 +6,13 @@ import {
   bankBalance,
   bankTransaction,
   dailyManagementActivity,
+  dailyPayments,
   monthlyGoals,
   storageFacilities,
+  transactionsToDailyPayments,
 } from "@/db/schema";
 import { ParsedBankFile } from "@/lib/parseBankDownloads";
+import { and, eq, gt, lt } from "drizzle-orm";
 
 export async function getFacilityHeaderData(sitelinkId: string) {
   const session = await auth();
@@ -94,14 +97,88 @@ export async function addBankTransactions(data: ParsedBankFile[]) {
           balance: file.availableBalance.toString(),
         })
         .onConflictDoNothing();
-
-      const result = await db
-        .insert(bankTransaction)
-        .values(transactions)
-        .onConflictDoNothing()
-        .returning({ id: bankTransaction.bankTransactionId });
-      return result;
+      if (transactions.length > 0) {
+        const result = await db
+          .insert(bankTransaction)
+          .values(transactions)
+          .onConflictDoNothing()
+          .returning({ id: bankTransaction.bankTransactionId });
+        return result;
+      } else {
+        return "transactions empty";
+      }
     })
   );
+  return result;
+}
+
+export async function commitTransactions(transactionsToCommit: any[]) {
+  const session = await auth();
+  if (!session || !session.user) {
+    return;
+  }
+  // const creditCardDailyDeposits = transactionsToCommit.filter(
+  //   (transaction) =>
+  //     transaction.connectionType === "creditCard" &&
+  //     transaction.depositDifference < 0.01 &&
+  //     transaction.depositDifference > -0.01
+  // );
+  // const cashCheckDailyDeposits = transactionsToCommit.filter(
+  //   (transaction) =>
+  //     transaction.connectionType === "cash" &&
+  //     transaction.depositDifference < 0.01 &&
+  //     transaction.depositDifference > -0.01
+  // );
+
+  const result = await db
+    .insert(transactionsToDailyPayments)
+    .values(transactionsToCommit)
+    .onConflictDoNothing()
+    .returning({ id: bankTransaction.bankTransactionId });
+
+  const updateCashDailyPayments = await db
+    .update(dailyPayments)
+    .set({ cashCheckCommitted: true })
+    .from(transactionsToDailyPayments)
+    .where(
+      and(
+        eq(transactionsToDailyPayments.dailyPaymentId, dailyPayments.Id),
+        eq(transactionsToDailyPayments.connectionType, "cash"),
+        lt(transactionsToDailyPayments.depositDifference, 0.01),
+        gt(transactionsToDailyPayments.depositDifference, -0.01)
+      )
+    )
+    .returning({
+      id: dailyPayments.Id,
+      cashCheckCommitted: dailyPayments.cashCheckCommitted,
+    });
+
+  console.log(
+    "🚀 ~ updateCashDailyPayments ~ result:",
+    updateCashDailyPayments
+  );
+
+  const updateCreditCardPayments = await db
+    .update(dailyPayments)
+    .set({ creditCardCommitted: true })
+    .from(transactionsToDailyPayments)
+    .where(
+      and(
+        eq(transactionsToDailyPayments.dailyPaymentId, dailyPayments.Id),
+        eq(transactionsToDailyPayments.connectionType, "creditCard"),
+        lt(transactionsToDailyPayments.depositDifference, 0.01),
+        gt(transactionsToDailyPayments.depositDifference, -0.01)
+      )
+    )
+    .returning({
+      id: dailyPayments.Id,
+      creditCardCommitted: dailyPayments.creditCardCommitted,
+    });
+
+  console.log(
+    "🚀 ~ updateCreditCardPayments ~ result:",
+    updateCreditCardPayments
+  );
+
   return result;
 }
