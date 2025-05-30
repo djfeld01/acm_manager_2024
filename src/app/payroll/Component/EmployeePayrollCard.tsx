@@ -33,6 +33,7 @@ import EmployeeMileageComponent from "@/components/EmployeeMileageComponent";
 import EmployeeDaysWorkedComponent from "@/components/EmployeeDaysWorkedComponent";
 import EmployeeHolidayComponent from "./EmployeeHolidayComponent";
 import next from "next";
+import EmployeeBonusComponent from "./EmployeeBonusComponent";
 
 // import EmployeeVacationComponent from "./EmployeeVacationComponent";
 // import EmployeeMileageComponent from "./EmployeeMileageComponent";
@@ -89,6 +90,11 @@ export function EmployeePayrollCard({
               payPeriodId={nextPayPeriod.payPeriodId}
             />
             <EmployeeHolidayComponent
+              sitelinkId={sitelinkId}
+              employeeId={employee.userDetailsId}
+              payPeriodId={nextPayPeriod.payPeriodId}
+            />
+            <EmployeeBonusComponent
               sitelinkId={sitelinkId}
               employeeId={employee.userDetailsId}
               payPeriodId={nextPayPeriod.payPeriodId}

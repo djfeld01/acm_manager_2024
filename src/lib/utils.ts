@@ -102,7 +102,7 @@ export function calculateStorageBonus(
     return 0;
   }
 
-  if (actualRentals < rentalsGoal && occupancy < 0.94) {
+  if (actualRentals < rentalsGoal && occupancy < 0.935) {
     return 0;
   }
 
@@ -112,7 +112,7 @@ export function calculateStorageBonus(
 
   let bonus = 75;
 
-  if (actualRentals < rentalsGoal && occupancy > 0.94) {
+  if (actualRentals < rentalsGoal && occupancy > 0.935) {
     return bonus;
   }
 
@@ -181,4 +181,9 @@ export function getWorkdaysLeftInMonth(holidays = []): number {
   }
 
   return workdays;
+}
+
+export function isValidDate(d: any) {
+  const parsedDate = new Date(d);
+  return parsedDate instanceof Date && !Number.isNaN(parsedDate);
 }

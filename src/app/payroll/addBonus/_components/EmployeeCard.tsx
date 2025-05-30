@@ -61,8 +61,9 @@ function EmployeeCard({
 
   return (
     <Card className="p-4">
-      <CardHeader className="text-lg font-semibold mb-4">
-        {employeeName}
+      <CardHeader className="text-lg font-semibold mb-4 flex">
+        <div className="flex-1">{employeeName}</div>
+        <div className="flex-2">{position}</div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-2 items-center mb-4">

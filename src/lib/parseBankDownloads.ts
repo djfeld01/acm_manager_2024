@@ -90,7 +90,6 @@ export async function parseBankDownloads(
           ? transactions
           : [transactions]
         : [];
-      console.log("transactions", transactions);
       const deposits: ParsedDeposit[] = normalizedTransactions.reduce(
         (act: ParsedDeposit[], transaction: OFXTransaction) => {
           const { TRNAMT, MEMO, NAME, FITID, DTPOSTED } = transaction;
