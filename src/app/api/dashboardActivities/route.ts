@@ -101,8 +101,13 @@ export async function GET(req: NextRequest) {
     response,
     arrayResponse,
     lastUpdated:
-      `${result[0].dailyManagementActivity[0]?.dateUpdated?.toLocaleDateString()} ${result[0].dailyManagementActivity[0]?.dateUpdated?.toLocaleTimeString()}` ||
-      "No data available",
+      `${result[0].dailyManagementActivity[0]?.dateUpdated?.toLocaleDateString(
+        "en-US",
+        { timeZone: "America/New_York" }
+      )} ${result[0].dailyManagementActivity[0]?.dateUpdated?.toLocaleTimeString(
+        "en-US",
+        { timeZone: "America/New_York" }
+      )}` || "No data available",
     timestamp: new Date().toISOString(),
     today: today.toDateString(),
     monday: sundayDate.toDateString(),
