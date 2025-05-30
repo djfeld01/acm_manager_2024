@@ -1,5 +1,9 @@
 import { db } from "@/db";
-import { dailyManagementActivity, dailyManagementOccupancy } from "@/db/schema";
+import {
+  dailyManagementActivity,
+  dailyManagementOccupancy,
+  storageFacilities,
+} from "@/db/schema";
 import { isSunday } from "date-fns";
 import { and, asc, desc, eq, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
@@ -20,6 +24,7 @@ export async function GET(req: NextRequest) {
   const sundayDate = new Date(findSundayDate.setDate(sunday));
 
   const result = await db.query.storageFacilities.findMany({
+    where: eq(storageFacilities.currentClient, true),
     with: {
       dailyManagementActivity: {
         where: and(
@@ -41,11 +46,12 @@ export async function GET(req: NextRequest) {
         where: eq(dailyManagementOccupancy.date, today.toDateString()),
       },
     },
+    orderBy: asc(storageFacilities.sitelinkSiteCode),
   });
 
   const response = result.map((facility) => {
     const dailyRentals = facility.dailyManagementActivity[0]?.dailyTotal;
-    const monthlyRentals = facility.dailyManagementActivity[0]?.monthlyTotal;
+    const monthlyRentals = facility.dailyManagementActivity[1]?.monthlyTotal;
     const weeklyRentals =
       facility.dailyManagementActivity[0]?.yearlyTotal -
       facility.dailyManagementActivity[1]?.yearlyTotal;
