@@ -6,10 +6,7 @@ import {
   dailyManagementSundries,
   storageFacilities,
 } from "@/db/schema";
-import { fail } from "assert";
-import { isSunday } from "date-fns";
-import { and, asc, between, desc, eq, or } from "drizzle-orm";
-import { BetweenHorizonalStart } from "lucide-react";
+import { and, asc, desc, eq, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 type FacilityData = {
@@ -17,9 +14,11 @@ type FacilityData = {
   yearlyCalls: number | null;
   yearlyRentals: number | null;
   yearlyMoveouts: number | null;
+  yearlyNet: number | null;
   rangeCalls: number | null;
   rangeRentals: number | null;
   rangeMoveouts: number | null;
+  rangeNet: number | null;
   receivablesZeroToThirty: number | null;
   receivableThirtyToSixty: number | null;
   receivableSixtyToNinety: number | null;
@@ -40,11 +39,11 @@ const GROUPS: Record<string, { label: string; keys: (keyof FacilityData)[] }> =
   {
     ytd: {
       label: "YTD Activities",
-      keys: ["yearlyCalls", "yearlyRentals", "yearlyMoveouts"],
+      keys: ["yearlyCalls", "yearlyRentals", "yearlyMoveouts", "yearlyNet"],
     },
     range: {
       label: "Range Activities",
-      keys: ["rangeCalls", "rangeRentals", "rangeMoveouts"],
+      keys: ["rangeCalls", "rangeRentals", "rangeMoveouts", "rangeNet"],
     },
     receivables: {
       label: "Receivables",
@@ -83,9 +82,11 @@ const LABELS: Partial<Record<keyof FacilityData, string>> = {
   yearlyCalls: "Calls - YTD",
   yearlyRentals: "Rentals - YTD",
   yearlyMoveouts: "Moveouts - YTD",
+  yearlyNet: "Net Rentals - YTD",
   rangeCalls: "Calls - Range",
   rangeRentals: "Rentals - Range",
   rangeMoveouts: "Moveouts - Range",
+  rangeNet: "Net Rentals - Range",
   receivablesZeroToThirty: "0–30 Days",
   receivableThirtyToSixty: "31–60 Days",
   receivableSixtyToNinety: "61–90 Days",
@@ -189,6 +190,7 @@ export async function GET(req: NextRequest) {
     const yearlyRentals = facility.dailyManagementActivity[0]?.yearlyTotal;
     const yearlyCalls = facility.dailyManagementActivity[4]?.yearlyTotal;
     const yearlyMoveouts = facility.dailyManagementActivity[2]?.yearlyTotal;
+    const yearlyNet = yearlyRentals - yearlyMoveouts;
     const rangeRentals =
       facility.dailyManagementActivity[0]?.yearlyTotal -
       facility.dailyManagementActivity[1]?.yearlyTotal;
@@ -198,6 +200,7 @@ export async function GET(req: NextRequest) {
     const rangeCalls =
       facility.dailyManagementActivity[4]?.yearlyTotal -
       facility.dailyManagementActivity[5]?.yearlyTotal;
+    const rangeNet = rangeRentals - rangeMoveouts;
     const receivablesZeroToThirty =
       facility.dailyManagementReceivable[0]?.delinquentTotal +
       facility.dailyManagementReceivable[1]?.delinquentTotal;
@@ -231,9 +234,11 @@ export async function GET(req: NextRequest) {
       yearlyCalls,
       yearlyRentals,
       yearlyMoveouts,
+      yearlyNet,
       rangeCalls,
       rangeRentals,
       rangeMoveouts,
+      rangeNet,
       receivablesZeroToThirty,
       receivableThirtyToSixty,
       receivableSixtyToNinety,
@@ -272,7 +277,6 @@ export async function GET(req: NextRequest) {
   // ]);
   const arrayResponse = pivotFacilitiesData(response);
   const data = {
-    message: "GET route is working!",
     result,
     response,
     arrayResponse,
