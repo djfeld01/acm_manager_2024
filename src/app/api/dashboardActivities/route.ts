@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
         { timeZone: "America/New_York" }
       )} ${result[0].dailyManagementActivity[0]?.dateUpdated?.toLocaleTimeString(
         "en-US",
-        { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit" }
+        { timeZone: "America/New_York" }
       )}` || "No data available",
     timestamp: new Date().toISOString(),
     today: today.toDateString(),
