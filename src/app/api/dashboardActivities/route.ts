@@ -100,6 +100,9 @@ export async function GET(req: NextRequest) {
   const data = {
     response,
     arrayResponse,
+    lastUpdated:
+      `${result[0].dailyManagementActivity[0]?.dateUpdated?.toLocaleDateString()} ${result[0].dailyManagementActivity[0]?.dateUpdated?.toLocaleTimeString()}` ||
+      "No data available",
     timestamp: new Date().toISOString(),
     today: today.toDateString(),
     monday: sundayDate.toDateString(),
