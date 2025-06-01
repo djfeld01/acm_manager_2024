@@ -53,9 +53,14 @@ export async function GET(req: NextRequest) {
     const dailyRentals = facility.dailyManagementActivity[0]?.dailyTotal;
     const monthlyRentals = facility.dailyManagementActivity[0]?.monthlyTotal;
     const weeklyRentals =
-      facility.dailyManagementActivity[0]?.yearlyTotal -
-      facility.dailyManagementActivity[1]?.yearlyTotal;
-    const monthlyMoveouts = facility.dailyManagementActivity[2]?.monthlyTotal;
+      facility.dailyManagementActivity.length === 2
+        ? facility.dailyManagementActivity[0].dailyTotal
+        : facility.dailyManagementActivity[0]?.yearlyTotal -
+          facility.dailyManagementActivity[1]?.yearlyTotal;
+    const monthlyMoveouts =
+      facility.dailyManagementActivity.length === 2
+        ? facility.dailyManagementActivity[1]?.monthlyTotal
+        : facility.dailyManagementActivity[0]?.monthlyTotal;
     const financialOccupancy =
       facility.dailyManagementOccupancy[0]?.financialOccupancy;
     const unitOccupancy = facility.dailyManagementOccupancy[0]?.unitOccupancy;
