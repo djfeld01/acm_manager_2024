@@ -9,6 +9,8 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { payPeriod, storageFacilities, userDetails } from "@/db/schema";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
 const bonus = pgTable(
   "bonus",
@@ -47,4 +49,11 @@ export const bonusRelations = relations(bonus, ({ one }) => ({
     references: [storageFacilities.sitelinkId],
   }),
 }));
+
+export const insertBonusSchema = createInsertSchema(bonus, {
+  bonusAmount: z.string().transform((val) => parseFloat(val)),
+  date: z.date().transform((val) => val.toDateString()),
+});
+
+export type AddBonus = z.infer<typeof insertBonusSchema>;
 export default bonus;

@@ -53,9 +53,14 @@ export async function GET(req: NextRequest) {
     const dailyRentals = facility.dailyManagementActivity[0]?.dailyTotal;
     const monthlyRentals = facility.dailyManagementActivity[0]?.monthlyTotal;
     const weeklyRentals =
-      facility.dailyManagementActivity[0]?.yearlyTotal -
-      facility.dailyManagementActivity[1]?.yearlyTotal;
-    const monthlyMoveouts = facility.dailyManagementActivity[2]?.monthlyTotal;
+      facility.dailyManagementActivity.length === 2
+        ? facility.dailyManagementActivity[0].dailyTotal
+        : facility.dailyManagementActivity[0]?.yearlyTotal -
+          facility.dailyManagementActivity[1]?.yearlyTotal;
+    const monthlyMoveouts =
+      facility.dailyManagementActivity.length === 2
+        ? facility.dailyManagementActivity[1]?.monthlyTotal
+        : facility.dailyManagementActivity[0]?.monthlyTotal;
     const financialOccupancy =
       facility.dailyManagementOccupancy[0]?.financialOccupancy;
     const unitOccupancy = facility.dailyManagementOccupancy[0]?.unitOccupancy;
@@ -106,7 +111,7 @@ export async function GET(req: NextRequest) {
         { timeZone: "America/New_York" }
       )} ${result[0].dailyManagementActivity[0]?.dateUpdated?.toLocaleTimeString(
         "en-US",
-        { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit" }
+        { timeZone: "America/New_York" }
       )}` || "No data available",
     timestamp: new Date().toISOString(),
     today: today.toDateString(),

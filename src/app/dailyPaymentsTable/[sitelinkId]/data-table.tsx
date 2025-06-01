@@ -12,16 +12,10 @@ import {
   ColumnFiltersState,
   VisibilityState,
   PaginationState,
+  getExpandedRowModel,
+  Row,
 } from "@tanstack/react-table";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -29,23 +23,33 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+
+import { subDays } from "date-fns";
+import dateBetweenFilterFn from "@/lib/dateBetweenFilter";
+import FilterCalendar from "./FilterCalendar";
+import { commitTransactions } from "@/app/actions";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  renderSubComponent: (props: { row: Row<TData> }) => React.ReactElement;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  // const [rowSelection, setRowSelection] = React.useState({});
+  // const [multiSelect, setMultiSelect] = React.useState();
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "sitelinkDate", desc: true },
   ]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  );
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([
+    {
+      id: "sitelinkDate",
+      value: { from: subDays(new Date(), 30), to: new Date() },
+    },
+  ]);
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: 0,
     pageSize: 100,
@@ -62,9 +66,13 @@ export function DataTable<TData, TValue>({
       americanExpress: false,
       debit: false,
     });
+
   const table = useReactTable({
     data,
     columns,
+    getRowCanExpand: (row) =>
+      row.getValue("hasCashBankTransaction") ||
+      row.getValue("hasCreditCardBankTransaction"),
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -73,8 +81,45 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onPaginationChange: setPagination,
     onColumnVisibilityChange: setColumnVisibility,
-    state: { pagination, sorting, columnFilters, columnVisibility },
+    getExpandedRowModel: getExpandedRowModel(),
+    // onRowSelectionChange: async (value) => {
+    //   await setRowSelection(value);
+    //   const rows: Row<TData>[] = table.getFilteredSelectedRowModel()
+    //     .rows as Row<TData>[];
+
+    // },
+    filterFns: {
+      dateBetweenFilterFn: dateBetweenFilterFn,
+    },
+    state: {
+      pagination,
+      sorting,
+      columnFilters,
+      columnVisibility,
+      // rowSelection,
+    },
   });
+
+  async function handleTransactionCommit() {
+    const selectedRows: Row<TData>[] = table.getSelectedRowModel().rows;
+    const transactionsToCommit = selectedRows.reduce((acc, row) => {
+      const dailyPaymentId = row.original.dailyPaymentId;
+
+      const transactionsToSubmit = row.original.bankTransactions.map(
+        (transaction) => ({
+          dailyPaymentId,
+          bankTransactionId: transaction.bankTransactionId,
+          connectionType: transaction.transactionType,
+          amount: transaction.transactionAmount,
+          depositDifference: 0,
+        })
+      );
+
+      return [...acc, ...transactionsToSubmit];
+    }, []);
+    const result = await commitTransactions(transactionsToCommit);
+    console.log("Transactions committed:", result);
+  }
 
   return (
     <div>
@@ -102,55 +147,134 @@ export function DataTable<TData, TValue>({
             })}
         </DropdownMenuContent>
       </DropdownMenu>
+      {table.getColumn("sitelinkDate") && (
+        <FilterCalendar column={table.getColumn("sitelinkDate")!} />
+      )}
+
+      <Button
+        variant="secondary"
+        className="ml-auto"
+        disabled={table.getSelectedRowModel().rows.length === 0}
+        onClick={() => handleTransactionCommit()}
+      >
+        Commit Transactions
+      </Button>
       <div className="rounded-md border">
-        <Table>
-          <TableHeader>
+        <table className="w-full border">
+          <thead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
+              <tr key={headerGroup.id} className="border-b">
+                {headerGroup.headers.map((header) => (
+                  <th key={header.id} className="p-2 text-left">
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                  </th>
+                ))}
+              </tr>
             ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => (
+              <React.Fragment key={row.id}>
+                <tr className="border-b">
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <td key={cell.id} className="p-2">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
                       )}
-                    </TableCell>
+                    </td>
                   ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                </tr>
+                {row.getIsExpanded() && (
+                  <tr key={`${row.id}-expanded`} className="border-b">
+                    <td colSpan={row.getAllCells().length}>
+                      <div className="grid grid-cols-2 gap-4">
+                        <h3 className="text-lg font-bold">
+                          Cash Bank Transactions
+                        </h3>
+                        <h3 className="text-lg font-bold">
+                          Credit Card Bank Transactions
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <table className="w-full border">
+                          <thead>
+                            <tr>
+                              <th className="p-2 text-left">Date</th>
+                              <th className="p-2 text-left">Type</th>
+                              <th className="p-2 text-left">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {row.original.cashBankTransactions.map(
+                              (transaction) => (
+                                <tr key={`${transaction.transactionId}-cash`}>
+                                  <td>
+                                    {new Date(
+                                      transaction.transactionDate
+                                    ).toLocaleDateString()}
+                                  </td>
+                                  <td>{transaction.transactionType}</td>
+                                  <td>
+                                    {new Intl.NumberFormat("en-US", {
+                                      style: "currency",
+                                      currency: "USD",
+                                    }).format(transaction.transactionAmount)}
+                                  </td>
+                                </tr>
+                              )
+                            )}
+                          </tbody>
+                        </table>
+
+                        <table className="w-full border">
+                          <thead>
+                            <tr>
+                              <th className="p-2 text-left">Date</th>
+                              <th className="p-2 text-left">Type</th>
+                              <th className="p-2 text-left">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {row.original.creditCardTransactions.map(
+                              (transaction) => (
+                                <tr key={`${transaction.transactionId}-credit`}>
+                                  <td>
+                                    {new Date(
+                                      transaction.transactionDate
+                                    ).toLocaleDateString()}
+                                  </td>
+                                  <td>{transaction.transactionType}</td>
+                                  <td>
+                                    {new Intl.NumberFormat("en-US", {
+                                      style: "currency",
+                                      currency: "USD",
+                                    }).format(transaction.transactionAmount)}
+                                  </td>
+                                </tr>
+                              )
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {/* {row.getIsExpanded() &&
+                  row.original.bankTransactions.map((transaction) => (
+                    <tr>
+                      <td>{transaction.transactionDate}</td>
+                      <td>{transaction.transactionType}</td>
+                      <td>{transaction.transactionAmount}</td>
+                    </tr>
+                  ))} */}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <Button
