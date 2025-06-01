@@ -61,7 +61,7 @@ function EmployeeBonusComponent({
   const form = useForm<AddBonus>({
     resolver: zodResolver(insertBonusSchema),
     defaultValues: {
-      date: new Date(),
+      date: new Date().toLocaleDateString(),
       employeeId: employeeId,
       payPeriodId: payPeriodId,
       facilityId: sitelinkId,
