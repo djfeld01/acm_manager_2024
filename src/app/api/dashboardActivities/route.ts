@@ -67,6 +67,8 @@ export async function GET(req: NextRequest) {
     const squareFootageOccupancy =
       facility.dailyManagementOccupancy[0]?.squareFootageOccupancy;
     const monthlyNetRentals = monthlyRentals - monthlyMoveouts;
+    const occupiedUnits =
+      facility.dailyManagementOccupancy[0]?.occupiedUnits || 0;
 
     return {
       abbreviatedName: facility.facilityAbbreviation,
@@ -78,6 +80,7 @@ export async function GET(req: NextRequest) {
       unitOccupancy,
       squareFootageOccupancy,
       monthlyNetRentals,
+      occupiedUnits,
     };
   });
   const arrayResponse = response.map((location) => [
@@ -89,6 +92,7 @@ export async function GET(req: NextRequest) {
     location.financialOccupancy,
     location.unitOccupancy,
     location.squareFootageOccupancy,
+    location.occupiedUnits,
     location.monthlyNetRentals,
   ]);
   arrayResponse.unshift([
@@ -100,6 +104,7 @@ export async function GET(req: NextRequest) {
     "Financial Occupancy",
     "Unit Occupancy",
     "Square Footage Occupancy",
+    "Occupied Units",
     "Monthly Net Rentals",
   ]);
   const data = {
