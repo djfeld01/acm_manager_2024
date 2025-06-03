@@ -10,7 +10,7 @@ async function saveInquiry(data: any) {
 export async function POST(req: NextRequest) {
   try {
     const body: Inquiry[] = await req.json();
-    const inquiryData: Inquiry[] = body.map(async (item) => {
+    const inquiryData: any = body.map(async (item) => {
       let employeeLookup = null;
       if (item.employeeName) {
         employeeLookup = await db.query.userDetails.findFirst({

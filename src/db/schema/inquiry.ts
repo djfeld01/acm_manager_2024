@@ -61,4 +61,6 @@ export const inquiryRelations = relations(inquiry, ({ one }) => ({
   }),
 }));
 
+export type Inquiry = typeof inquiry.$inferSelect;
+
 export default inquiry;
