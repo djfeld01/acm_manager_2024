@@ -118,3 +118,7 @@ export {
   default as dailyManagementSundries,
   dailyManagementSundriesRelations,
 } from "@/db/schema/dailyManagementSundries";
+
+export { default as unit, unitRelations } from "@/db/schema/unit";
+export { default as inquiry, inquiryRelations } from "@/db/schema/inquiry";
+export { default as tenant, tenantRelations } from "@/db/schema/tenant";
