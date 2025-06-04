@@ -204,6 +204,27 @@
       "when": 1749062389701,
       "tag": "0028_friendly_solo",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1749063773972,
+      "tag": "0029_little_korvac",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1749069560162,
+      "tag": "0030_flat_unicorn",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1749075455633,
+      "tag": "0031_overjoyed_lady_bullseye",
+      "breakpoints": true
     }
   ]
 }

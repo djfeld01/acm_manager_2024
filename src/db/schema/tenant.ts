@@ -22,4 +22,6 @@ export const tenantRelations = relations(tenant, ({ many }) => ({
   inquiries: many(inquiry),
 }));
 
+export type Tenant = typeof tenant.$inferSelect;
+export type TenantInsert = typeof tenant.$inferInsert;
 export default tenant;

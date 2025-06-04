@@ -9,6 +9,8 @@ import {
   real,
   text,
   timestamp,
+  index,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import storageFacilities from "./storageFacilities";
@@ -16,47 +18,64 @@ import unit from "./unit";
 import tenant from "./tenant";
 import userDetails from "./userDetails";
 
-export const inquiry = pgTable("inquiry", {
-  id: serial("id").primaryKey(),
-  sitelinkId: varchar("sitelink_id").references(
-    () => storageFacilities.sitelinkId
-  ),
-  waitingId: varchar("waiting_id"),
-  tenantId: varchar("tenant_id").references(() => tenant.tenantId),
-  ledgerId: varchar("ledger_id"),
-  unitId: varchar("unit_id").references(() => unit.unitId),
-  datePlaced: timestamp("date_placed"),
-  firstFollowUpDate: timestamp("first_follow_up_date"),
-  lastFollowUpDate: timestamp("last_follow_up_date"),
-  cancelDate: timestamp("cancel_date"),
-  expirationDate: timestamp("expiration_date"),
-  leaseDate: timestamp("lease_date"),
-  callType: varchar("call_type", { length: 32 }),
-  inquiryType: varchar("inquiry_type", { length: 32 }),
-  marketingId: integer("marketing_id"),
-  marketingDesc: varchar("marketing_desc", { length: 128 }),
-  rentalTypeId: integer("rental_type_id"),
-  rentalType: varchar("rental_type", { length: 64 }),
-  convertedToResDate: date("converted_to_res_date"),
-  neededDate: date("needed_date"),
-  cancellationReason: text("cancellation_reason"),
-  comment: text("comment"),
-  source: varchar("source", { length: 128 }),
-  quotedRate: real("quoted_rate"),
-  employeeName: varchar("employee_name", { length: 128 }),
-  employeeFollowUp: varchar("employee_follow_up", { length: 128 }),
-  employeeConvertedToRes: varchar("employee_converted_to_res", { length: 128 }),
-  employeeConvertedToMoveIn: varchar("employee_converted_to_move_in", {
-    length: 128,
-  }),
-  pushRate: real("push_rate"),
-  stdRate: real("std_rate"),
-  discountPlanName: varchar("discount_plan_name", { length: 128 }),
-  employeeConvertedToMoveInId: varchar("employee_converted_to_move_in_id"),
-  employeeId: varchar("employee_id"),
-  employeeConvertedToResId: varchar("employee_converted_to_res_id"),
-  employeeFollowUpId: varchar("employee_follow_up_id"),
-});
+export const inquiry = pgTable(
+  "inquiry",
+  {
+    id: serial("id").primaryKey(),
+    sitelinkId: varchar("sitelink_id").references(
+      () => storageFacilities.sitelinkId
+    ),
+    waitingId: varchar("waiting_id"),
+    tenantId: varchar("tenant_id").references(() => tenant.tenantId),
+    ledgerId: varchar("ledger_id"),
+    unitId: varchar("unit_id").references(() => unit.unitId),
+    datePlaced: timestamp("date_placed"),
+    firstFollowUpDate: timestamp("first_follow_up_date"),
+    lastFollowUpDate: timestamp("last_follow_up_date"),
+    cancelDate: timestamp("cancel_date"),
+    expirationDate: timestamp("expiration_date"),
+    leaseDate: timestamp("lease_date"),
+    callType: varchar("call_type", { length: 32 }),
+    inquiryType: varchar("inquiry_type", { length: 32 }),
+    marketingId: integer("marketing_id"),
+    marketingDesc: varchar("marketing_desc", { length: 128 }),
+    rentalTypeId: integer("rental_type_id"),
+    rentalType: varchar("rental_type", { length: 64 }),
+    convertedToResDate: timestamp("converted_to_res_date"),
+    neededDate: timestamp("needed_date"),
+    cancellationReason: text("cancellation_reason"),
+    comment: text("comment"),
+    source: varchar("source", { length: 128 }),
+    quotedRate: real("quoted_rate"),
+    employeeName: varchar("employee_name", { length: 128 }),
+    employeeFollowUp: varchar("employee_follow_up", { length: 128 }),
+    employeeConvertedToRes: varchar("employee_converted_to_res", {
+      length: 128,
+    }),
+    employeeConvertedToMoveIn: varchar("employee_converted_to_move_in", {
+      length: 128,
+    }),
+    pushRate: real("push_rate"),
+    stdRate: real("std_rate"),
+    discountPlanName: varchar("discount_plan_name", { length: 128 }),
+    employeeConvertedToMoveInId: varchar("employee_converted_to_move_in_id"),
+    employeeId: varchar("employee_id"),
+    employeeConvertedToResId: varchar("employee_converted_to_res_id"),
+    employeeFollowUpId: varchar("employee_follow_up_id"),
+  },
+  (table) => ({
+    dateIndex: index().on(table.datePlaced),
+    followUpIndex: index().on(table.firstFollowUpDate, table.lastFollowUpDate),
+    cancellationIndex: index().on(table.cancelDate),
+    expirationIndex: index().on(table.expirationDate),
+    leaseIndex: index().on(table.leaseDate),
+    uniqueInquiry: unique().on(
+      table.datePlaced,
+      table.tenantId,
+      table.sitelinkId
+    ),
+  })
+);
 
 // Relations
 export const inquiryRelations = relations(inquiry, ({ one }) => ({

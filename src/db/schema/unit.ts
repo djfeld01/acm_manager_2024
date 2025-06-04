@@ -28,4 +28,7 @@ export const unitRelations = relations(unit, ({ many }) => ({
   inquiry: many(inquiry),
 }));
 
+export type Unit = typeof unit.$inferSelect;
+export type UnitInsert = typeof unit.$inferInsert;
+
 export default unit;

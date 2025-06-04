@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { Inquiry, inquiry, InquiryInsert } from "@/db/schema/inquiry";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { userDetails } from "@/db/schema";
 import { getEmployeeIdByFullName } from "@/lib/controllers/userController";
 import { emptyStringToNull, isValidDate } from "@/lib/utils";
+import unit, { UnitInsert } from "@/db/schema/unit";
+import tenant, { TenantInsert } from "@/db/schema/tenant";
+import { set } from "date-fns";
+import { util } from "zod";
 
 type InquiryApiData = {
   sitelinkId: string;
@@ -85,7 +89,7 @@ type InquiryApiData = {
   phone: string;
   iGlobalWaitingNum: number;
   source: string;
-  postalCode: number;
+  postalCode: string;
   sCallerID: string;
   sTrackingNum: string | null;
   iInquiryConvertedToLease: number;
@@ -118,7 +122,7 @@ async function parseInquiryData(item: InquiryApiData): Promise<InquiryInsert> {
       datePlaced:
         item.datePlaced && item.datePlaced !== ""
           ? new Date(item.datePlaced)
-          : null,
+          : new Date(item.leaseDate),
       firstFollowUpDate:
         item.firstFollowUpDate && item.firstFollowUpDate !== ""
           ? new Date(item.firstFollowUpDate)
@@ -145,8 +149,14 @@ async function parseInquiryData(item: InquiryApiData): Promise<InquiryInsert> {
       marketingDesc: item.marketingDesc,
       rentalTypeId: item.rentalTypeId,
       rentalType: item.rentalType,
-      convertedToResDate: item.convertedToResDate,
-      neededDate: item.neededDate,
+      convertedToResDate:
+        item.convertedToResDate && item.convertedToResDate !== ""
+          ? new Date(item.convertedToResDate)
+          : null,
+      neededDate:
+        item.neededDate && item.neededDate !== ""
+          ? new Date(item.neededDate)
+          : null,
       cancellationReason: item.cancellationReason,
       source: item.source,
       quotedRate: item.quotedRate,
@@ -163,9 +173,110 @@ async function parseInquiryData(item: InquiryApiData): Promise<InquiryInsert> {
     };
   }
 }
-async function saveInquiry(data: any) {
+
+async function saveTenants(data: TenantInsert[]) {
   try {
-    const result = await db.insert(inquiry).values(data);
+    const result = await db
+      .insert(tenant)
+      .values(data)
+      .onConflictDoUpdate({
+        target: [tenant.tenantId],
+        set: {
+          company: sql.raw(`excluded.company`),
+          email: sql.raw(`excluded.email`),
+          firstName: sql.raw(`excluded.first_name`),
+          isCommercial: sql.raw(`excluded.is_commercial`),
+          lastName: sql.raw(`excluded.last_name`),
+          middleInitial: sql.raw(`excluded.middle_initial`),
+          phone: sql.raw(`excluded.phone`),
+          postalCode: sql.raw(`excluded.postal_code`),
+          sitelinkId: sql.raw(`excluded.sitelink_id`),
+        },
+      });
+    console.log("Tenant saved successfully:", result);
+  } catch (error) {
+    console.error("Error saving Tenant:", error);
+    throw new Error("Database operation failed");
+  }
+  return { success: true };
+}
+async function saveUnits(data: UnitInsert[]) {
+  try {
+    const result = await db
+      .insert(unit)
+      .values(data)
+      .onConflictDoUpdate({
+        target: [unit.unitId],
+        set: {
+          area: sql.raw(`excluded.area`),
+          floor: sql.raw(`excluded.floor`),
+          isAlarm: sql.raw(`excluded.is_alarm`),
+          isClimate: sql.raw(`excluded.is_climate`),
+          isInside: sql.raw(`excluded.is_inside`),
+          isMobile: sql.raw(`excluded.is_mobile`),
+          isPower: sql.raw(`excluded.is_power`),
+          length: sql.raw(`excluded.length`),
+          size: sql.raw(`excluded.size`),
+          unitName: sql.raw(`excluded.unit_name`),
+          unitTypeId: sql.raw(`excluded.unit_type_id`),
+          unitTypeName: sql.raw(`excluded.unit_type_name`),
+          width: sql.raw(`excluded.width`),
+        },
+      });
+    console.log("Unit saved successfully:", result);
+  } catch (error) {
+    console.error("Error saving unit:", error);
+    throw new Error("Database operation failed");
+  }
+  return { success: true };
+}
+async function saveInquiries(data: InquiryInsert[]) {
+  try {
+    const result = await db
+      .insert(inquiry)
+      .values(data)
+      .onConflictDoUpdate({
+        target: [inquiry.tenantId, inquiry.datePlaced, inquiry.sitelinkId],
+        set: {
+          ledgerId: sql.raw(`excluded.ledger_id`),
+          waitingId: sql.raw(`excluded.waiting_id`),
+          unitId: sql.raw(`excluded.unit_id`),
+          firstFollowUpDate: sql.raw(`excluded.first_follow_up_date`),
+          lastFollowUpDate: sql.raw(`excluded.last_follow_up_date`),
+          cancelDate: sql.raw(`excluded.cancel_date`),
+          expirationDate: sql.raw(`excluded.expiration_date`),
+          leaseDate: sql.raw(`excluded.lease_date`),
+          callType: sql.raw(`excluded.call_type`),
+          inquiryType: sql.raw(`excluded.inquiry_type`),
+          marketingId: sql.raw(`excluded.marketing_id`),
+          marketingDesc: sql.raw(`excluded.marketing_desc`),
+          rentalTypeId: sql.raw(`excluded.rental_type_id`),
+          rentalType: sql.raw(`excluded.rental_type`),
+          convertedToResDate: sql.raw(`excluded.converted_to_res_date`),
+          neededDate: sql.raw(`excluded.needed_date`),
+          cancellationReason: sql.raw(`excluded.cancellation_reason`),
+          comment: sql.raw(`excluded.comment`),
+          source: sql.raw(`excluded.source`),
+          quotedRate: sql.raw(`excluded.quoted_rate`),
+          employeeName: sql.raw(`excluded.employee_name`),
+          employeeFollowUp: sql.raw(`excluded.employee_follow_up`),
+          employeeConvertedToRes: sql.raw(`excluded.employee_converted_to_res`),
+          employeeConvertedToMoveIn: sql.raw(
+            `excluded.employee_converted_to_move_in`
+          ),
+          pushRate: sql.raw(`excluded.push_rate`),
+          stdRate: sql.raw(`excluded.std_rate`),
+          discountPlanName: sql.raw(`excluded.discount_plan_name`),
+          employeeConvertedToMoveInId: sql.raw(
+            `excluded.employee_converted_to_move_in_id`
+          ),
+          employeeId: sql.raw(`excluded.employee_id`),
+          employeeConvertedToResId: sql.raw(
+            `excluded.employee_converted_to_res_id`
+          ),
+          employeeFollowUpId: sql.raw(`excluded.employee_follow_up_id`),
+        },
+      });
     console.log("Inquiry saved successfully:", result);
   } catch (error) {
     console.error("Error saving inquiry:", error);
@@ -177,12 +288,61 @@ async function saveInquiry(data: any) {
 export async function POST(req: NextRequest) {
   try {
     const body: InquiryApiData[] = await req.json();
+    const unitData: UnitInsert[] = body
+      .map((item) => {
+        return {
+          sitelinkId: item.sitelinkId,
+          unitId: item.unitId,
+          unitName: item.unitName,
+          size: item.size,
+          width: item.width,
+          length: item.length,
+          area: item.area,
+          isMobile: item.isMobile,
+          isClimate: item.isClimate,
+          isAlarm: item.isAlarm,
+          isPower: item.isPower,
+          isInside: item.isInside,
+          floor: item.floor,
+          unitTypeId: item.unitTypeId,
+          unitTypeName: item.unitTypeName,
+        };
+      })
+      .filter(
+        (obj, index, self) =>
+          index === self.findIndex((t) => t.unitId === obj.unitId)
+      );
+    const tenantData: TenantInsert[] = body
+      .map((item) => {
+        return {
+          sitelinkId: item.sitelinkId,
+          tenantId: item.tenantId,
+          firstName: emptyStringToNull(item.firstName),
+          middleName: emptyStringToNull(item.middleName),
+          lastName: emptyStringToNull(item.lastName),
+          company: emptyStringToNull(item.company),
+          email: emptyStringToNull(item.email),
+          phone: emptyStringToNull(item.phone),
+          isCommercial: item.isCommercial,
+          insurancePremium: item.insurancePremium,
+          postalCode: item.postalCode,
+        };
+      })
+      .filter(
+        (obj, index, self) =>
+          index === self.findIndex((t) => t.tenantId === obj.tenantId)
+      );
     const inquiryData: InquiryInsert[] = await Promise.all(
       body.map(async (item) => await parseInquiryData(item))
     );
-    const result = await saveInquiry(inquiryData);
+    const tenantResult = await saveTenants(tenantData);
+    const unitResult = await saveUnits(unitData);
+    const result = await saveInquiries(inquiryData);
 
-    return NextResponse.json(inquiryData, { status: 201 });
+    return NextResponse.json(
+      { tenantResult, unitResult, result },
+      { status: 201 }
+    );
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to process inquiry" },
