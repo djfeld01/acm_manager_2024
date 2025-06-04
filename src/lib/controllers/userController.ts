@@ -117,3 +117,13 @@ export async function insertUserFacilitiesConnections(
     console.log(e);
   }
 }
+
+export async function getEmployeeIdByFullName(fullName: string | null) {
+  let employeeLookup = null;
+  if (fullName) {
+    employeeLookup = await db.query.userDetails.findFirst({
+      where: eq(userDetails.fullName, fullName.trim()),
+    });
+  }
+  return employeeLookup ? employeeLookup.id : null;
+}
