@@ -19,10 +19,10 @@ export const inquiry = pgTable("inquiry", {
   sitelinkId: varchar("sitelink_id").references(
     () => storageFacilities.sitelinkId
   ),
-  waitingId: integer("waiting_id"),
-  tenantId: integer("tenant_id").references(() => tenant.tenantId),
-  ledgerId: integer("ledger_id"),
-  unitId: integer("unit_id").references(() => unit.unitId),
+  waitingId: varchar("waiting_id"),
+  tenantId: varchar("tenant_id").references(() => tenant.tenantId),
+  ledgerId: varchar("ledger_id"),
+  unitId: varchar("unit_id").references(() => unit.unitId),
   datePlaced: date("date_placed"),
   firstFollowUpDate: date("first_follow_up_date"),
   lastFollowUpDate: date("last_follow_up_date"),
