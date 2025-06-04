@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { Inquiry, inquiry, InquiryInsert } from "@/db/schema/inquiry";
-import { eq, sql } from "drizzle-orm";
-import { userDetails } from "@/db/schema";
+import { inquiry, InquiryInsert } from "@/db/schema/inquiry";
+import { sql } from "drizzle-orm";
 import { getEmployeeIdByFullName } from "@/lib/controllers/userController";
 import { emptyStringToNull, isValidDate } from "@/lib/utils";
 import unit, { UnitInsert } from "@/db/schema/unit";
 import tenant, { TenantInsert } from "@/db/schema/tenant";
-import { set } from "date-fns";
-import { util } from "zod";
 
 type InquiryApiData = {
   sitelinkId: string;
