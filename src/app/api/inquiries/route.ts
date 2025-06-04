@@ -160,7 +160,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-
-export async function GET(req: NextRequest) {
-  return NextResponse.json({ message: "Hello from inquiries API!" });
 }
