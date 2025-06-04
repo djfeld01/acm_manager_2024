@@ -1,6 +1,6 @@
 {
-  "id": "78dc083b-84bf-454e-ab3a-324897141038",
-  "prevId": "fb6d9f29-cab1-4c8e-bff1-0fff4a29f57a",
+  "id": "d2688959-eeaf-4219-afd2-edbd52ccb46a",
+  "prevId": "78dc083b-84bf-454e-ab3a-324897141038",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1473,7 +1473,7 @@
         },
         "quoted_rate": {
           "name": "quoted_rate",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
@@ -2614,19 +2614,19 @@
         },
         "width": {
           "name": "width",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "length": {
           "name": "length",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },
         "area": {
           "name": "area",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         },

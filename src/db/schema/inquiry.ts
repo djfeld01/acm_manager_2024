@@ -6,7 +6,7 @@ import {
   integer,
   boolean,
   date,
-  numeric,
+  real,
   text,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -40,7 +40,7 @@ export const inquiry = pgTable("inquiry", {
   cancellationReason: text("cancellation_reason"),
   comment: text("comment"),
   source: varchar("source", { length: 128 }),
-  quotedRate: numeric("quoted_rate"),
+  quotedRate: real("quoted_rate"),
   employeeName: varchar("employee_name", { length: 128 }),
   employeeFollowUp: varchar("employee_follow_up", { length: 128 }),
   employeeConvertedToRes: varchar("employee_converted_to_res", { length: 128 }),
@@ -62,5 +62,8 @@ export const inquiryRelations = relations(inquiry, ({ one }) => ({
 }));
 
 export type Inquiry = typeof inquiry.$inferSelect;
+
+export type InquiryInsert = typeof inquiry.$inferInsert;
+
 
 export default inquiry;
