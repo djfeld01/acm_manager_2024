@@ -1,6 +1,6 @@
 {
-  "id": "d92413b4-9189-4c41-8527-c0548f72a7fc",
-  "prevId": "62466654-487a-442b-a362-bbd681af708a",
+  "id": "78dc083b-84bf-454e-ab3a-324897141038",
+  "prevId": "fb6d9f29-cab1-4c8e-bff1-0fff4a29f57a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1345,39 +1345,27 @@
           "primaryKey": false,
           "notNull": false
         },
-        "push_rate": {
-          "name": "push_rate",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "std_rate": {
-          "name": "std_rate",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
         "waiting_id": {
           "name": "waiting_id",
-          "type": "integer",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
         "tenant_id": {
           "name": "tenant_id",
-          "type": "integer",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
         "ledger_id": {
           "name": "ledger_id",
-          "type": "integer",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
         "unit_id": {
           "name": "unit_id",
-          "type": "integer",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
@@ -1471,6 +1459,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "comment": {
+          "name": "comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "source": {
           "name": "source",
           "type": "varchar(128)",
@@ -1480,12 +1474,6 @@
         "quoted_rate": {
           "name": "quoted_rate",
           "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "discount_plan_name": {
-          "name": "discount_plan_name",
-          "type": "varchar(128)",
           "primaryKey": false,
           "notNull": false
         },
@@ -1510,30 +1498,6 @@
         "employee_converted_to_move_in": {
           "name": "employee_converted_to_move_in",
           "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "employee_id": {
-          "name": "employee_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "employee_follow_up_id": {
-          "name": "employee_follow_up_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "employee_converted_to_res_id": {
-          "name": "employee_converted_to_res_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "employee_converted_to_move_in_id": {
-          "name": "employee_converted_to_move_in_id",
-          "type": "varchar",
           "primaryKey": false,
           "notNull": false
         }
@@ -1575,58 +1539,6 @@
           ],
           "columnsTo": [
             "unit_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "inquiry_employee_id_user_detail_id_fk": {
-          "name": "inquiry_employee_id_user_detail_id_fk",
-          "tableFrom": "inquiry",
-          "tableTo": "user_detail",
-          "columnsFrom": [
-            "employee_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "inquiry_employee_follow_up_id_user_detail_id_fk": {
-          "name": "inquiry_employee_follow_up_id_user_detail_id_fk",
-          "tableFrom": "inquiry",
-          "tableTo": "user_detail",
-          "columnsFrom": [
-            "employee_follow_up_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "inquiry_employee_converted_to_res_id_user_detail_id_fk": {
-          "name": "inquiry_employee_converted_to_res_id_user_detail_id_fk",
-          "tableFrom": "inquiry",
-          "tableTo": "user_detail",
-          "columnsFrom": [
-            "employee_converted_to_res_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "inquiry_employee_converted_to_move_in_id_user_detail_id_fk": {
-          "name": "inquiry_employee_converted_to_move_in_id_user_detail_id_fk",
-          "tableFrom": "inquiry",
-          "tableTo": "user_detail",
-          "columnsFrom": [
-            "employee_converted_to_move_in_id"
-          ],
-          "columnsTo": [
-            "id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -2271,7 +2183,7 @@
       "columns": {
         "tenant_id": {
           "name": "tenant_id",
-          "type": "integer",
+          "type": "varchar",
           "primaryKey": true,
           "notNull": true
         },
@@ -2678,7 +2590,7 @@
       "columns": {
         "unit_id": {
           "name": "unit_id",
-          "type": "integer",
+          "type": "varchar",
           "primaryKey": true,
           "notNull": true
         },

@@ -4,7 +4,7 @@ import inquiry from "./inquiry";
 import { relations } from "drizzle-orm";
 
 const tenant = pgTable("tenant", {
-  tenantId: integer("tenant_id").notNull().primaryKey(),
+  tenantId: varchar("tenant_id").notNull().primaryKey(),
   sitelinkId: varchar("sitelink_id").references(
     () => storageFacilities.sitelinkId
   ),
@@ -21,7 +21,5 @@ const tenant = pgTable("tenant", {
 export const tenantRelations = relations(tenant, ({ many }) => ({
   inquiries: many(inquiry),
 }));
-
-const letsdeletethisinaminute = "Let's delete this in a minute";
 
 export default tenant;

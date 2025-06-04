@@ -11,7 +11,7 @@ import inquiry from "./inquiry";
 
 // Unit Table
 const unit = pgTable("unit", {
-  unitId: integer("unit_id").notNull().primaryKey(),
+  unitId: varchar("unit_id").notNull().primaryKey(),
   sitelinkId: varchar("sitelink_id").references(
     () => storageFacilities.sitelinkId
   ),
@@ -29,7 +29,6 @@ const unit = pgTable("unit", {
   unitTypeId: integer("unit_type_id"),
   unitTypeName: varchar("unit_type_name", { length: 64 }),
 });
-const letsdeletethisinaminute = "Let's delete this in a minute";
 
 export const unitRelations = relations(unit, ({ many }) => ({
   inquiry: many(inquiry),
