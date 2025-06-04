@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { Inquiry, inquiry } from "@/db/schema/inquiry";
+import { Inquiry, inquiry, InquiryInsert } from "@/db/schema/inquiry";
 import { eq } from "drizzle-orm";
 import { userDetails } from "@/db/schema";
 import { getEmployeeIdByFullName } from "@/lib/controllers/userController";
@@ -11,10 +11,10 @@ type InquiryApiData = {
   iTaxDecimals: number;
   dcTax1Rate_Rent: number;
   dcTax2Rate_Rent: number;
-  waitingId: number;
-  tenantId: number;
-  ledgerId: number;
-  unitId: number;
+  waitingId: string;
+  tenantId: string;
+  ledgerId: string;
+  unitId: string;
   unitName: string;
   size: string;
   width: number;
@@ -99,7 +99,7 @@ async function saveInquiry(data: any) {
 export async function POST(req: NextRequest) {
   try {
     const body: InquiryApiData[] = await req.json();
-    const inquiryData: Inquiry[] = await Promise.all(
+    const inquiryData: InquiryInsert[] = await Promise.all(
       body.map(async (item) => {
         const employeeId = await getEmployeeIdByFullName(item.employeeName);
         console.log("Employee ID:", employeeId);
@@ -121,28 +121,20 @@ export async function POST(req: NextRequest) {
           tenantId: item.tenantId,
           ledgerId: item.ledgerId,
           unitId: item.unitId,
-          datePlaced: item.datePlaced ? new Date(item.datePlaced) : null,
-          firstFollowUpDate: item.firstFollowUpDate
-            ? new Date(item.firstFollowUpDate)
-            : null,
-          lastFollowUpDate: item.lastFollowUpDate
-            ? new Date(item.lastFollowUpDate)
-            : null,
-          cancelDate: item.cancelDate ? new Date(item.cancelDate) : null,
-          expirationDate: item.expirationDate
-            ? new Date(item.expirationDate)
-            : null,
-          leaseDate: item.leaseDate ? new Date(item.leaseDate) : null,
+          datePlaced: item.datePlaced,
+          firstFollowUpDate: item.firstFollowUpDate,
+          lastFollowUpDate: item.lastFollowUpDate,
+          cancelDate: item.cancelDate,
+          expirationDate: item.expirationDate,
+          leaseDate: item.leaseDate,
           callType: item.callType,
           inquiryType: item.inquiryType,
           marketingId: item.marketingId,
           marketingDesc: item.marketingDesc,
           rentalTypeId: item.rentalTypeId,
           rentalType: item.rentalType,
-          convertedToResDate: item.convertedToResDate
-            ? new Date(item.convertedToResDate)
-            : null,
-          neededDate: item.neededDate ? new Date(item.neededDate) : null,
+          convertedToResDate: item.convertedToResDate,
+          neededDate: item.neededDate,
           cancellationReason: item.cancellationReason,
           source: item.source,
           quotedRate: item.quotedRate,
