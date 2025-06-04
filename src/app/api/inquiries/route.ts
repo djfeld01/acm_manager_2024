@@ -4,6 +4,7 @@ import { Inquiry, inquiry, InquiryInsert } from "@/db/schema/inquiry";
 import { eq } from "drizzle-orm";
 import { userDetails } from "@/db/schema";
 import { getEmployeeIdByFullName } from "@/lib/controllers/userController";
+import { emptyStringToNull, isValidDate } from "@/lib/utils";
 
 type InquiryApiData = {
   sitelinkId: string;
@@ -92,7 +93,84 @@ type InquiryApiData = {
   quotedRate: number;
 };
 
+async function parseInquiryData(item: InquiryApiData): Promise<InquiryInsert> {
+  {
+    const employeeId = await getEmployeeIdByFullName(item.employeeName);
+
+    const employeeConvertedToMoveInId = await getEmployeeIdByFullName(
+      item.employeeConvertedToMoveIn
+    );
+    const employeeConvertedToResId = await getEmployeeIdByFullName(
+      item.employeeConvertedToRes
+    );
+    const employeeFollowUpId = await getEmployeeIdByFullName(
+      item.employeeFollowUp
+    );
+
+    return {
+      sitelinkId: item.sitelinkId,
+      pushRate: item.pushRate,
+      stdRate: item.stdRate,
+      waitingId: item.waitingId,
+      tenantId: item.tenantId,
+      ledgerId: item.ledgerId,
+      unitId: item.unitId,
+      datePlaced:
+        item.datePlaced && item.datePlaced !== ""
+          ? new Date(item.datePlaced)
+          : null,
+      firstFollowUpDate:
+        item.firstFollowUpDate && item.firstFollowUpDate !== ""
+          ? new Date(item.firstFollowUpDate)
+          : null,
+      lastFollowUpDate:
+        item.lastFollowUpDate && item.lastFollowUpDate !== ""
+          ? new Date(item.lastFollowUpDate)
+          : null,
+      cancelDate:
+        item.cancelDate && item.cancelDate !== ""
+          ? new Date(item.cancelDate)
+          : null,
+      expirationDate:
+        item.expirationDate && item.expirationDate !== ""
+          ? new Date(item.expirationDate)
+          : null,
+      leaseDate:
+        item.leaseDate && item.leaseDate !== ""
+          ? new Date(item.leaseDate)
+          : null,
+      callType: item.callType,
+      inquiryType: item.inquiryType,
+      marketingId: item.marketingId,
+      marketingDesc: item.marketingDesc,
+      rentalTypeId: item.rentalTypeId,
+      rentalType: item.rentalType,
+      convertedToResDate: item.convertedToResDate,
+      neededDate: item.neededDate,
+      cancellationReason: item.cancellationReason,
+      source: item.source,
+      quotedRate: item.quotedRate,
+      discountPlanName: item.discountPlanName,
+      employeeName: item.employeeName,
+      employeeFollowUp: item.employeeFollowUp,
+      employeeConvertedToRes: item.employeeConvertedToRes,
+      employeeConvertedToMoveIn: item.employeeConvertedToMoveIn,
+      employeeConvertedToMoveInId: employeeConvertedToMoveInId,
+      employeeId: employeeId,
+      employeeConvertedToResId: employeeConvertedToResId,
+      employeeFollowUpId: employeeFollowUpId,
+      comment: item.comment,
+    };
+  }
+}
 async function saveInquiry(data: any) {
+  try {
+    const result = await db.insert(inquiry).values(data);
+    console.log("Inquiry saved successfully:", result);
+  } catch (error) {
+    console.error("Error saving inquiry:", error);
+    throw new Error("Database operation failed");
+  }
   return { success: true };
 }
 
@@ -100,58 +178,9 @@ export async function POST(req: NextRequest) {
   try {
     const body: InquiryApiData[] = await req.json();
     const inquiryData: InquiryInsert[] = await Promise.all(
-      body.map(async (item) => {
-        const employeeId = await getEmployeeIdByFullName(item.employeeName);
-        console.log("Employee ID:", employeeId);
-        const employeeConvertedToMoveInId = await getEmployeeIdByFullName(
-          item.employeeConvertedToMoveIn
-        );
-        const employeeConvertedToResId = await getEmployeeIdByFullName(
-          item.employeeConvertedToRes
-        );
-        const employeeFollowUpId = await getEmployeeIdByFullName(
-          item.employeeFollowUp
-        );
-
-        return {
-          sitelinkId: item.sitelinkId,
-          pushRate: item.pushRate,
-          stdRate: item.stdRate,
-          waitingId: item.waitingId,
-          tenantId: item.tenantId,
-          ledgerId: item.ledgerId,
-          unitId: item.unitId,
-          datePlaced: item.datePlaced,
-          firstFollowUpDate: item.firstFollowUpDate,
-          lastFollowUpDate: item.lastFollowUpDate,
-          cancelDate: item.cancelDate,
-          expirationDate: item.expirationDate,
-          leaseDate: item.leaseDate,
-          callType: item.callType,
-          inquiryType: item.inquiryType,
-          marketingId: item.marketingId,
-          marketingDesc: item.marketingDesc,
-          rentalTypeId: item.rentalTypeId,
-          rentalType: item.rentalType,
-          convertedToResDate: item.convertedToResDate,
-          neededDate: item.neededDate,
-          cancellationReason: item.cancellationReason,
-          source: item.source,
-          quotedRate: item.quotedRate,
-          discountPlanName: item.discountPlanName,
-          employeeName: item.employeeName,
-          employeeFollowUp: item.employeeFollowUp,
-          employeeConvertedToRes: item.employeeConvertedToRes,
-          employeeConvertedToMoveIn: item.employeeConvertedToMoveIn,
-          employeeConvertedToMoveInId: employeeConvertedToMoveInId,
-          employeeId: employeeId,
-          employeeConvertedToResId: employeeConvertedToResId,
-          employeeFollowUpId: employeeFollowUpId,
-          comment: item.comment,
-        };
-      })
+      body.map(async (item) => await parseInquiryData(item))
     );
-    const result = await saveInquiry(body);
+    const result = await saveInquiry(inquiryData);
 
     return NextResponse.json(inquiryData, { status: 201 });
   } catch (error) {
