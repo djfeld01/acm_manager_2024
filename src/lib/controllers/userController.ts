@@ -127,3 +127,7 @@ export async function getEmployeeIdByFullName(fullName: string | null) {
   }
   return employeeLookup ? employeeLookup.id : null;
 }
+
+export async function getAllEmployees() {
+  return db.query.userDetails.findMany();
+}

@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { inquiry, InquiryInsert } from "@/db/schema/inquiry";
-import { sql } from "drizzle-orm";
-import { getEmployeeIdByFullName } from "@/lib/controllers/userController";
+import { and, eq, sql } from "drizzle-orm";
+import {
+  getAllEmployees,
+  getEmployeeIdByFullName,
+} from "@/lib/controllers/userController";
 import { emptyStringToNull, isValidDate } from "@/lib/utils";
 import unit, { UnitInsert } from "@/db/schema/unit";
 import tenant, { TenantInsert } from "@/db/schema/tenant";
+import { UserDetails } from "@/db/schema/userDetails";
 
 type InquiryApiData = {
   sitelinkId: string;
@@ -94,19 +98,29 @@ type InquiryApiData = {
   quotedRate: number;
 };
 
-async function parseInquiryData(item: InquiryApiData): Promise<InquiryInsert> {
+async function parseInquiryData(
+  item: InquiryApiData,
+  allEmployees: UserDetails[]
+): Promise<InquiryInsert> {
   {
-    const employeeId = await getEmployeeIdByFullName(item.employeeName);
+    const employee = allEmployees.filter(
+      (employee) => employee.fullName === item.employeeName.trim()
+    );
+    const employeeId = employee[0]?.id || null;
+    const employeeConvertedToMoveIn = allEmployees.filter(
+      (employee) => employee.fullName === item.employeeConvertedToMoveIn.trim()
+    );
+    const employeeConvertedToMoveInId =
+      employeeConvertedToMoveIn[0]?.id || null;
+    const employeeConvertedToRes = allEmployees.filter(
+      (employee) => employee.fullName === item.employeeConvertedToRes.trim()
+    );
+    const employeeConvertedToResId = employeeConvertedToRes[0]?.id || null;
 
-    const employeeConvertedToMoveInId = await getEmployeeIdByFullName(
-      item.employeeConvertedToMoveIn
+    const employeeFollowUp = allEmployees.filter(
+      (employee) => employee.fullName === item.employeeFollowUp.trim()
     );
-    const employeeConvertedToResId = await getEmployeeIdByFullName(
-      item.employeeConvertedToRes
-    );
-    const employeeFollowUpId = await getEmployeeIdByFullName(
-      item.employeeFollowUp
-    );
+    const employeeFollowUpId = employeeFollowUp[0]?.id || null;
 
     return {
       sitelinkId: item.sitelinkId,
@@ -173,6 +187,7 @@ async function parseInquiryData(item: InquiryApiData): Promise<InquiryInsert> {
 
 async function saveTenants(data: TenantInsert[]) {
   try {
+    console.log("Inserting into Tenants");
     const result = await db
       .insert(tenant)
       .values(data)
@@ -199,6 +214,7 @@ async function saveTenants(data: TenantInsert[]) {
 }
 async function saveUnits(data: UnitInsert[]) {
   try {
+    console.log("Inserting into Units");
     const result = await db
       .insert(unit)
       .values(data)
@@ -229,6 +245,7 @@ async function saveUnits(data: UnitInsert[]) {
 }
 async function saveInquiries(data: InquiryInsert[]) {
   try {
+    console.log("Inserting into Inquiries");
     const result = await db
       .insert(inquiry)
       .values(data)
@@ -285,6 +302,7 @@ async function saveInquiries(data: InquiryInsert[]) {
 export async function POST(req: NextRequest) {
   try {
     const body: InquiryApiData[] = await req.json();
+    console.log("Build Unit Data");
     const unitData: UnitInsert[] = body
       .map((item) => {
         return {
@@ -309,6 +327,7 @@ export async function POST(req: NextRequest) {
         (obj, index, self) =>
           index === self.findIndex((t) => t.unitId === obj.unitId)
       );
+    console.log("Build Tenant Data");
     const tenantData: TenantInsert[] = body
       .map((item) => {
         return {
@@ -329,15 +348,18 @@ export async function POST(req: NextRequest) {
         (obj, index, self) =>
           index === self.findIndex((t) => t.tenantId === obj.tenantId)
       );
+    console.log("Build Inquiry Data");
+    const allEmployees = await getAllEmployees();
     const inquiryData: InquiryInsert[] = await Promise.all(
-      body.map(async (item) => await parseInquiryData(item))
+      body.map(async (item) => await parseInquiryData(item, allEmployees))
     );
+    console.log("inquiry Data Built");
     const tenantResult = await saveTenants(tenantData);
     const unitResult = await saveUnits(unitData);
-    const result = await saveInquiries(inquiryData);
+    const inquiryResult = await saveInquiries(inquiryData);
 
     return NextResponse.json(
-      { tenantResult, unitResult, result },
+      { tenantResult, unitResult, inquiryResult },
       { status: 201 }
     );
   } catch (error) {
@@ -346,4 +368,49 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+export async function GET(req: NextRequest) {
+  const res = await await db.execute(
+    sql`
+    SELECT
+      inquiry.sitelink_id,
+      inquiry.source,
+      DATE_TRUNC('month', inquiry.date_placed) AS month,
+      COUNT(inquiry.date_placed) FILTER (WHERE inquiry.date_placed IS NOT NULL) AS leads_placed,
+      COUNT(inquiry.converted_to_res_date) FILTER (WHERE inquiry.converted_to_res_date IS NOT NULL) AS reservations_placed,
+      (
+        COUNT(inquiry.date_placed) FILTER (WHERE inquiry.date_placed IS NOT NULL) +
+        COUNT(inquiry.converted_to_res_date) FILTER (WHERE inquiry.converted_to_res_date IS NOT NULL)
+      ) AS total_placed
+    FROM inquiry
+    GROUP BY
+      inquiry.sitelink_id,
+      inquiry.source,
+      DATE_TRUNC('month', inquiry.date_placed)
+    ORDER BY
+      month,
+      inquiry.sitelink_id,
+      inquiry.source;
+  `
+  );
+
+  const arrayResult = res.map((row) => [
+    row.month,
+    row.sitelink_id,
+    row.source,
+    row.leads_placed,
+    row.reservations_placed,
+    row.total_placed,
+  ]);
+
+  arrayResult.unshift([
+    "Month",
+    "SitelinkID",
+    "Source",
+    "Leads Placed",
+    "Reservations Placed",
+    "Total Placed",
+  ]);
+  return NextResponse.json({ length: res.length, res, arrayResult });
 }

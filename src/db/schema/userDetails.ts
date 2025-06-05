@@ -51,6 +51,7 @@ export const insertUserDetailsSchema = createInsertSchema(userDetails, {
   paycorEmployeeId: z.string().transform((val) => parseFloat(val)),
 });
 
+export type UserDetails = typeof userDetails.$inferSelect;
 export type CreateUserDetails = z.infer<typeof insertUserDetailsSchema>;
 
 export const userDetailsRelations = relations(userDetails, ({ one, many }) => ({
