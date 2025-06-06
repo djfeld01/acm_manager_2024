@@ -1,4 +1,4 @@
-import { getInquiryTotalsByInquiryTypeAndMonth } from "@/lib/controllers/inquiryController/getInquiryTotalsByInquiryTypeAndMonth";
+import { getInquiryTotalsByDiscountPlanAndMonth } from "@/lib/controllers/inquiryController/getInquiryTotalsByDiscountPlanAndMonth";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -7,22 +7,22 @@ export async function GET(req: NextRequest) {
 
     const startDateStr = searchParams.get("start");
     const endDateStr = searchParams.get("end");
-    const source = searchParams.get("source") || undefined;
+    const discountPlanName = searchParams.get("discountPlanName") || undefined;
 
     const startDate = startDateStr ? new Date(startDateStr) : undefined;
     const endDate = endDateStr ? new Date(endDateStr) : undefined;
 
-    const result = await getInquiryTotalsByInquiryTypeAndMonth({
+    const result = await getInquiryTotalsByDiscountPlanAndMonth({
       startDate,
       endDate,
-      inquiryTypeFilter: source,
+      discountPlanNameFilter: discountPlanName,
     });
 
     const arrayResult = result.map((row) => [
       row.facilityAbbreviation,
       row.sitelinkId,
       row.monthKey,
-      row.inquiryType,
+      row.discountPlanName,
       row.inquiriesPlaced ? row.inquiriesPlaced : 0,
       row.leasesSigned ? row.leasesSigned : 0,
       row.cancellations ? row.cancellations : 0,
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       "Facility",
       "SitelinkId",
       "Month",
-      "Inquiry Type",
+      "Discount Plan",
       "Inquiries",
       "Rentals",
       "Cancellations",

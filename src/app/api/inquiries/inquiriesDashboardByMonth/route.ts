@@ -1,6 +1,5 @@
 import { getInquiryTotalsBySourceAndMonth } from "@/lib/controllers/inquiryController/getInquiryTotalsBySourceAndMonth";
 import { NextRequest, NextResponse } from "next/server";
-import { array } from "zod";
 
 export async function GET(req: NextRequest) {
   try {
