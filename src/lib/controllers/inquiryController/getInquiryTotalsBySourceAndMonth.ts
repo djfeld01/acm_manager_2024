@@ -47,6 +47,7 @@ export async function getInquiryTotalsBySourceAndMonth({
   const leasesByMonth = db
     .select({
       sitelinkId: inquiry.sitelinkId,
+      facilityAbbreviation: storageFacilities.facilityAbbreviation,
       source: inquiry.source,
       leasedMonth: sql<string>`TO_CHAR(${inquiry.leaseDate}, 'YYYY-MM')`.as(
         "leasedMonth"
@@ -67,6 +68,7 @@ export async function getInquiryTotalsBySourceAndMonth({
       )
     )
     .groupBy(
+      storageFacilities.facilityAbbreviation,
       inquiry.sitelinkId,
       inquiry.source,
       sql`TO_CHAR(${inquiry.leaseDate}, 'YYYY-MM')`
@@ -108,7 +110,7 @@ export async function getInquiryTotalsBySourceAndMonth({
     .select({
       sitelinkId: sql<string>`COALESCE(${inquiriesByMonth.sitelinkId}, ${leasesByMonth.sitelinkId}, ${cancellationsByMonth.sitelinkId})`,
       source: sql<string>`COALESCE(${inquiriesByMonth.source}, ${leasesByMonth.source}, ${cancellationsByMonth.source})`,
-      facilityAbbreviation: inquiriesByMonth.facilityAbbreviation,
+      facilityAbbreviation: sql<string>`COALESCE(${inquiriesByMonth.facilityAbbreviation}, ${leasesByMonth.facilityAbbreviation}, ${cancellationsByMonth.facilityAbbreviation})`,
       monthKey:
         sql<string>`COALESCE(${inquiriesByMonth.placedMonth}, ${leasesByMonth.leasedMonth}, ${cancellationsByMonth.cancelledMonth})`.as(
           "monthKey"
