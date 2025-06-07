@@ -81,7 +81,7 @@ export function calculateRetailBonus(
 export function caluclateReceivableBonus(
   receivableGoal: number,
   actualReceivable: number,
-  position: string
+  position?: string
 ) {
   if (
     position !== "MANAGER" ||
@@ -96,7 +96,7 @@ export function calculateStorageBonus(
   rentalsGoal: number,
   actualRentals: number,
   occupancy: number,
-  position: string
+  position?: string
 ) {
   if (rentalsGoal <= 0) {
     return 0;
@@ -190,4 +190,28 @@ export function isValidDate(d: any) {
 
 export function emptyStringToNull(value: string) {
   return value === "" ? null : value;
+}
+
+export function getLastMonthDateRange(): { start: string; end: string } {
+  const now = new Date();
+
+  // Start of this month
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // End of last month = 1 day before start of this month
+  const endOfLastMonth = new Date(startOfThisMonth.getTime() - 1);
+
+  // Start of last month
+  const startOfLastMonth = new Date(
+    endOfLastMonth.getFullYear(),
+    endOfLastMonth.getMonth(),
+    1
+  );
+
+  const formatDate = (date: Date): string => date.toISOString().split("T")[0]; // Returns 'YYYY-MM-DD'
+
+  return {
+    start: formatDate(startOfLastMonth),
+    end: formatDate(endOfLastMonth),
+  };
 }

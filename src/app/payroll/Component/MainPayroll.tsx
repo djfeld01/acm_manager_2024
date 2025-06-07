@@ -15,6 +15,7 @@ import React from "react";
 import { EmployeePayrollCard } from "./EmployeePayrollCard";
 import { mutateCommitActivityCommissionToPayroll } from "@/app/queryHelpers/queries";
 import LocationHeader from "./LocationHeader";
+import LocationCard from "../addBonus/_components/LocationCard";
 
 type MainPayrollProps = {
   sitelinkId: string;
@@ -25,6 +26,9 @@ function MainPayroll({ sitelinkId }: MainPayrollProps) {
   const { data: employeesData } = useSuspenseQuery(
     payrollPageDataOptions(sitelinkId)
   );
+  const { data: facilityData } = useSuspenseQuery(
+    facilityPageDataOptions(sitelinkId)
+  );
 
   const {
     employees,
@@ -34,9 +38,15 @@ function MainPayroll({ sitelinkId }: MainPayrollProps) {
     employeeList,
   } = employeesData;
 
+  const { facility } = facilityData;
   return (
     <div className="container mx-auto p-4">
       <LocationHeader sitelinkId={sitelinkId} />
+      <LocationCard
+        sitelinkId={sitelinkId}
+        nextPayPeriodId={nextPayPeriod.payPeriodId}
+        facilityName={facility?.facilityName || ""}
+      />
 
       {/* <EmployeeContainer sitelinkId={sitelinkId} /> */}
       <div className="flex flex-col flex-wrap lg:flex-row justify-between gap-2 mb-8">
