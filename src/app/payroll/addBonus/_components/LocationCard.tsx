@@ -12,6 +12,11 @@ import {
   workingEmployees,
 } from "@/app/queryHelpers/queryOptions";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  calculateRetailBonus,
+  calculateStorageBonus,
+  caluclateReceivableBonus,
+} from "@/lib/utils";
 
 type LocationCardProps = {
   sitelinkId: string;
@@ -24,7 +29,6 @@ function LocationCard({
   facilityName,
   nextPayPeriodId,
 }: LocationCardProps) {
-  const queryClient = useQueryClient();
   let endOfLastMonth = new Date();
   endOfLastMonth.setUTCDate(0);
   const { data: monthlyNumbers, isFetching: monthlyNumbersIsFetching } =
@@ -51,6 +55,34 @@ function LocationCard({
       employee.employeePosition === "MANAGER" ||
       employee.employeePosition === "ASSISTANT"
   );
+
+  const rentalGoal = monthlyNumbers?.monthlyGoals[0]?.rentalGoal || 0;
+  const rentalActual =
+    monthlyNumbers?.dailyManagementActivity[0]?.monthlyTotal || 0;
+  const occupancy =
+    monthlyNumbers?.dailyManagementOccupancy[0]?.unitOccupancy || 0;
+
+  const retailActual =
+    monthlyNumbers?.dailyManagementPaymentReceipt[0]?.monthlyAmount || 0;
+
+  const rentalsBonus = calculateStorageBonus(
+    rentalGoal,
+    rentalActual,
+    occupancy
+  );
+
+  const receivableBonus = caluclateReceivableBonus(
+    receivablesGoalNumber,
+    receivableActual
+  );
+
+  const retailBonus = calculateRetailBonus(
+    retailGoalNumber,
+    retailActual,
+    1,
+    1
+  );
+
   if (monthlyNumbersIsFetching) {
     return (
       <Skeleton>
@@ -59,16 +91,21 @@ function LocationCard({
     );
   }
   return (
-    <Card className="p-4">
-      <CardHeader className="font-semibold text-center text-xl mb-4 bg-slate-400 rounded-lg">
+    <Card className="p-0">
+      <div className="font-semibold text-center text-xl mb-1 bg-slate-400 rounded-lg">
         {endOfLastMonth.toLocaleString("default", { month: "long" })} Results
-      </CardHeader>
+      </div>
 
       <CardContent>
         {/* Top Section: Goals and Actuals */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {/* Rental Section */}
-          <div className="space-y-2 border rounded-md p-3">
+          <div className="space-y-2 border rounded-md p-1">
+            {rentalGoal > 0 && (
+              <div className="flex justify-between bg-orange-300">
+                <span className="text-sm font-light ">GOAL REACHED!</span>
+              </div>
+            )}
             <div className="font-light text-center">Rental</div>
             <div className="flex justify-between">
               <span className="text-sm font-light">Goal:</span>
@@ -97,13 +134,16 @@ function LocationCard({
           </div>
 
           {/* Retail Section */}
-          <div className="space-y-2 border rounded-md p-3">
+          <div className="space-y-2 border rounded-md p-1">
+            {retailBonus > 0 && (
+              <div className="flex justify-between bg-orange-300">
+                <span className="text-sm font-light ">GOAL REACHED!</span>
+              </div>
+            )}
             <div className="font-light text-center">Retail</div>
             <div className="flex justify-between">
               <span className="text-sm font-light">Goal:</span>
-              <span className="text-sm font-light">
-                ${monthlyNumbers?.monthlyGoals[0]?.retailGoal}
-              </span>
+              <span className="text-sm font-light">${retailGoalNumber}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm font-light">Actual:</span>
@@ -118,7 +158,12 @@ function LocationCard({
           </div>
 
           {/* Receivables Section */}
-          <div className="space-y-2 border rounded-md p-3">
+          <div className="space-y-2 border rounded-md p-1">
+            {receivableBonus > 0 && (
+              <div className="flex justify-between bg-orange-300">
+                <span className="text-sm font-light ">GOAL REACHED!</span>
+              </div>
+            )}
             <div className="font-light text-center">Receivables</div>
             <div className="flex justify-between">
               <span className="text-sm font-light">Goal:</span>

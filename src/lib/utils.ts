@@ -81,7 +81,7 @@ export function calculateRetailBonus(
 export function caluclateReceivableBonus(
   receivableGoal: number,
   actualReceivable: number,
-  position: string
+  position?: string
 ) {
   if (
     position !== "MANAGER" ||
@@ -96,7 +96,7 @@ export function calculateStorageBonus(
   rentalsGoal: number,
   actualRentals: number,
   occupancy: number,
-  position: string
+  position?: string
 ) {
   if (rentalsGoal <= 0) {
     return 0;
