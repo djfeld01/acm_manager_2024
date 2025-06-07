@@ -9,6 +9,7 @@ import {
   monthlyNumbers,
 } from "@/lib/controllers/activityController";
 import { getFacilityPageData } from "@/lib/controllers/facilityController";
+import { getLastMonthDateRange } from "@/lib/utils";
 import { queryOptions, useMutation } from "@tanstack/react-query";
 import { inArray } from "drizzle-orm";
 
@@ -33,14 +34,11 @@ export function payrollPageDataOptions(sitelinkId: string) {
   });
 }
 export function workingEmployees(sitelinkId: string) {
+  const { start, end } = getLastMonthDateRange();
   return queryOptions({
     queryKey: ["workingEmployees", sitelinkId],
     queryFn: async () => {
-      const data = await employeesWhoWorked(
-        sitelinkId,
-        "2025-04-01",
-        "2025-04-30"
-      );
+      const data = await employeesWhoWorked(sitelinkId, start, end);
       return data;
     },
   });

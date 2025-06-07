@@ -27,7 +27,6 @@ function LocationCard({
   const queryClient = useQueryClient();
   let endOfLastMonth = new Date();
   endOfLastMonth.setUTCDate(0);
-  console.log("endoflastmonth", endOfLastMonth.toISOString());
   const { data: monthlyNumbers, isFetching: monthlyNumbersIsFetching } =
     useQuery(getMonthlyNumbers(sitelinkId, endOfLastMonth.toISOString()));
 
@@ -62,15 +61,12 @@ function LocationCard({
   return (
     <Card className="p-4">
       <CardHeader className="font-semibold text-center text-xl mb-4 bg-slate-400 rounded-lg">
-        {facilityName}
-        <div className=" text-center text-base font-light">
-          {endOfLastMonth.toLocaleString("default", { month: "long" })} Results
-        </div>
+        {endOfLastMonth.toLocaleString("default", { month: "long" })} Results
       </CardHeader>
 
       <CardContent>
         {/* Top Section: Goals and Actuals */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-6">
           {/* Rental Section */}
           <div className="space-y-2 border rounded-md p-3">
             <div className="font-light text-center">Rental</div>
@@ -84,6 +80,18 @@ function LocationCard({
               <span className="text-sm font-light">Actual:</span>
               <span className="text-sm font-light">
                 {monthlyNumbers?.dailyManagementActivity[0]?.monthlyTotal}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm font-light">Unit Occupancy:</span>
+              <span className="text-sm font-light">
+                {monthlyNumbers?.dailyManagementOccupancy[0]?.unitOccupancy !=
+                null
+                  ? `${(
+                      monthlyNumbers.dailyManagementOccupancy[0].unitOccupancy *
+                      100
+                    ).toFixed(1)}%`
+                  : "—"}
               </span>
             </div>
           </div>
@@ -126,7 +134,7 @@ function LocationCard({
         </div>
 
         {/* Employee Cards */}
-        <div className="space-y-4">
+        {/* <div className="space-y-4">
           {filteredEmployees &&
             filteredEmployees.map((employee) => (
               <EmployeeCard
@@ -154,7 +162,7 @@ function LocationCard({
                 sitelinkId={sitelinkId}
               />
             ))}
-        </div>
+        </div> */}
       </CardContent>
     </Card>
   );
