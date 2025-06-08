@@ -57,6 +57,7 @@ function MainPayroll({ sitelinkId }: MainPayrollProps) {
                 employee={employee}
                 key={employee.userDetailsId}
                 sitelinkId={sitelinkId}
+                employeePosition={employee.position || ""}
               />
             )
         )}

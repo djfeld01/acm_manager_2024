@@ -101,11 +101,6 @@ function LocationCard({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {/* Rental Section */}
           <div className="space-y-2 border rounded-md p-1">
-            {rentalGoal > 0 && (
-              <div className="flex justify-between bg-orange-300">
-                <span className="text-sm font-light ">GOAL REACHED!</span>
-              </div>
-            )}
             <div className="font-light text-center">Rental</div>
             <div className="flex justify-between">
               <span className="text-sm font-light">Goal:</span>
@@ -131,15 +126,15 @@ function LocationCard({
                   : "—"}
               </span>
             </div>
-          </div>
-
-          {/* Retail Section */}
-          <div className="space-y-2 border rounded-md p-1">
-            {retailBonus > 0 && (
+            {rentalGoal > 0 && (
               <div className="flex justify-between bg-orange-300">
                 <span className="text-sm font-light ">GOAL REACHED!</span>
               </div>
             )}
+          </div>
+
+          {/* Retail Section */}
+          <div className="space-y-2 border rounded-md p-1">
             <div className="font-light text-center">Retail</div>
             <div className="flex justify-between">
               <span className="text-sm font-light">Goal:</span>
@@ -155,15 +150,15 @@ function LocationCard({
                 }
               </span>
             </div>
-          </div>
-
-          {/* Receivables Section */}
-          <div className="space-y-2 border rounded-md p-1">
-            {receivableBonus > 0 && (
+            {retailBonus > 0 && (
               <div className="flex justify-between bg-orange-300">
                 <span className="text-sm font-light ">GOAL REACHED!</span>
               </div>
             )}
+          </div>
+
+          {/* Receivables Section */}
+          <div className="space-y-2 border rounded-md p-1">
             <div className="font-light text-center">Receivables</div>
             <div className="flex justify-between">
               <span className="text-sm font-light">Goal:</span>
@@ -176,6 +171,11 @@ function LocationCard({
               <span className="text-sm font-light">${receivableActual}</span>
             </div>
           </div>
+          {receivableBonus > 0 && (
+            <div className="flex justify-between bg-orange-300">
+              <span className="text-sm font-light ">GOAL REACHED!</span>
+            </div>
+          )}
         </div>
 
         {/* Employee Cards */}

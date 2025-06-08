@@ -1,0 +1,1 @@
+ALTER TABLE "monthly_goal" ADD COLUMN "has_been_paid" boolean DEFAULT false;
