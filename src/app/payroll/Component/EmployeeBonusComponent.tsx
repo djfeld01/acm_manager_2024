@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/collapsible";
 import { CalendarIcon, CirclePlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { z } from "zod";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -27,25 +27,9 @@ import { cn, holidays } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
-import {
-  addBonus,
-  addHoliday,
-  addVacation,
-} from "@/lib/controllers/payrollController";
+import { addBonus } from "@/lib/controllers/payrollController";
 import { getQueryClient } from "@/app/queryHelpers/getQueryClient";
-import holiday, {
-  AddHolidayHours,
-  insertHolidaySchema,
-} from "@/db/schema/holiday";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { AddBonus, insertBonusSchema } from "@/db/schema/bonus";
 
 type EmployeeBonusComponentProps = {

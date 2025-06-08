@@ -12,7 +12,11 @@ import {
 } from "@/db/schema";
 import logonWithFacilityUserView from "@/db/schema/views/logonWithFacityUserView";
 import { and, count, eq, gte, lte, desc } from "drizzle-orm";
-import { getDateSentence, parseLocalDate } from "@/lib/utils";
+import {
+  getDateSentence,
+  getLastMonthDateRange,
+  parseLocalDate,
+} from "@/lib/utils";
 import EmployeeContainer from "@/components/EmployeeContainer";
 import { auth } from "@/auth";
 import { getFacilityPageData } from "@/lib/controllers/facilityController";
@@ -21,6 +25,7 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import MainPayroll from "../Component/MainPayroll";
 import {
   facilityPageDataOptions,
+  getMonthlyNumbers,
   payrollPageDataOptions,
 } from "@/app/queryHelpers/queryOptions";
 import { getQueryClient } from "@/app/queryHelpers/getQueryClient";
@@ -37,6 +42,7 @@ export default async function Page({
 
   await queryClient.prefetchQuery(facilityPageDataOptions(sitelinkId));
   await queryClient.prefetchQuery(payrollPageDataOptions(sitelinkId));
+
   return (
     <main>
       <HydrationBoundary state={dehydrate(queryClient)}>

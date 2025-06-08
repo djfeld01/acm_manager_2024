@@ -17,7 +17,7 @@ export async function mutateCommitActivityCommissionToPayroll(updates: {
   return data;
 }
 
-export async function addBonus(
+export async function addMonthlyBonus(
   employeeId: string,
   sitelinkId: string,
   bonusType: string,

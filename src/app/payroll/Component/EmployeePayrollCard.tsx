@@ -26,14 +26,19 @@ import {
   markActivitiesAsPaid,
   uncommitActivityFromPayroll,
 } from "@/lib/controllers/activityController";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { payrollPageDataOptions } from "@/app/queryHelpers/queryOptions";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  facilityPageDataOptions,
+  getMonthlyNumbers,
+  payrollPageDataOptions,
+} from "@/app/queryHelpers/queryOptions";
 import EmployeeVacationComponent from "./EmployeeVacationComponent";
 import EmployeeMileageComponent from "@/components/EmployeeMileageComponent";
 import EmployeeDaysWorkedComponent from "@/components/EmployeeDaysWorkedComponent";
 import EmployeeHolidayComponent from "./EmployeeHolidayComponent";
 import next from "next";
 import EmployeeBonusComponent from "./EmployeeBonusComponent";
+import EmployeeMonthlyBonusComponent from "./EmployeeMonthlyBonusComponent";
 
 // import EmployeeVacationComponent from "./EmployeeVacationComponent";
 // import EmployeeMileageComponent from "./EmployeeMileageComponent";
@@ -42,11 +47,13 @@ import EmployeeBonusComponent from "./EmployeeBonusComponent";
 type EmployeePayrollCardProps = {
   employee: UserWithActivities;
   sitelinkId: string;
+  employeePosition: string;
 };
 
 export function EmployeePayrollCard({
   employee,
   sitelinkId,
+  employeePosition,
 }: EmployeePayrollCardProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -55,7 +62,16 @@ export function EmployeePayrollCard({
   );
 
   const { nextPayPeriod } = employeesData;
+  const { data: monthlyNumbers } = useQuery(
+    getMonthlyNumbers(sitelinkId, "2025-05-31")
+  );
 
+  const showMonthlyBonus =
+    monthlyNumbers?.monthlyGoals?.length &&
+    monthlyNumbers?.monthlyGoals?.length > 0 &&
+    !monthlyNumbers?.monthlyGoals?.[0]?.hasBeenPaid;
+
+  console.log("showMonthlyBonus ", showMonthlyBonus);
   // if (isDesktop) {
   return (
     // <Dialog open={open} onOpenChange={setOpen}>
@@ -99,7 +115,14 @@ export function EmployeePayrollCard({
               employeeId={employee.userDetailsId}
               payPeriodId={nextPayPeriod.payPeriodId}
             />
-            <div></div>
+            {showMonthlyBonus === true && (
+              <EmployeeMonthlyBonusComponent
+                sitelinkId={sitelinkId}
+                employeeId={employee.userDetailsId}
+                payPeriodId={nextPayPeriod.payPeriodId}
+                employeePosition={employeePosition}
+              />
+            )}
           </div>
         )}
 

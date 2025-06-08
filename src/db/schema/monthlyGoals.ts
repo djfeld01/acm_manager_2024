@@ -1,5 +1,6 @@
 import {
   bigint,
+  boolean,
   date,
   integer,
   numeric,
@@ -24,6 +25,7 @@ const monthlyGoals = pgTable(
     collectionsGoal: numeric("collections_goal").notNull(),
     retailGoal: numeric("retail_goal").notNull(),
     rentalGoal: integer("rental_goal").notNull(),
+    hasBeenPaid: boolean("has_been_paid").default(false),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.month, t.sitelinkId] }),

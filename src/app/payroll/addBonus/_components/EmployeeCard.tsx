@@ -1,4 +1,4 @@
-import { addBonus } from "@/app/queryHelpers/queries";
+import { addMonthlyBonus } from "@/app/queryHelpers/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -78,7 +78,7 @@ function EmployeeCard({
               className="w-6 h-6 p-0 flex items-center justify-center"
               aria-label="Add Rental Bonus"
               onClick={() => {
-                addBonus(
+                addMonthlyBonus(
                   employeeId,
                   sitelinkId,
                   "Rental",
@@ -107,7 +107,7 @@ function EmployeeCard({
               className="w-6 h-6 p-0 flex items-center justify-center"
               aria-label="Add Receivable Bonus"
               onClick={() => {
-                addBonus(
+                addMonthlyBonus(
                   employeeId,
                   sitelinkId,
                   "Receivable",
@@ -136,7 +136,7 @@ function EmployeeCard({
               className="w-6 h-6 p-0 flex items-center justify-center"
               aria-label="Add Retail Bonus"
               onClick={() => {
-                addBonus(
+                addMonthlyBonus(
                   employeeId,
                   sitelinkId,
                   "Retail",

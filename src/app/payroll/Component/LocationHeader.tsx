@@ -13,7 +13,7 @@ function LocationHeader({ sitelinkId }: LocationHeaderProps) {
     facilityPageDataOptions(sitelinkId)
   );
   const { facility, latestLogons } = facilityData;
-  const latestLogonDate = latestLogons[0].logonDate;
+  const latestLogonDate = latestLogons[0]?.logonDate;
   const latestLogonFormatted = getDateSentence(
     latestLogonDate || new Date(2024, 1, 1)
   );
@@ -29,8 +29,8 @@ function LocationHeader({ sitelinkId }: LocationHeaderProps) {
         Email: {facility?.email} | Phone: {facility?.phoneNumber}
       </p>
       <p>
-        Last Logon: {latestLogonFormatted} - {latestLogons[0].firstName}{" "}
-        {latestLogons[0].lastName}
+        Last Logon: {latestLogonFormatted} - {latestLogons[0]?.firstName}{" "}
+        {latestLogons[0]?.lastName}
       </p>
     </div>
   );
