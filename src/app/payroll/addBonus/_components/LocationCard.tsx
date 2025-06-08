@@ -73,7 +73,8 @@ function LocationCard({
 
   const receivableBonus = caluclateReceivableBonus(
     receivablesGoalNumber,
-    receivableActual
+    receivableActual,
+    "MANAGER"
   );
 
   const retailBonus = calculateRetailBonus(
@@ -170,12 +171,12 @@ function LocationCard({
               <span className="text-sm font-light">Actual:</span>
               <span className="text-sm font-light">${receivableActual}</span>
             </div>
+            {receivableBonus > 0 && (
+              <div className="flex justify-between bg-orange-300">
+                <span className="text-sm font-light ">GOAL REACHED!</span>
+              </div>
+            )}
           </div>
-          {receivableBonus > 0 && (
-            <div className="flex justify-between bg-orange-300">
-              <span className="text-sm font-light ">GOAL REACHED!</span>
-            </div>
-          )}
         </div>
 
         {/* Employee Cards */}
