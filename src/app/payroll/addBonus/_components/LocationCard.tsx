@@ -127,7 +127,7 @@ function LocationCard({
                   : "—"}
               </span>
             </div>
-            {rentalGoal > 0 && (
+            {rentalsBonus > 0 && (
               <div className="flex justify-between bg-orange-300">
                 <span className="text-sm font-light ">GOAL REACHED!</span>
               </div>
