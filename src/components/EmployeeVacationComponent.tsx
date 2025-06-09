@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { Calendar } from "./ui/calendar";
 import { format } from "date-fns";
 import { Input } from "./ui/input";
-import { addVacation } from "@/lib/controllers/payrollController";
+import { addVacation } from "@/lib/controllers/payrollController/payrollController";
 
 type EmployeeVacationComponentProps = {
   sitelinkId: string;

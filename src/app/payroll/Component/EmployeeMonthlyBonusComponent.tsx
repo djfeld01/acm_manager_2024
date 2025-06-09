@@ -22,7 +22,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
-import { addBonus } from "@/lib/controllers/payrollController";
+import { addBonus } from "@/lib/controllers/payrollController/payrollController";
 import { getQueryClient } from "@/app/queryHelpers/getQueryClient";
 
 import {

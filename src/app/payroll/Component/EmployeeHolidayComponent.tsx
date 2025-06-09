@@ -27,7 +27,10 @@ import { cn, holidays } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
-import { addHoliday, addVacation } from "@/lib/controllers/payrollController";
+import {
+  addHoliday,
+  addVacation,
+} from "@/lib/controllers/payrollController/payrollController";
 import { getQueryClient } from "@/app/queryHelpers/getQueryClient";
 import holiday, {
   AddHolidayHours,

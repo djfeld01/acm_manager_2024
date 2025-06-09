@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar } from "./ui/calendar";
 import { Input } from "./ui/input";
-import { addMileage } from "@/lib/controllers/payrollController";
+import { addMileage } from "@/lib/controllers/payrollController/payrollController";
 type EmployeeMileageComponentProps = {
   sitelinkId: string;
   employeeId: string;
