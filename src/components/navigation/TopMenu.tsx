@@ -54,14 +54,15 @@ export default async function TopMenu() {
           <DropdownMenuContent align="center">
             {locations.length > 0 ? (
               locations.map((location) => (
-                <DropdownMenuItem key={location.sitelinkId}>
-                  <Link
-                    href={`/dailyPaymentsTable/${location.sitelinkId}`}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
+                <Link
+                  href={`/dailyPaymentsTable/${location.sitelinkId}`}
+                  className="text-muted-foreground hover:text-foreground"
+                  key={location.sitelinkId}
+                >
+                  <DropdownMenuItem>
                     {location.facilityAbbreviation}
-                  </Link>
-                </DropdownMenuItem>
+                  </DropdownMenuItem>
+                </Link>
               ))
             ) : (
               <DropdownMenuItem>
@@ -81,14 +82,16 @@ export default async function TopMenu() {
           <DropdownMenuContent align="center">
             {locations.length > 0 ? (
               locations.map((location) => (
-                <DropdownMenuItem key={location.sitelinkId}>
-                  <Link
-                    href={`/payroll/${location.sitelinkId}`}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
+                <Link
+                  key={location.sitelinkId}
+                  href={`/payroll/${location.sitelinkId}`}
+                  // passHref
+                  // legacyBehavior
+                >
+                  <DropdownMenuItem className="cursor-pointer text-muted-foreground hover:text-foreground">
                     {location.facilityAbbreviation}
-                  </Link>
-                </DropdownMenuItem>
+                  </DropdownMenuItem>
+                </Link>
               ))
             ) : (
               <DropdownMenuItem>
