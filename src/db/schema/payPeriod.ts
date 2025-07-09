@@ -23,4 +23,6 @@ const payPeriod = pgTable("pay_period", {
 export const payPeriodRelations = relations(payPeriod, ({ many }) => ({
   tenantActivities: many(tenantActivities),
 }));
+
+export type PayPeriod = typeof payPeriod.$inferSelect;
 export default payPeriod;

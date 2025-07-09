@@ -38,20 +38,23 @@ import { eq, sql, and, isNull, gte, lte, not, Name } from "drizzle-orm";
 
 export async function getEmployeePayrollData(payrollNumber?: string) {
   try {
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-    const nextPayPeriodArray = await db
-      .select()
-      .from(payPeriod)
-      .where(gte(payPeriod.processingDate, yesterday.toDateString()))
-      .limit(1)
-      .orderBy(payPeriod.processingDate);
-    if (!nextPayPeriodArray) {
-      throw new Error("No pay period found for the given criteria.");
+    let payrollId = payrollNumber;
+    if (!payrollId) {
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+      const nextPayPeriodArray = await db
+        .select()
+        .from(payPeriod)
+        .where(gte(payPeriod.processingDate, yesterday.toDateString()))
+        .limit(1)
+        .orderBy(payPeriod.processingDate);
+      if (!nextPayPeriodArray) {
+        throw new Error("No pay period found for the given criteria.");
+      }
+      const { startDate, endDate } = nextPayPeriodArray[0];
+      payrollId = nextPayPeriodArray[0].payPeriodId;
     }
-    const { startDate, endDate } = nextPayPeriodArray[0];
-    const payrollId = nextPayPeriodArray[0].payPeriodId;
     const employees = await db.query.userDetails.findMany({
       columns: {
         firstName: true,
@@ -107,6 +110,23 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
         eq(tenantActivities.payPeriodId, payrollId),
       columns: {
         employeeId: true,
+        date: true,
+        tenantName: true,
+        unitName: true,
+        hasInsurance: true,
+        facilityId: true,
+      },
+    });
+    const unpaidRentals = await db.query.tenantActivities.findMany({
+      where: (tenantActivities, { eq, isNull }) =>
+        and(
+          eq(tenantActivities.activityType, "MoveIn"),
+          isNull(tenantActivities.payPeriodId)
+        ),
+      columns: {
+        employeeId: true,
+        date: true,
+        tenantName: true,
         unitName: true,
         hasInsurance: true,
         facilityId: true,
@@ -122,7 +142,7 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
         (relation) => relation.userId === employee.id
       );
       const employeeOutput = facilityConnections.map((employeeFacility) => {
-        const mileage = mileageUsage.reduce(
+        const mileageDollars = mileageUsage.reduce(
           (prev, entry) =>
             entry.employeeId === employeeFacility.userId &&
             entry.facilityId === employeeFacility.storageFacilityId
@@ -130,15 +150,15 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
               : prev,
           0
         );
-        const storage = rentals.reduce((prev, rental) => {
+        const filteredRentals = rentals.filter(
+          (rental) =>
+            rental.employeeId === employeeFacility.userId &&
+            rental.facilityId === employeeFacility.storageFacilityId
+        );
+        console.log("Filtered Rentals", filteredRentals);
+        const storage = filteredRentals.reduce((prev, rental) => {
           const { position, storageFacilityId, userId, storageFacility } =
             employeeFacility;
-          if (
-            rental.employeeId !== userId ||
-            rental.facilityId !== storageFacilityId
-          ) {
-            return prev;
-          }
 
           if (position === "MANAGER") {
             return rental.hasInsurance
@@ -150,7 +170,13 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
             ? prev + storageFacility.insuranceCommissionRate + 5
             : prev + 5;
         }, 0);
-
+        const unpaidCommission = unpaidRentals.filter((rental) => {
+          return (
+            rental.employeeId === employeeFacility.userId &&
+            rental.facilityId === employeeFacility.storageFacilityId
+          );
+        });
+        console.log("Unpaid Commission:", unpaidCommission);
         const vacation = vacationHours.reduce(
           (prev, vacationTime) =>
             vacationTime.employeeId === employeeFacility.userId &&
@@ -167,7 +193,7 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
               : prev,
           0
         );
-        const bonus = bonusPay.reduce(
+        const monthlyBonus = bonusPay.reduce(
           (prev, bonusItem) =>
             bonusItem.employeeId === employeeFacility.userId &&
             bonusItem.facilityId === employeeFacility.storageFacilityId
@@ -180,12 +206,18 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
           firstName: employee.firstName,
           lastName: employee.lastName,
           fullName: employee.fullName,
-          facility: employeeFacility.storageFacility.paycorNumber,
-          bonus,
-          mileage,
-          storage,
-          vacation,
-          holiday,
+          locationPaycorNumber: employeeFacility.storageFacility.paycorNumber,
+          locationAbbreviation:
+            employeeFacility.storageFacility.facilityAbbreviation,
+          locationName: employeeFacility.storageFacility.facilityName,
+          monthlyBonus,
+          mileageDollars,
+          commission: storage,
+          unpaidCommission,
+          rentals: filteredRentals,
+          vacationHours: vacation,
+          holidayHours: holiday,
+          christmasBonus: 0, // Assuming no christmas bonus in this context
         };
       });
       finalResult = [...finalResult, ...employeeOutput];
@@ -197,16 +229,16 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
       item.fullName,
       ,
       ,
-      item.facility,
+      item.locationPaycorNumber,
       ,
       ,
-      item.holiday,
-      item.vacation,
+      item.holidayHours,
+      item.vacationHours,
       ,
       ,
-      item.bonus,
-      item.storage,
-      item.mileage,
+      item.monthlyBonus,
+      item.commission,
+      item.mileageDollars,
     ]);
     finalResultArray.unshift([
       "Last Name",
