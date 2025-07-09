@@ -18,6 +18,7 @@ export const positionEnum = pgEnum("position", [
   "MANAGER",
   "ASSISTANT",
   "STORE_OWNER",
+  "TERMINATED",
 ]);
 const usersToFacilities = pgTable(
   "user_to_facilities",
