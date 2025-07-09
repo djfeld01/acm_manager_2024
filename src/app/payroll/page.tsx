@@ -9,41 +9,10 @@ import { payPeriod, payPeriodStatusEnum } from "@/db/schema";
 import { format } from "date-fns";
 import { getEmployeePayrollData } from "@/lib/controllers/payrollController/getEmployeePayrollData";
 
-async function getCommittedPayroll(): Promise<CommittedPayrollByEmployee[]> {
-  return [
-    {
-      lastName: "Doe",
-      firstName: "John",
-      locationAbbreviation: "NYC",
-      locationName: "New York City",
-      locationPaycorNumber: 12345,
-      vacationHours: 40,
-      holidayHours: 8,
-      christmasBonus: 500,
-      monthlyBonus: 200,
-      commission: 1500,
-      mileageDollars: 100,
-    },
-    {
-      lastName: "Smith",
-      firstName: "Jane",
-      locationAbbreviation: "LA",
-      locationName: "Los Angeles",
-      locationPaycorNumber: 67890,
-      vacationHours: 32,
-      holidayHours: 8,
-      christmasBonus: 600,
-      monthlyBonus: 250,
-      commission: 1200,
-      mileageDollars: 80,
-    },
-  ];
-}
-
 export default async function payrollPage({
   searchParams,
 }: {
-  searchParams?: { payPeriod?: string };
+  searchParams?: Promise<{ payPeriod?: string }>;
 }) {
   const payPeriods = await db.query.payPeriod.findMany({
     where: (payPeriod, { lt }) =>

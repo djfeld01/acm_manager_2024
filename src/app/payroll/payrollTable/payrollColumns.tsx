@@ -13,6 +13,7 @@ import { ArrowUpDown } from "lucide-react";
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
 export type Rentals = {
+  Id: string;
   employeeId: string;
   facilityId: string;
   date: string;

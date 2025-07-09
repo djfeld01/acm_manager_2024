@@ -109,6 +109,7 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
       where: (tenantActivities, { eq }) =>
         eq(tenantActivities.payPeriodId, payrollId),
       columns: {
+        Id: true,
         employeeId: true,
         date: true,
         tenantName: true,
@@ -124,6 +125,7 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
           isNull(tenantActivities.payPeriodId)
         ),
       columns: {
+        Id: true,
         employeeId: true,
         date: true,
         tenantName: true,
@@ -155,7 +157,7 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
             rental.employeeId === employeeFacility.userId &&
             rental.facilityId === employeeFacility.storageFacilityId
         );
-        console.log("Filtered Rentals", filteredRentals);
+        //console.log("Filtered Rentals", filteredRentals);
         const storage = filteredRentals.reduce((prev, rental) => {
           const { position, storageFacilityId, userId, storageFacility } =
             employeeFacility;
@@ -176,7 +178,7 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
             rental.facilityId === employeeFacility.storageFacilityId
           );
         });
-        console.log("Unpaid Commission:", unpaidCommission);
+        //console.log("Unpaid Commission:", unpaidCommission);
         const vacation = vacationHours.reduce(
           (prev, vacationTime) =>
             vacationTime.employeeId === employeeFacility.userId &&
