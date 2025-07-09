@@ -1,0 +1,1 @@
+ALTER TYPE "public"."position" ADD VALUE 'TERMINATED';
