@@ -20,6 +20,7 @@ export type Position =
   | "STORE_OWNER"
   | "ACM_OFFICE"
   | "AREA_MANAGER"
+  | "TERMINATED"
   | null;
 export interface Facility {
   sitelinkId: string;
