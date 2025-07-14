@@ -138,23 +138,23 @@ async function getData(sitelinkId: string): Promise<Payment[]> {
   return transformedPayments;
 }
 
-async function renderSubComponent({ row }: { row: Row<Payment> }) {
-  "use server";
-  const { cashBankTransactions, creditCardTransactions } =
-    row.original as Payment;
-  return (
-    <div className="grid gap-4">
-      <div className="grid grid-cols-2 gap-4">
-        <h3 className="text-lg font-bold">Cash Bank Transactions</h3>
-        <h3 className="text-lg font-bold">Credit Card Bank Transactions</h3>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <DataTable columns={columns} data={cashBankTransactions} />
-        <DataTable columns={columns} data={creditCardTransactions} />
-      </div>
-    </div>
-  );
-}
+// async function renderSubComponent({ row }: { row: Row<Payment> }) {
+//   "use server";
+//   const { cashBankTransactions, creditCardTransactions } =
+//     row.original as Payment;
+//   return (
+//     <div className="grid gap-4">
+//       <div className="grid grid-cols-2 gap-4">
+//         <h3 className="text-lg font-bold">Cash Bank Transactions</h3>
+//         <h3 className="text-lg font-bold">Credit Card Bank Transactions</h3>
+//       </div>
+//       <div className="grid grid-cols-2 gap-4">
+//         <DataTable columns={columns} data={cashBankTransactions} />
+//         <DataTable columns={columns} data={creditCardTransactions} />
+//       </div>
+//     </div>
+//   );
+// }
 
 export default async function dailyPaymentsPage({
   params,
@@ -176,7 +176,7 @@ export default async function dailyPaymentsPage({
       <DataTable
         columns={columns}
         data={data}
-        // renderSubComponent={renderSubComponent}
+        //renderSubComponent={renderSubComponent}
       />
     </div>
   );

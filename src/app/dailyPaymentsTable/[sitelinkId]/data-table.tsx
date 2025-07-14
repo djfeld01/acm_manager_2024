@@ -29,13 +29,21 @@ import dateBetweenFilterFn from "@/lib/dateBetweenFilter";
 import FilterCalendar from "./FilterCalendar";
 import { commitTransactions } from "@/app/actions";
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
-  renderSubComponent: (props: { row: Row<TData> }) => React.ReactElement;
+interface DataTableRow {
+  dailyPaymentId: any;
+  bankTransactions: any[];
+  cashBankTransactions?: any[];
+  creditCardTransactions?: any[];
+  // add other properties as needed
 }
 
-export function DataTable<TData, TValue>({
+interface DataTableProps<TData extends DataTableRow, TValue> {
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  renderSubComponent?: (props: { row: Row<TData> }) => React.ReactElement;
+}
+
+export function DataTable<TData extends DataTableRow, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
@@ -102,11 +110,19 @@ export function DataTable<TData, TValue>({
 
   async function handleTransactionCommit() {
     const selectedRows: Row<TData>[] = table.getSelectedRowModel().rows;
-    const transactionsToCommit = selectedRows.reduce((acc, row) => {
+    const transactionsToCommit = selectedRows.reduce<
+      Array<{
+        dailyPaymentId: any;
+        bankTransactionId: any;
+        connectionType: any;
+        amount: any;
+        depositDifference: number;
+      }>
+    >((acc, row) => {
       const dailyPaymentId = row.original.dailyPaymentId;
 
       const transactionsToSubmit = row.original.bankTransactions.map(
-        (transaction) => ({
+        (transaction: any) => ({
           dailyPaymentId,
           bankTransactionId: transaction.bankTransactionId,
           connectionType: transaction.transactionType,
@@ -209,24 +225,25 @@ export function DataTable<TData, TValue>({
                             </tr>
                           </thead>
                           <tbody>
-                            {row.original.cashBankTransactions.map(
-                              (transaction) => (
-                                <tr key={`${transaction.transactionId}-cash`}>
-                                  <td>
-                                    {new Date(
-                                      transaction.transactionDate
-                                    ).toLocaleDateString()}
-                                  </td>
-                                  <td>{transaction.transactionType}</td>
-                                  <td>
-                                    {new Intl.NumberFormat("en-US", {
-                                      style: "currency",
-                                      currency: "USD",
-                                    }).format(transaction.transactionAmount)}
-                                  </td>
-                                </tr>
-                              )
-                            )}
+                            {row.original.cashBankTransactions &&
+                              row.original.cashBankTransactions.map(
+                                (transaction) => (
+                                  <tr key={`${transaction.transactionId}-cash`}>
+                                    <td>
+                                      {new Date(
+                                        transaction.transactionDate
+                                      ).toLocaleDateString()}
+                                    </td>
+                                    <td>{transaction.transactionType}</td>
+                                    <td>
+                                      {new Intl.NumberFormat("en-US", {
+                                        style: "currency",
+                                        currency: "USD",
+                                      }).format(transaction.transactionAmount)}
+                                    </td>
+                                  </tr>
+                                )
+                              )}
                           </tbody>
                         </table>
 
@@ -239,24 +256,27 @@ export function DataTable<TData, TValue>({
                             </tr>
                           </thead>
                           <tbody>
-                            {row.original.creditCardTransactions.map(
-                              (transaction) => (
-                                <tr key={`${transaction.transactionId}-credit`}>
-                                  <td>
-                                    {new Date(
-                                      transaction.transactionDate
-                                    ).toLocaleDateString()}
-                                  </td>
-                                  <td>{transaction.transactionType}</td>
-                                  <td>
-                                    {new Intl.NumberFormat("en-US", {
-                                      style: "currency",
-                                      currency: "USD",
-                                    }).format(transaction.transactionAmount)}
-                                  </td>
-                                </tr>
-                              )
-                            )}
+                            {row.original.creditCardTransactions &&
+                              row.original.creditCardTransactions.map(
+                                (transaction) => (
+                                  <tr
+                                    key={`${transaction.transactionId}-credit`}
+                                  >
+                                    <td>
+                                      {new Date(
+                                        transaction.transactionDate
+                                      ).toLocaleDateString()}
+                                    </td>
+                                    <td>{transaction.transactionType}</td>
+                                    <td>
+                                      {new Intl.NumberFormat("en-US", {
+                                        style: "currency",
+                                        currency: "USD",
+                                      }).format(transaction.transactionAmount)}
+                                    </td>
+                                  </tr>
+                                )
+                              )}
                           </tbody>
                         </table>
                       </div>

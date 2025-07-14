@@ -64,6 +64,7 @@ export type UserWithActivities = {
     | "MANAGER"
     | "ASSISTANT"
     | "STORE_OWNER"
+    | "TERMINATED"
     | null;
   activities: Activity[]; // Array of Activity objects
   committedActivities: Activity[];
