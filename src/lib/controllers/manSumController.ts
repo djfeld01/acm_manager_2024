@@ -72,7 +72,7 @@ export async function getDashboardData(todayParam?: string) {
       facility.dailyManagementOccupancy[0]?.occupiedUnits || 0;
 
     return {
-      sitelinkId: facility.sitelinkSiteCode,
+      sitelinkId: facility.sitelinkId,
       facilityName: facility.facilityName,
       abbreviatedName: facility.facilityAbbreviation,
       rentalGoal,
