@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import {
+  bankBalance,
   dailyManagementActivity,
   dailyManagementOccupancy,
   monthlyGoals,
@@ -45,11 +46,28 @@ export async function getDashboardData(todayParam?: string) {
       dailyManagementOccupancy: {
         where: eq(dailyManagementOccupancy.date, today.toDateString()),
       },
+      bankAccount: {
+        with: { bankBalance: { limit: 1, orderBy: desc(bankBalance.date) } },
+      },
     },
-    orderBy: asc(storageFacilities.sitelinkSiteCode),
+    orderBy: [
+      asc(storageFacilities.state),
+      asc(storageFacilities.facilityName),
+    ],
   });
 
   const response = result.map((facility) => {
+    const accountBalances = facility.bankAccount.map((account) => {
+      const latestBalance = account.bankBalance[0]?.balance || 0;
+      const latestBalanceDate = account.bankBalance[0]?.date || new Date();
+
+      return {
+        bankAccountId: account.bankAccountId,
+        bankName: account.bankName,
+        latestBalance,
+        latestBalanceDate,
+      };
+    });
     const rentalGoal = facility.monthlyGoals[0]?.rentalGoal || 0;
     const dailyRentals = facility.dailyManagementActivity[0]?.dailyTotal;
     const monthlyRentals = facility.dailyManagementActivity[0]?.monthlyTotal;
@@ -85,6 +103,7 @@ export async function getDashboardData(todayParam?: string) {
       squareFootageOccupancy,
       monthlyNetRentals,
       occupiedUnits,
+      accountBalances,
     };
   });
   return {
