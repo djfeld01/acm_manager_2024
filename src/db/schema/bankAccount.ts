@@ -1,5 +1,5 @@
 import { boolean, pgEnum, pgTable, serial, varchar } from "drizzle-orm/pg-core";
-import { bankTransaction, storageFacilities } from "@/db/schema";
+import { bankBalance, bankTransaction, storageFacilities } from "@/db/schema";
 import { relations } from "drizzle-orm";
 
 export const depositTypes = pgEnum("deposit_types", [
@@ -28,6 +28,7 @@ export const bankAccountRelations = relations(bankAccount, ({ one, many }) => ({
     references: [storageFacilities.sitelinkId],
   }),
   bankTransactions: many(bankTransaction),
+  bankBalance: many(bankBalance),
 }));
 
 export default bankAccount;

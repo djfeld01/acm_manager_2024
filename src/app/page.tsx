@@ -32,7 +32,7 @@ export default async function DashboardPage() {
   return (
     <main className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-4">Locations Overview</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
         {response.map((loc) => {
           const monthlyGoal = loc.rentalGoal ?? 1;
           const monthlyRentals = loc.monthlyRentals ?? 0;
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
           return (
             <Card
               key={loc.sitelinkId}
-              className="p-3 transition-all group-hover:shadow-xl group-hover:border-blue-400 border-2 border-gray-400 bg-white/90 cursor-pointer"
+              className="p-1 transition-all group-hover:shadow-xl group-hover:border-blue-400 border-2 border-gray-400 bg-white/90 cursor-pointer"
             >
               <CardHeader className="pb-1">
                 <div className="flex items-center gap-2 w-full">
@@ -133,11 +133,27 @@ export default async function DashboardPage() {
               {/* Group 3: Net Rentals */}
               <div className="bg-gray-300 rounded-lg p-2 mb-1 flex items-center gap-1">
                 <TrendingUp className="h-3 w-3 text-yellow-600" />
-                <span className="text-xs">Net:</span>
+                <span className="text-xs">Monthly Net:</span>
                 <span className="font-semibold text-xs">
                   {loc.monthlyNetRentals}
                 </span>
               </div>
+
+              {/* Account Balances */}
+              {loc.accountBalances && loc.accountBalances.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2 w-full">
+                  {loc.accountBalances.map((bal, i) => (
+                    <span
+                      key={i}
+                      className="bg-gray-100 rounded px-2 py-0.5 text-xs font-semibold text-gray-700"
+                      title={bal.bankName}
+                    >
+                      {bal.bankName ? `${bal.bankName}: ` : ""}$
+                      {Math.round(Number(bal.latestBalance)).toLocaleString()}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <Separator />
               <CardFooter className="flex justify-between items-center pt-1">
