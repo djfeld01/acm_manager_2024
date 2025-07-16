@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import {
+  bankAccount,
   bankBalance,
   dailyManagementActivity,
   dailyManagementOccupancy,
@@ -47,6 +48,7 @@ export async function getDashboardData(todayParam?: string) {
         where: eq(dailyManagementOccupancy.date, today.toDateString()),
       },
       bankAccount: {
+        where: eq(bankAccount.operatingAccount, true),
         with: { bankBalance: { limit: 1, orderBy: desc(bankBalance.date) } },
       },
     },
@@ -57,17 +59,21 @@ export async function getDashboardData(todayParam?: string) {
   });
 
   const response = result.map((facility) => {
-    const accountBalances = facility.bankAccount.map((account) => {
-      const latestBalance = account.bankBalance[0]?.balance || 0;
-      const latestBalanceDate = account.bankBalance[0]?.date || new Date();
+    const accountBalances = facility.bankAccount
+      .map((account) => {
+        const latestBalance = account.bankBalance[0]?.balance || 0;
+        const latestBalanceDate = account.bankBalance[0]?.date || new Date();
 
-      return {
-        bankAccountId: account.bankAccountId,
-        bankName: account.bankName,
-        latestBalance,
-        latestBalanceDate,
-      };
-    });
+        return {
+          bankAccountId: account.bankAccountId,
+          bankName: account.bankName,
+          latestBalance,
+          latestBalanceDate,
+        };
+      })
+      .sort((a, b) => {
+        return Number(b.latestBalance) - Number(a.latestBalance);
+      });
     const rentalGoal = facility.monthlyGoals[0]?.rentalGoal || 0;
     const dailyRentals = facility.dailyManagementActivity[0]?.dailyTotal;
     const monthlyRentals = facility.dailyManagementActivity[0]?.monthlyTotal;

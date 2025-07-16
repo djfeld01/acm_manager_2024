@@ -51,7 +51,7 @@ export default async function DashboardPage() {
                 <div className="flex items-center gap-2 w-full">
                   <Building2 className="h-5 w-5 text-blue-600 shrink-0" />
                   <CardTitle className="text-lg truncate w-full">
-                    {loc.facilityName}
+                    {loc.abbreviatedName}
                   </CardTitle>
                 </div>
                 <div className="mt-1 flex justify-start">
@@ -75,14 +75,14 @@ export default async function DashboardPage() {
               <div className="bg-gray-100 rounded-lg p-2 mb-1 flex gap-4 items-center justify-between">
                 <div className="flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-blue-500" />
-                  <span className="text-xs">Daily:</span>
+                  <span className="text-xs">Daily Rentals:</span>
                   <span className="font-semibold text-base">
                     {loc.dailyRentals}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-blue-500" />
-                  <span className="text-xs">Weekly:</span>
+                  <span className="text-xs">Weekly Rentals:</span>
                   <span className="font-semibold text-base">
                     {loc.weeklyRentals}
                   </span>
@@ -94,7 +94,7 @@ export default async function DashboardPage() {
                 <div className="flex items-center gap-4 mb-1 justify-between">
                   <div className="flex items-center gap-1">
                     <TrendingUp className="h-4 w-4 text-green-600" />
-                    <span className="text-xs">Monthly:</span>
+                    <span className="text-xs">Monthly Rentals:</span>
                     <span className="font-semibold text-base">
                       {monthlyRentals}
                     </span>
@@ -146,7 +146,13 @@ export default async function DashboardPage() {
                     <span
                       key={i}
                       className="bg-gray-100 rounded px-2 py-0.5 text-xs font-semibold text-gray-700"
-                      title={bal.bankName}
+                      title={
+                        bal.latestBalanceDate
+                          ? `Updated: ${new Date(
+                              bal.latestBalanceDate
+                            ).toLocaleDateString()}`
+                          : undefined
+                      }
                     >
                       {bal.bankName ? `${bal.bankName}: ` : ""}$
                       {Math.round(Number(bal.latestBalance)).toLocaleString()}
