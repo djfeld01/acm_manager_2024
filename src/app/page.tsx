@@ -32,7 +32,7 @@ export default async function DashboardPage() {
   return (
     <main className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-4">Locations Overview</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
         {response.map((loc) => {
           const monthlyGoal = loc.rentalGoal ?? 1;
           const monthlyRentals = loc.monthlyRentals ?? 0;
@@ -51,7 +51,7 @@ export default async function DashboardPage() {
                 <div className="flex items-center gap-2 w-full">
                   <Building2 className="h-5 w-5 text-blue-600 shrink-0" />
                   <CardTitle className="text-lg truncate w-full">
-                    {loc.abbreviatedName}
+                    {loc.facilityName}
                   </CardTitle>
                 </div>
                 <div className="mt-1 flex justify-start">
