@@ -11,25 +11,28 @@ import {
 import { Button } from "@/components/ui/button";
 import { X, Search } from "lucide-react";
 import { Table } from "@tanstack/react-table";
-import { CommittedPayrollByEmployee } from "./payrollColumns";
 
-interface TableFiltersProps {
-  table: Table<CommittedPayrollByEmployee>;
+interface TableFiltersProps<TData> {
+  table: Table<TData>;
   globalFilter: string;
   setGlobalFilter: (value: string) => void;
 }
 
-export function TableFilters({
+export function TableFilters<TData>({
   table,
   globalFilter,
   setGlobalFilter,
-}: TableFiltersProps) {
+}: TableFiltersProps<TData>) {
   // Get unique locations for the dropdown
   const locations = Array.from(
     new Set(
       table
         .getPreFilteredRowModel()
-        .rows.map((row) => row.original.locationName)
+        .rows.map((row) => {
+          const rowData = row.original as any;
+          return rowData.locationName || "";
+        })
+        .filter(Boolean)
     )
   ).sort();
 
