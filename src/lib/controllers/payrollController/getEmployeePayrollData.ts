@@ -93,6 +93,7 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
         bonusMonth: true,
         date: true,
         facilityId: true,
+        bonusType: true,
       },
     });
     const mileageUsage = await db.query.mileage.findMany({
@@ -195,12 +196,14 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
               : prev,
           0
         );
-        const monthlyBonus = bonusPay.reduce(
-          (prev, bonusItem) =>
+        const monthlyBonusBreakdown = bonusPay.filter(
+          (bonusItem) =>
             bonusItem.employeeId === employeeFacility.userId &&
             bonusItem.facilityId === employeeFacility.storageFacilityId
-              ? bonusItem.bonusAmount + prev
-              : prev,
+        );
+        const monthlyBonus = monthlyBonusBreakdown.reduce(
+          (prev, bonusItem) => bonusItem.bonusAmount + prev,
+
           0
         );
 
@@ -213,13 +216,20 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
             employeeFacility.storageFacility.facilityAbbreviation,
           locationName: employeeFacility.storageFacility.facilityName,
           monthlyBonus,
+          monthlyBonusBreakdown,
           mileageDollars,
           commission: storage,
           unpaidCommission,
+          unpaidCommissionCount: unpaidCommission.length,
           rentals: filteredRentals,
           vacationHours: vacation,
           holidayHours: holiday,
           christmasBonus: 0, // Assuming no christmas bonus in this context
+          // Include the current payroll ID for the action
+          currentPayrollId: payrollId,
+          // Include employee and facility IDs for the action
+          employeeId: employeeFacility.userId,
+          facilityId: employeeFacility.storageFacilityId,
         };
       });
       finalResult = [...finalResult, ...employeeOutput];
