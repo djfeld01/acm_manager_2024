@@ -1,4 +1,11 @@
-import { integer, boolean, pgTable, varchar, timestamp } from "drizzle-orm/pg-core";
+import {
+  integer,
+  boolean,
+  pgTable,
+  varchar,
+  timestamp,
+  numeric,
+} from "drizzle-orm/pg-core";
 import storageFacilities from "./storageFacilities";
 import inquiry from "./inquiry";
 import { relations } from "drizzle-orm";
@@ -14,7 +21,7 @@ const tenant = pgTable("tenant", {
   lastName: varchar("last_name", { length: 64 }),
   company: varchar("company", { length: 128 }),
   isCommercial: boolean("is_commercial"),
-  insurancePremium: integer("insurance_premium"),
+  insurancePremium: numeric("insurance_premium"),
   email: varchar("email", { length: 128 }),
   phone: varchar("phone", { length: 32 }),
   postalCode: varchar("postal_code", { length: 16 }),
