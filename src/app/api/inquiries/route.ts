@@ -182,9 +182,10 @@ async function parseInquiryData(
       employeeConvertedToResId: employeeConvertedToResId,
       employeeFollowUpId: employeeFollowUpId,
       comment: item.comment,
-      reportDate: item.reportDate && item.reportDate !== ""
-        ? new Date(item.reportDate)
-        : null,
+      reportDate:
+        item.reportDate && item.reportDate !== ""
+          ? new Date(item.reportDate)
+          : null,
     };
   }
 }
@@ -211,7 +212,9 @@ async function saveTenants(data: TenantInsert[]) {
           sitelinkId: sql.raw(`excluded.sitelink_id`),
           reportDate: sql.raw(`excluded.report_date`),
         },
-        where: sql.raw(`excluded.report_date > tenant.report_date OR tenant.report_date IS NULL`),
+        where: sql.raw(
+          `excluded.report_date > tenant.report_date OR tenant.report_date IS NULL`
+        ),
       });
     console.log("Tenant saved successfully:", result);
   } catch (error) {
@@ -244,7 +247,9 @@ async function saveUnits(data: UnitInsert[]) {
           width: sql.raw(`excluded.width`),
           reportDate: sql.raw(`excluded.report_date`),
         },
-        where: sql.raw(`excluded.report_date > unit.report_date OR unit.report_date IS NULL`),
+        where: sql.raw(
+          `excluded.report_date > unit.report_date OR unit.report_date IS NULL`
+        ),
       });
     console.log("Unit saved successfully:", result);
   } catch (error) {
@@ -301,7 +306,9 @@ async function saveInquiries(data: InquiryInsert[]) {
           employeeFollowUpId: sql.raw(`excluded.employee_follow_up_id`),
           reportDate: sql.raw(`excluded.report_date`),
         },
-        where: sql.raw(`excluded.report_date > inquiry.report_date OR inquiry.report_date IS NULL`),
+        where: sql.raw(
+          `excluded.report_date > inquiry.report_date OR inquiry.report_date IS NULL`
+        ),
       });
     console.log("Inquiry saved successfully:", result);
   } catch (error) {
@@ -333,9 +340,10 @@ export async function POST(req: NextRequest) {
           floor: item.floor,
           unitTypeId: item.unitTypeId,
           unitTypeName: item.unitTypeName,
-          reportDate: item.reportDate && item.reportDate !== ""
-            ? new Date(item.reportDate)
-            : null,
+          reportDate:
+            item.reportDate && item.reportDate !== ""
+              ? new Date(item.reportDate)
+              : null,
         };
       })
       .filter(
@@ -355,11 +363,12 @@ export async function POST(req: NextRequest) {
           email: emptyStringToNull(item.email),
           phone: emptyStringToNull(item.phone),
           isCommercial: item.isCommercial,
-          insurancePremium: item.insurancePremium,
+          insurancePremium: item.insurancePremium.toString(),
           postalCode: item.postalCode,
-          reportDate: item.reportDate && item.reportDate !== ""
-            ? new Date(item.reportDate)
-            : null,
+          reportDate:
+            item.reportDate && item.reportDate !== ""
+              ? new Date(item.reportDate)
+              : null,
         };
       })
       .filter(
