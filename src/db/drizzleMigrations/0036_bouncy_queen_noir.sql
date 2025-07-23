@@ -1,0 +1,1 @@
+ALTER TABLE "tenant" ALTER COLUMN "insurance_premium" SET DATA TYPE numeric;
