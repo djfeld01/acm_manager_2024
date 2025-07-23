@@ -96,6 +96,7 @@ type InquiryApiData = {
   iInquiryConvertedToLease: number;
   iReservationConvertedToLease: number;
   quotedRate: number;
+  reportDate: string;
 };
 
 async function parseInquiryData(
@@ -181,6 +182,9 @@ async function parseInquiryData(
       employeeConvertedToResId: employeeConvertedToResId,
       employeeFollowUpId: employeeFollowUpId,
       comment: item.comment,
+      reportDate: item.reportDate && item.reportDate !== ""
+        ? new Date(item.reportDate)
+        : null,
     };
   }
 }
@@ -197,13 +201,17 @@ async function saveTenants(data: TenantInsert[]) {
           company: sql.raw(`excluded.company`),
           email: sql.raw(`excluded.email`),
           firstName: sql.raw(`excluded.first_name`),
+          middleName: sql.raw(`excluded.middle_name`),
           isCommercial: sql.raw(`excluded.is_commercial`),
+          insurancePremium: sql.raw(`excluded.insurance_premium`),
           lastName: sql.raw(`excluded.last_name`),
           middleInitial: sql.raw(`excluded.middle_initial`),
           phone: sql.raw(`excluded.phone`),
           postalCode: sql.raw(`excluded.postal_code`),
           sitelinkId: sql.raw(`excluded.sitelink_id`),
+          reportDate: sql.raw(`excluded.report_date`),
         },
+        where: sql.raw(`excluded.report_date > tenant.report_date OR tenant.report_date IS NULL`),
       });
     console.log("Tenant saved successfully:", result);
   } catch (error) {
@@ -234,7 +242,9 @@ async function saveUnits(data: UnitInsert[]) {
           unitTypeId: sql.raw(`excluded.unit_type_id`),
           unitTypeName: sql.raw(`excluded.unit_type_name`),
           width: sql.raw(`excluded.width`),
+          reportDate: sql.raw(`excluded.report_date`),
         },
+        where: sql.raw(`excluded.report_date > unit.report_date OR unit.report_date IS NULL`),
       });
     console.log("Unit saved successfully:", result);
   } catch (error) {
@@ -289,7 +299,9 @@ async function saveInquiries(data: InquiryInsert[]) {
             `excluded.employee_converted_to_res_id`
           ),
           employeeFollowUpId: sql.raw(`excluded.employee_follow_up_id`),
+          reportDate: sql.raw(`excluded.report_date`),
         },
+        where: sql.raw(`excluded.report_date > inquiry.report_date OR inquiry.report_date IS NULL`),
       });
     console.log("Inquiry saved successfully:", result);
   } catch (error) {
@@ -321,6 +333,9 @@ export async function POST(req: NextRequest) {
           floor: item.floor,
           unitTypeId: item.unitTypeId,
           unitTypeName: item.unitTypeName,
+          reportDate: item.reportDate && item.reportDate !== ""
+            ? new Date(item.reportDate)
+            : null,
         };
       })
       .filter(
@@ -342,6 +357,9 @@ export async function POST(req: NextRequest) {
           isCommercial: item.isCommercial,
           insurancePremium: item.insurancePremium,
           postalCode: item.postalCode,
+          reportDate: item.reportDate && item.reportDate !== ""
+            ? new Date(item.reportDate)
+            : null,
         };
       })
       .filter(
