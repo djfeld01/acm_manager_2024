@@ -357,10 +357,21 @@ export async function POST(req: NextRequest) {
     const inquiryData: InquiryInsert[] = await Promise.all(
       body.map(async (item) => await parseInquiryData(item, allEmployees))
     );
-    console.log("inquiry Data Built");
+    
+    // Deduplicate inquiries based on unique constraint (tenantId, datePlaced, sitelinkId)
+    const deduplicatedInquiryData = inquiryData.filter(
+      (obj, index, self) =>
+        index === self.findIndex((t) => 
+          t.tenantId === obj.tenantId && 
+          t.datePlaced?.getTime() === obj.datePlaced?.getTime() && 
+          t.sitelinkId === obj.sitelinkId
+        )
+    );
+    
+    console.log(`inquiry Data Built: ${inquiryData.length} total, ${deduplicatedInquiryData.length} after deduplication`);
     const tenantResult = await saveTenants(tenantData);
     const unitResult = await saveUnits(unitData);
-    const inquiryResult = await saveInquiries(inquiryData);
+    const inquiryResult = await saveInquiries(deduplicatedInquiryData);
 
     return NextResponse.json(
       { tenantResult, unitResult, inquiryResult },
