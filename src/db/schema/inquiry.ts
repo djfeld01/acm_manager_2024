@@ -62,6 +62,7 @@ export const inquiry = pgTable(
     employeeId: varchar("employee_id"),
     employeeConvertedToResId: varchar("employee_converted_to_res_id"),
     employeeFollowUpId: varchar("employee_follow_up_id"),
+    reportDate: timestamp("report_date"),
   },
   (table) => ({
     dateIndex: index().on(table.datePlaced),

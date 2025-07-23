@@ -1,0 +1,1 @@
+ALTER TABLE "inquiry" ADD COLUMN "report_date" timestamp;
