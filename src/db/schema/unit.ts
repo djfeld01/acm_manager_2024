@@ -1,4 +1,4 @@
-import { boolean, integer, real, pgTable, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, real, pgTable, varchar, timestamp } from "drizzle-orm/pg-core";
 import storageFacilities from "./storageFacilities";
 import { relations } from "drizzle-orm";
 import inquiry from "./inquiry";
@@ -22,6 +22,7 @@ const unit = pgTable("unit", {
   floor: integer("floor"),
   unitTypeId: integer("unit_type_id"),
   unitTypeName: varchar("unit_type_name", { length: 64 }),
+  reportDate: timestamp("report_date"),
 });
 
 export const unitRelations = relations(unit, ({ many }) => ({
