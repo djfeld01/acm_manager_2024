@@ -16,7 +16,7 @@ function safeParseDate(dateStr: string | null | undefined): Date | null {
   if (!dateStr || dateStr === "" || dateStr === "null") {
     return null;
   }
-  
+
   const parsedDate = new Date(dateStr);
   return isNaN(parsedDate.getTime()) ? null : parsedDate;
 }
@@ -141,7 +141,10 @@ async function parseInquiryData(
       tenantId: item.tenantId,
       ledgerId: item.ledgerId,
       unitId: item.unitId,
-      datePlaced: safeParseDate(item.datePlaced) || safeParseDate(item.leaseDate) || new Date(),
+      datePlaced:
+        safeParseDate(item.datePlaced) ||
+        safeParseDate(item.leaseDate) ||
+        new Date(),
       firstFollowUpDate: safeParseDate(item.firstFollowUpDate),
       lastFollowUpDate: safeParseDate(item.lastFollowUpDate),
       cancelDate: safeParseDate(item.cancelDate),
@@ -357,24 +360,48 @@ export async function POST(req: NextRequest) {
     const inquiryData: InquiryInsert[] = await Promise.all(
       body.map(async (item) => await parseInquiryData(item, allEmployees))
     );
-    
-    // Deduplicate inquiries based on unique constraint (tenantId, datePlaced, sitelinkId)
-    const deduplicatedInquiryData = inquiryData.filter(
-      (obj, index, self) =>
-        index === self.findIndex((t) => 
-          t.tenantId === obj.tenantId && 
-          t.datePlaced?.getTime() === obj.datePlaced?.getTime() && 
-          t.sitelinkId === obj.sitelinkId
-        )
+
+    // Track duplicates for debugging
+    const duplicates: InquiryInsert[] = [];
+    const seen = new Set<string>();
+    const deduplicatedInquiryData: InquiryInsert[] = [];
+
+    inquiryData.forEach((inquiry) => {
+      const key = `${inquiry.tenantId}|${inquiry.datePlaced?.getTime()}|${
+        inquiry.sitelinkId
+      }`;
+      if (seen.has(key)) {
+        duplicates.push(inquiry);
+      } else {
+        seen.add(key);
+        deduplicatedInquiryData.push(inquiry);
+      }
+    });
+
+    console.log(
+      `inquiry Data Built: ${inquiryData.length} total, ${deduplicatedInquiryData.length} after deduplication, ${duplicates.length} duplicates removed`
     );
-    
-    console.log(`inquiry Data Built: ${inquiryData.length} total, ${deduplicatedInquiryData.length} after deduplication`);
     const tenantResult = await saveTenants(tenantData);
     const unitResult = await saveUnits(unitData);
     const inquiryResult = await saveInquiries(deduplicatedInquiryData);
 
     return NextResponse.json(
-      { tenantResult, unitResult, inquiryResult },
+      {
+        tenantResult,
+        unitResult,
+        inquiryResult,
+        duplicates: {
+          count: duplicates.length,
+          removedInquiries: duplicates.map((inquiry) => ({
+            tenantId: inquiry.tenantId,
+            datePlaced: inquiry.datePlaced,
+            sitelinkId: inquiry.sitelinkId,
+            waitingId: inquiry.waitingId,
+            ledgerId: inquiry.ledgerId,
+            employeeName: inquiry.employeeName,
+          })),
+        },
+      },
       { status: 201 }
     );
   } catch (error) {
