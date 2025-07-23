@@ -251,7 +251,7 @@ async function saveInquiries(data: InquiryInsert[]) {
       .insert(inquiry)
       .values(data)
       .onConflictDoUpdate({
-        target: [inquiry.tenantId, inquiry.datePlaced, inquiry.sitelinkId],
+        target: [inquiry.datePlaced, inquiry.tenantId, inquiry.sitelinkId, inquiry.unitId, inquiry.waitingId],
         set: {
           ledgerId: sql.raw(`excluded.ledger_id`),
           waitingId: sql.raw(`excluded.waiting_id`),
@@ -367,9 +367,7 @@ export async function POST(req: NextRequest) {
     const deduplicatedInquiryData: InquiryInsert[] = [];
 
     inquiryData.forEach((inquiry) => {
-      const key = `${inquiry.tenantId}|${inquiry.datePlaced?.getTime()}|${
-        inquiry.sitelinkId
-      }`;
+      const key = `${inquiry.datePlaced?.getTime()}|${inquiry.tenantId}|${inquiry.sitelinkId}|${inquiry.unitId}|${inquiry.waitingId}`;
       if (seen.has(key)) {
         duplicates.push(inquiry);
       } else {
@@ -393,9 +391,10 @@ export async function POST(req: NextRequest) {
         duplicates: {
           count: duplicates.length,
           removedInquiries: duplicates.map((inquiry) => ({
-            tenantId: inquiry.tenantId,
             datePlaced: inquiry.datePlaced,
+            tenantId: inquiry.tenantId,
             sitelinkId: inquiry.sitelinkId,
+            unitId: inquiry.unitId,
             waitingId: inquiry.waitingId,
             ledgerId: inquiry.ledgerId,
             employeeName: inquiry.employeeName,

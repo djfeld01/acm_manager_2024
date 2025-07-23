@@ -1,0 +1,2 @@
+ALTER TABLE "inquiry" DROP CONSTRAINT "inquiry_date_placed_tenant_id_sitelink_id_unique";--> statement-breakpoint
+ALTER TABLE "inquiry" ADD CONSTRAINT "inquiry_date_placed_tenant_id_sitelink_id_unit_id_waiting_id_unique" UNIQUE("date_placed","tenant_id","sitelink_id","unit_id","waiting_id");

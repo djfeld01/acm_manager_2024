@@ -73,7 +73,9 @@ export const inquiry = pgTable(
     uniqueInquiry: unique().on(
       table.datePlaced,
       table.tenantId,
-      table.sitelinkId
+      table.sitelinkId,
+      table.unitId,
+      table.waitingId
     ),
   })
 );
