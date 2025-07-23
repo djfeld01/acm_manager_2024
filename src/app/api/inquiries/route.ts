@@ -11,6 +11,16 @@ import unit, { UnitInsert } from "@/db/schema/unit";
 import tenant, { TenantInsert } from "@/db/schema/tenant";
 import { UserDetails } from "@/db/schema/userDetails";
 
+// Helper function to safely parse dates
+function safeParseDate(dateStr: string | null | undefined): Date | null {
+  if (!dateStr || dateStr === "" || dateStr === "null") {
+    return null;
+  }
+  
+  const parsedDate = new Date(dateStr);
+  return isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
+
 type InquiryApiData = {
   sitelinkId: string;
   iCurrencyDecimals: number;
@@ -131,44 +141,20 @@ async function parseInquiryData(
       tenantId: item.tenantId,
       ledgerId: item.ledgerId,
       unitId: item.unitId,
-      datePlaced:
-        item.datePlaced && item.datePlaced !== ""
-          ? new Date(item.datePlaced)
-          : new Date(item.leaseDate),
-      firstFollowUpDate:
-        item.firstFollowUpDate && item.firstFollowUpDate !== ""
-          ? new Date(item.firstFollowUpDate)
-          : null,
-      lastFollowUpDate:
-        item.lastFollowUpDate && item.lastFollowUpDate !== ""
-          ? new Date(item.lastFollowUpDate)
-          : null,
-      cancelDate:
-        item.cancelDate && item.cancelDate !== ""
-          ? new Date(item.cancelDate)
-          : null,
-      expirationDate:
-        item.expirationDate && item.expirationDate !== ""
-          ? new Date(item.expirationDate)
-          : null,
-      leaseDate:
-        item.leaseDate && item.leaseDate !== ""
-          ? new Date(item.leaseDate)
-          : null,
+      datePlaced: safeParseDate(item.datePlaced) || safeParseDate(item.leaseDate) || new Date(),
+      firstFollowUpDate: safeParseDate(item.firstFollowUpDate),
+      lastFollowUpDate: safeParseDate(item.lastFollowUpDate),
+      cancelDate: safeParseDate(item.cancelDate),
+      expirationDate: safeParseDate(item.expirationDate),
+      leaseDate: safeParseDate(item.leaseDate),
       callType: item.callType,
       inquiryType: item.inquiryType,
       marketingId: item.marketingId,
       marketingDesc: item.marketingDesc,
       rentalTypeId: item.rentalTypeId,
       rentalType: item.rentalType,
-      convertedToResDate:
-        item.convertedToResDate && item.convertedToResDate !== ""
-          ? new Date(item.convertedToResDate)
-          : null,
-      neededDate:
-        item.neededDate && item.neededDate !== ""
-          ? new Date(item.neededDate)
-          : null,
+      convertedToResDate: safeParseDate(item.convertedToResDate),
+      neededDate: safeParseDate(item.neededDate),
       cancellationReason: item.cancellationReason,
       source: item.source,
       quotedRate: item.quotedRate,
@@ -182,10 +168,7 @@ async function parseInquiryData(
       employeeConvertedToResId: employeeConvertedToResId,
       employeeFollowUpId: employeeFollowUpId,
       comment: item.comment,
-      reportDate:
-        item.reportDate && item.reportDate !== ""
-          ? new Date(item.reportDate)
-          : null,
+      reportDate: safeParseDate(item.reportDate),
     };
   }
 }
@@ -340,10 +323,7 @@ export async function POST(req: NextRequest) {
           floor: item.floor,
           unitTypeId: item.unitTypeId,
           unitTypeName: item.unitTypeName,
-          reportDate:
-            item.reportDate && item.reportDate !== ""
-              ? new Date(item.reportDate)
-              : null,
+          reportDate: safeParseDate(item.reportDate),
         };
       })
       .filter(
@@ -365,10 +345,7 @@ export async function POST(req: NextRequest) {
           isCommercial: item.isCommercial,
           insurancePremium: item.insurancePremium.toString(),
           postalCode: item.postalCode,
-          reportDate:
-            item.reportDate && item.reportDate !== ""
-              ? new Date(item.reportDate)
-              : null,
+          reportDate: safeParseDate(item.reportDate),
         };
       })
       .filter(
