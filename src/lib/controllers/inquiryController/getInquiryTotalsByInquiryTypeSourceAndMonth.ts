@@ -39,9 +39,7 @@ export async function getInquiryTotalsByInquiryTypeSourceAndMonth({
         inquiryTypeFilter
           ? eq(inquiry.inquiryType, inquiryTypeFilter)
           : undefined,
-        sourceFilter
-          ? eq(inquiry.source, sourceFilter)
-          : undefined
+        sourceFilter ? eq(inquiry.source, sourceFilter) : undefined
       )
     )
     .groupBy(
@@ -77,9 +75,7 @@ export async function getInquiryTotalsByInquiryTypeSourceAndMonth({
         inquiryTypeFilter
           ? eq(inquiry.inquiryType, inquiryTypeFilter)
           : undefined,
-        sourceFilter
-          ? eq(inquiry.source, sourceFilter)
-          : undefined
+        sourceFilter ? eq(inquiry.source, sourceFilter) : undefined
       )
     )
     .groupBy(
@@ -115,9 +111,7 @@ export async function getInquiryTotalsByInquiryTypeSourceAndMonth({
         inquiryTypeFilter
           ? eq(inquiry.inquiryType, inquiryTypeFilter)
           : undefined,
-        sourceFilter
-          ? eq(inquiry.source, sourceFilter)
-          : undefined
+        sourceFilter ? eq(inquiry.source, sourceFilter) : undefined
       )
     )
     .groupBy(

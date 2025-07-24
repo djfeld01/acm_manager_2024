@@ -21,6 +21,9 @@ export async function GET(req: NextRequest) {
     });
 
     const arrayResult = result.map((row) => [
+      `=TEXT(DATE(${row.monthKey.split("-")[0]},${
+        row.monthKey.split("-")[1]
+      },1),"YYYY-MM")`,
       row.facilityAbbreviation,
       row.sitelinkId,
       row.monthKey,
@@ -31,6 +34,7 @@ export async function GET(req: NextRequest) {
       row.cancellations ? row.cancellations : 0,
     ]);
     arrayResult.unshift([
+      "FormattedDateFormula",
       "Facility",
       "SitelinkId",
       "Month",
