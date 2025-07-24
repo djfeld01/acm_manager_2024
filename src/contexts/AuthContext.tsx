@@ -72,6 +72,17 @@ interface AuthContextType {
   canManageEmployees: boolean;
   canManagePayroll: boolean;
   canManageFinances: boolean;
+  // Facility-related methods
+  userFacilities: Array<{
+    sitelinkId: string;
+    facilityName: string;
+    facilityAbbreviation: string;
+    position: string | null;
+    primarySite: boolean | null;
+    rentsUnits: boolean | null;
+  }>;
+  hasAccessToFacility: (sitelinkId: string) => boolean;
+  getUserFacilityIds: () => string[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -111,6 +122,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const canManagePayroll = hasPermission(PERMISSIONS.MANAGE_PAYROLL);
   const canManageFinances = hasPermission(PERMISSIONS.MANAGE_FINANCES);
 
+  // Facility-related methods
+  const userFacilities = session?.user?.facilities || [];
+  
+  const hasAccessToFacility = (sitelinkId: string): boolean => {
+    // Admins have access to all facilities
+    if (isAdmin) return true;
+    // Other users only have access to their assigned facilities
+    return userFacilities.some(facility => facility.sitelinkId === sitelinkId);
+  };
+
+  const getUserFacilityIds = (): string[] => {
+    // Admins get access to all facilities (we'll handle this in the component)
+    if (isAdmin) return [];
+    return userFacilities.map(facility => facility.sitelinkId);
+  };
+
   const value: AuthContextType = {
     session,
     user: session?.user,
@@ -126,6 +153,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     canManageEmployees,
     canManagePayroll,
     canManageFinances,
+    userFacilities,
+    hasAccessToFacility,
+    getUserFacilityIds,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

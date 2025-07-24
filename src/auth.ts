@@ -11,6 +11,7 @@ import {
 } from "./db/schema";
 import { eq } from "drizzle-orm";
 import { userDetailsRelations } from "./db/schema";
+import { getUserFacilities } from "@/lib/controllers/userController/getUserFacilities";
 
 declare module "next-auth" {
   interface User {
@@ -26,6 +27,14 @@ declare module "next-auth" {
       image?: string | null;
       role?: string | null;
       userDetailId?: string | null;
+      facilities?: Array<{
+        sitelinkId: string;
+        facilityName: string;
+        facilityAbbreviation: string;
+        position: string | null;
+        primarySite: boolean | null;
+        rentsUnits: boolean | null;
+      }>;
     };
   }
 }
@@ -105,6 +114,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role = user.role;
         session.user.userDetailId = user.userDetailId;
         session.user.id = user.id;
+
+        // Fetch user facilities if userDetailId exists
+        if (user.userDetailId) {
+          const facilities = await getUserFacilities(user.userDetailId);
+          session.user.facilities = facilities;
+        }
       }
       return session;
     },

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Card,
@@ -8,8 +10,10 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { getDashboardData } from "@/lib/controllers/manSumController";
 import { Building2, TrendingUp, Target, Users } from "lucide-react";
+import { AccountBalances } from "@/components/AccountBalances";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
 
 // Helper for color coding goal completion
 function getGoalBadgeVariant(percent: number, monthPercent: number) {
@@ -18,8 +22,71 @@ function getGoalBadgeVariant(percent: number, monthPercent: number) {
   return "destructive";
 }
 
-export default async function DashboardPage() {
-  const { response } = await getDashboardData();
+export default function DashboardPage() {
+  const { isAuthenticated, isLoading: authLoading, userFacilities, isAdmin } = useAuth();
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      if (!isAuthenticated) return;
+      
+      try {
+        const response = await fetch('/api/dashboard');
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard data');
+        }
+        const data = await response.json();
+        setDashboardData(data.response);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated]);
+
+  if (authLoading) {
+    return (
+      <main className="p-6 bg-gray-50 min-h-screen">
+        <h1 className="text-3xl font-bold mb-4">Locations Overview</h1>
+        <div className="text-center">Loading...</div>
+      </main>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <main className="p-6 bg-gray-50 min-h-screen">
+        <h1 className="text-3xl font-bold mb-4">Locations Overview</h1>
+        <div className="text-center">Please sign in to view the dashboard.</div>
+      </main>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <main className="p-6 bg-gray-50 min-h-screen">
+        <h1 className="text-3xl font-bold mb-4">Locations Overview</h1>
+        <div className="text-center">Loading dashboard data...</div>
+      </main>
+    );
+  }
+
+  if (!dashboardData) {
+    return (
+      <main className="p-6 bg-gray-50 min-h-screen">
+        <h1 className="text-3xl font-bold mb-4">Locations Overview</h1>
+        <div className="text-center">No data available</div>
+      </main>
+    );
+  }
+
+  const response = dashboardData;
   const now = new Date();
   const daysInMonth = new Date(
     now.getFullYear(),
@@ -32,8 +99,26 @@ export default async function DashboardPage() {
   return (
     <main className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-4">Locations Overview</h1>
+      
+      {/* User facility access summary */}
+      <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+        <p className="text-sm text-blue-800">
+          {isAdmin ? (
+            <span className="font-semibold">Admin Access: </span>
+          ) : (
+            <span className="font-semibold">Your Facilities: </span>
+          )}
+          {isAdmin 
+            ? `Viewing all ${response.length} facilities`
+            : userFacilities.length > 0 
+              ? userFacilities.map(f => f.facilityAbbreviation).join(', ')
+              : 'No facilities assigned'
+          }
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-        {response.map((loc) => {
+        {response.map((loc: any) => {
           const monthlyGoal = loc.rentalGoal ?? 1;
           const monthlyRentals = loc.monthlyRentals ?? 0;
           const goalPercent = Math.round((monthlyRentals / monthlyGoal) * 100);
@@ -139,27 +224,8 @@ export default async function DashboardPage() {
                 </span>
               </div>
 
-              {/* Account Balances */}
-              {loc.accountBalances && loc.accountBalances.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2 w-full">
-                  {loc.accountBalances.map((bal, i) => (
-                    <span
-                      key={i}
-                      className="bg-gray-100 rounded px-2 py-0.5 text-xs font-semibold text-gray-700"
-                      title={
-                        bal.latestBalanceDate
-                          ? `Updated: ${new Date(
-                              bal.latestBalanceDate
-                            ).toLocaleDateString()}`
-                          : undefined
-                      }
-                    >
-                      {bal.bankName ? `${bal.bankName}: ` : ""}$
-                      {Math.round(Number(bal.latestBalance)).toLocaleString()}
-                    </span>
-                  ))}
-                </div>
-              )}
+              {/* Account Balances - Only show for users who can manage finances */}
+              <AccountBalances accountBalances={loc.accountBalances || []} />
 
               <Separator />
               <CardFooter className="flex justify-between items-center pt-1">

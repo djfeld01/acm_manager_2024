@@ -7,9 +7,12 @@ import {
   monthlyGoals,
   storageFacilities,
 } from "@/db/schema";
-import { and, asc, desc, eq, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, or, sql, inArray } from "drizzle-orm";
 
-export async function getDashboardData(todayParam?: string) {
+export async function getDashboardData(
+  todayParam?: string,
+  facilityIds?: string[]
+) {
   let today = new Date();
   if (todayParam) {
     const [year, month, day] = todayParam.split("-").map(Number);
@@ -23,7 +26,12 @@ export async function getDashboardData(todayParam?: string) {
   console.log("firstOfTheMonth", firstOfTheMonth);
 
   const result = await db.query.storageFacilities.findMany({
-    where: eq(storageFacilities.currentClient, true),
+    where: and(
+      eq(storageFacilities.currentClient, true),
+      facilityIds && facilityIds.length > 0
+        ? inArray(storageFacilities.sitelinkId, facilityIds)
+        : undefined
+    ),
     with: {
       monthlyGoals: {
         where: eq(monthlyGoals.month, firstOfTheMonth),
