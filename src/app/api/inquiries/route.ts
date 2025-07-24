@@ -251,7 +251,13 @@ async function saveInquiries(data: InquiryInsert[]) {
       .insert(inquiry)
       .values(data)
       .onConflictDoUpdate({
-        target: [inquiry.datePlaced, inquiry.tenantId, inquiry.sitelinkId, inquiry.unitId, inquiry.waitingId],
+        target: [
+          inquiry.datePlaced,
+          inquiry.tenantId,
+          inquiry.sitelinkId,
+          inquiry.unitId,
+          inquiry.waitingId,
+        ],
         set: {
           ledgerId: sql.raw(`excluded.ledger_id`),
           waitingId: sql.raw(`excluded.waiting_id`),
@@ -367,7 +373,9 @@ export async function POST(req: NextRequest) {
     const deduplicatedInquiryData: InquiryInsert[] = [];
 
     inquiryData.forEach((inquiry) => {
-      const key = `${inquiry.datePlaced?.getTime()}|${inquiry.tenantId}|${inquiry.sitelinkId}|${inquiry.unitId}|${inquiry.waitingId}`;
+      const key = `${inquiry.datePlaced?.getTime()}|${inquiry.tenantId}|${
+        inquiry.sitelinkId
+      }|${inquiry.unitId}|${inquiry.waitingId}`;
       if (seen.has(key)) {
         duplicates.push(inquiry);
       } else {
