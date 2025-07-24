@@ -5,9 +5,15 @@ import LocationCard from "./_components/LocationCard";
 import { db } from "@/db";
 import { payPeriod } from "@/db/schema";
 import { gte } from "drizzle-orm";
+import { Protected, ROLES } from "@/contexts/AuthContext";
 
 async function page() {
   const session = await auth();
+
+  if (!session?.user?.userDetailId) {
+    return <div>Access denied. Please contact an administrator.</div>;
+  }
+
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
@@ -20,11 +26,20 @@ async function page() {
 
   const nextPayPeriodId = nextPayPeriodArray[0].payPeriodId;
   console.log(nextPayPeriodArray[0].processingDate);
-  if (session?.user?.role === "ADMIN") {
-    const locations = await getFacilityConnections(
-      session?.user?.userDetailId || ""
-    );
-    return (
+
+  const locations = await getFacilityConnections(
+    session?.user?.userDetailId || ""
+  );
+
+  return (
+    <Protected
+      roles={[ROLES.ADMIN]}
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <p className="text-lg">You are not authorized to view this page!</p>
+        </div>
+      }
+    >
       <div className="grid grid-cols-2">
         {locations.map((location) => (
           <LocationCard
@@ -35,9 +50,8 @@ async function page() {
           />
         ))}
       </div>
-    );
-  }
-  return <p>You are not authorized to view this page!</p>;
+    </Protected>
+  );
 }
 
 export default page;

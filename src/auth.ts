@@ -17,6 +17,17 @@ declare module "next-auth" {
     role?: string | null;
     userDetailId?: string | null;
   }
+
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      role?: string | null;
+      userDetailId?: string | null;
+    };
+  }
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -44,27 +55,61 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async signIn({ user, email }) {
-      const userDetail = await db.query.userDetails.findFirst({
-        where: (userDetails, { eq }) =>
-          eq(userDetails.email, user?.email || ""),
-      });
-      if (!userDetail) {
-        return "/unauthorized";
-      }
-      if (!user?.userDetailId) {
-        const result = await db
-          .update(users)
-          .set({ userDetailId: userDetail.id })
-          .where(eq(users.email, userDetail?.email));
+      try {
+        const userDetail = await db.query.userDetails.findFirst({
+          where: (userDetails, { eq }) =>
+            eq(userDetails.email, user?.email || ""),
+          with: {
+            usersToFacilities: true,
+          },
+        });
+
+        // If user is not in userDetails table, deny sign in
+        if (!userDetail) {
+          return false; // This will redirect to error page
+        }
+
+        // Determine user's highest role from their facility positions
+        const positions =
+          userDetail.usersToFacilities
+            ?.map((utf) => utf.position)
+            .filter(Boolean) || [];
+        let highestRole = "USER";
+
+        // Role hierarchy (highest to lowest)
+        if (positions.includes("STORE_OWNER")) highestRole = "ADMIN";
+        else if (positions.includes("AREA_MANAGER")) highestRole = "SUPERVISOR";
+        else if (positions.includes("MANAGER")) highestRole = "MANAGER";
+        else if (positions.includes("ASSISTANT")) highestRole = "ASSISTANT";
+        else if (positions.includes("ACM_OFFICE")) highestRole = "ADMIN";
+
+        // Update user record with userDetailId and role if not already set
+        if (!user?.userDetailId) {
+          await db
+            .update(users)
+            .set({
+              userDetailId: userDetail.id,
+              role: highestRole as any,
+            })
+            .where(eq(users.email, userDetail?.email));
+        }
+
         return true;
+      } catch (error) {
+        console.error("Error in signIn callback:", error);
+        return false;
       }
-      return true;
     },
     async session({ session, user }) {
-      session.user.role = user.role;
-      session.user.userDetailId = user.userDetailId;
-
+      if (session.user) {
+        session.user.role = user.role;
+        session.user.userDetailId = user.userDetailId;
+        session.user.id = user.id;
+      }
       return session;
     },
+  },
+  pages: {
+    error: "/unauthorized", // Redirect here when signIn returns false
   },
 });

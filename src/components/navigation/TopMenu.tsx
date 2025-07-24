@@ -18,6 +18,7 @@ import { db } from "@/db";
 import { storageFacilities, usersToFacilities } from "@/db/schema";
 import { getFacilityConnections } from "@/lib/controllers/facilityController";
 import acmLogo from "@/public/images/acm_logo.svg";
+import { SignInButton, SignOutButton } from "@/components/auth/AuthButtons";
 export default async function TopMenu() {
   const session = await auth();
   const locations = await getFacilityConnections(
@@ -66,7 +67,7 @@ export default async function TopMenu() {
             ) : (
               <DropdownMenuItem>
                 <DropdownMenuLabel>
-                  <Link href="/api/auth/signin">Login</Link>
+                  <SignInButton />
                 </DropdownMenuLabel>
               </DropdownMenuItem>
             )}
@@ -93,7 +94,7 @@ export default async function TopMenu() {
             ) : (
               <DropdownMenuItem>
                 <DropdownMenuLabel>
-                  <Link href="/api/auth/signin">Login</Link>
+                  <SignInButton />
                 </DropdownMenuLabel>
               </DropdownMenuItem>
             )}
@@ -160,7 +161,7 @@ export default async function TopMenu() {
                 ) : (
                   <DropdownMenuItem>
                     <DropdownMenuLabel>
-                      <Link href="/api/auth/signin">Login</Link>
+                      <SignInButton />
                     </DropdownMenuLabel>
                   </DropdownMenuItem>
                 )}
@@ -187,7 +188,7 @@ export default async function TopMenu() {
                 ) : (
                   <DropdownMenuItem>
                     <DropdownMenuLabel>
-                      <Link href="/api/auth/signin">Login</Link>
+                      <SignInButton />
                     </DropdownMenuLabel>
                   </DropdownMenuItem>
                 )}
@@ -247,12 +248,7 @@ export default async function TopMenu() {
               <DropdownMenuItem>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
-                <Link
-                  href="/api/auth/signout"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  Logout
-                </Link>
+                <SignOutButton />
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -266,7 +262,7 @@ export default async function TopMenu() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>
-                <Link href="/api/auth/signin">Login</Link>
+                <SignInButton />
               </DropdownMenuLabel>
             </DropdownMenuContent>
           </DropdownMenu>
