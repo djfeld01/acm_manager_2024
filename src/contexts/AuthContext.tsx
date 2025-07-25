@@ -124,18 +124,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Facility-related methods
   const userFacilities = session?.user?.facilities || [];
-  
+
   const hasAccessToFacility = (sitelinkId: string): boolean => {
     // Admins have access to all facilities
     if (isAdmin) return true;
     // Other users only have access to their assigned facilities
-    return userFacilities.some(facility => facility.sitelinkId === sitelinkId);
+    return userFacilities.some(
+      (facility) => facility.sitelinkId === sitelinkId
+    );
   };
 
   const getUserFacilityIds = (): string[] => {
     // Admins get access to all facilities (we'll handle this in the component)
     if (isAdmin) return [];
-    return userFacilities.map(facility => facility.sitelinkId);
+    return userFacilities.map((facility) => facility.sitelinkId);
   };
 
   const value: AuthContextType = {
