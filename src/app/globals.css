@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ACM Design System Imports */
+@import "../styles/design-tokens.css";
+
+/* Mobile-First Touch Targets */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
 @layer base {
   :root {
     --background: 234.5 68% 95%;

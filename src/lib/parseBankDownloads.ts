@@ -62,7 +62,6 @@ export async function parseBankDownloads(
     filesArray.map(async (file): Promise<ParsedBankFile> => {
       const data = await file.text();
       const parsedData: ParsedOFXData = await parseOFX(data);
-
       // Ensure parsedData.OFX exists before accessing its properties
       if (!parsedData.OFX?.BANKMSGSRSV1?.STMTTRNRS?.STMTRS) {
         throw new Error("Invalid OFX format: Missing required fields.");

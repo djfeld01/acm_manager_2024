@@ -21,6 +21,7 @@ function UploadButton() {
 
     try {
       const result = await parseBankDownloads(files);
+      console.log("Parsed Bank Downloads:", result);
       await addBankTransactions(result);
     } catch (error) {
       console.error("Error uploading files:", error);

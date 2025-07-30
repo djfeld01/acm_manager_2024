@@ -1,0 +1,51 @@
+/**
+ * ACM Design Tokens
+ * Additional design tokens specific to ACM Manager 2024
+ */
+
+:root {
+  /* ACM Brand Colors - to be refined based on your preferences */
+  --acm-primary: 234.5 89.5% 73.9%;
+  --acm-primary-dark: 234.5 89.5% 65%;
+  --acm-secondary: 196.5 30% 70%;
+
+  /* Status Colors for Business Context */
+  --success: 142 76% 36%;
+  --success-foreground: 355.7 100% 97.3%;
+  --warning: 32 95% 44%;
+  --warning-foreground: 0 0% 100%;
+  --info: 221 83% 53%;
+  --info-foreground: 0 0% 100%;
+
+  /* Facility/Location Colors */
+  --facility-primary: 142 71% 45%;
+  --facility-secondary: 262 83% 58%;
+  --facility-tertiary: 32 95% 44%;
+
+  /* Data Visualization - Enhanced palette */
+  --revenue: 142 76% 36%;
+  --expense: 0 68% 30%;
+  --profit: 32 95% 44%;
+  --occupancy: 221 83% 53%;
+  --performance: 262 83% 58%;
+
+  /* Mobile-Specific Spacing */
+  --mobile-padding: 1rem;
+  --mobile-margin: 0.75rem;
+  --touch-target: 2.75rem; /* 44px */
+
+  /* Layout Breakpoints - Matching Tailwind */
+  --mobile: 640px;
+  --tablet: 768px;
+  --desktop: 1024px;
+  --wide: 1280px;
+}
+
+.dark {
+  --success: 142 76% 36%;
+  --success-foreground: 355.7 100% 97.3%;
+  --warning: 32 95% 44%;
+  --warning-foreground: 0 0% 100%;
+  --info: 221 83% 53%;
+  --info-foreground: 0 0% 100%;
+}

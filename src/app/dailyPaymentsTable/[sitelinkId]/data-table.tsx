@@ -28,6 +28,7 @@ import { subDays } from "date-fns";
 import dateBetweenFilterFn from "@/lib/dateBetweenFilter";
 import FilterCalendar from "./FilterCalendar";
 import { commitTransactions } from "@/app/actions";
+import UploadButton from "@/components/UploadButton";
 
 interface DataTableRow {
   dailyPaymentId: any;
@@ -166,7 +167,7 @@ export function DataTable<TData extends DataTableRow, TValue>({
       {table.getColumn("sitelinkDate") && (
         <FilterCalendar column={table.getColumn("sitelinkDate")!} />
       )}
-
+      <UploadButton />
       <Button
         variant="secondary"
         className="ml-auto"

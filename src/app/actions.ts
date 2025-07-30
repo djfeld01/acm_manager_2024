@@ -88,7 +88,6 @@ export async function addBankTransactions(data: ParsedBankFile[]) {
           transactionType: deposit.transactionType,
         };
       });
-
       const addBalance = await db
         .insert(bankBalance)
         .values({

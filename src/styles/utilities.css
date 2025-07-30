@@ -1,0 +1,197 @@
+/**
+ * ACM Utility Classes
+ * Custom utility classes for common patterns in ACM Manager
+ */
+
+@layer utilities {
+  /* Mobile-First Touch Targets */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  .touch-target-lg {
+    @apply min-h-[48px] min-w-[48px];
+  }
+
+  /* Mobile-Optimized Spacing */
+  .mobile-padding {
+    @apply p-4 md:p-6;
+  }
+
+  .mobile-margin {
+    @apply m-3 md:m-4;
+  }
+
+  .mobile-gap {
+    @apply gap-4 md:gap-6;
+  }
+
+  /* Data Display Patterns */
+  .metric-card {
+    @apply bg-card rounded-lg p-4 border border-border;
+    @apply hover:bg-accent/50 transition-colors duration-200;
+  }
+
+  .data-table-mobile {
+    @apply overflow-x-auto;
+    @apply scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent;
+  }
+
+  /* Status Indicators */
+  .status-success {
+    @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100;
+  }
+
+  .status-warning {
+    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100;
+  }
+
+  .status-error {
+    @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100;
+  }
+
+  .status-info {
+    @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100;
+  }
+
+  /* Dashboard Layout Patterns */
+  .dashboard-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6;
+  }
+
+  .dashboard-main {
+    @apply grid grid-cols-1 lg:grid-cols-3 gap-6;
+  }
+
+  .dashboard-content {
+    @apply lg:col-span-2 space-y-6;
+  }
+
+  .dashboard-sidebar {
+    @apply space-y-6;
+  }
+
+  /* Form Layouts */
+  .form-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+  }
+
+  .form-field {
+    @apply space-y-2;
+  }
+
+  /* Navigation Helpers */
+  .nav-item {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm;
+    @apply transition-all duration-200;
+    @apply hover:bg-accent hover:text-accent-foreground;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring;
+  }
+
+  .nav-item-active {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  /* Mobile Bottom Navigation */
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 z-50;
+    @apply bg-background border-t border-border;
+    @apply safe-area-pb; /* For devices with home indicators */
+  }
+
+  .bottom-nav-item {
+    @apply flex flex-col items-center justify-center gap-1;
+    @apply px-3 py-2 rounded-lg transition-colors min-w-0 flex-1;
+    @apply text-muted-foreground hover:text-foreground hover:bg-accent;
+  }
+
+  .bottom-nav-item-active {
+    @apply text-primary bg-primary/10;
+  }
+
+  /* Content Containers */
+  .page-container {
+    @apply min-h-screen bg-background;
+  }
+
+  .page-content {
+    @apply mobile-padding pb-20 md:pb-6; /* Account for bottom nav on mobile */
+  }
+
+  .page-header {
+    @apply mb-6 space-y-2;
+  }
+
+  .page-title {
+    @apply text-2xl md:text-3xl font-bold tracking-tight;
+  }
+
+  .page-description {
+    @apply text-muted-foreground;
+  }
+
+  /* Loading States */
+  .loading-skeleton {
+    @apply animate-pulse bg-muted rounded;
+  }
+
+  .loading-spinner {
+    @apply animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full;
+  }
+
+  /* Error States */
+  .error-container {
+    @apply text-center py-8 space-y-4;
+  }
+
+  .error-icon {
+    @apply mx-auto h-12 w-12 text-muted-foreground;
+  }
+
+  .error-title {
+    @apply text-lg font-medium;
+  }
+
+  .error-message {
+    @apply text-muted-foreground;
+  }
+
+  /* Safe Area Support for iOS */
+  .safe-area-pt {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-pl {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-area-pr {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Custom Scrollbars */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thumb-border {
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .scrollbar-track-transparent {
+    scrollbar-track-color: transparent;
+  }
+}
+
+/* Focus Visible for Better Keyboard Navigation */
+@layer utilities {
+  .focus-visible-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+}
