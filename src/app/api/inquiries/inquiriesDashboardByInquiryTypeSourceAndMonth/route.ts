@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
       row.monthKey,
       row.inquiryType,
       row.source,
+      row.rentalsFromInquiriesByMonth ? row.rentalsFromInquiriesByMonth : 0,
       row.inquiriesPlaced ? row.inquiriesPlaced : 0,
       row.leasesSigned ? row.leasesSigned : 0,
       row.cancellations ? row.cancellations : 0,
@@ -41,7 +42,8 @@ export async function GET(req: NextRequest) {
       "Inquiry Type",
       "Source",
       "Inquiries",
-      "Rentals",
+      "Conversions By Inquiries Placed",
+      "Monthly Rentals",
       "Cancellations",
     ]);
     return NextResponse.json({ arrayResult, result });

@@ -51,6 +51,42 @@ export async function getInquiryTotalsByInquiryTypeSourceAndMonth({
     )
     .as("inquiriesByMonth");
 
+  const rentalsFromInquiriesByMonth = db
+    .select({
+      sitelinkId: inquiry.sitelinkId,
+      facilityAbbreviation: storageFacilities.facilityAbbreviation,
+      inquiryType: inquiry.inquiryType,
+      source: inquiry.source,
+      inquiryMonth: sql<string>`TO_CHAR(${inquiry.datePlaced}, 'YYYY-MM')`.as(
+        "inquiryMonth"
+      ),
+      rentals: count().as("rentals"),
+    })
+    .from(inquiry)
+    .innerJoin(
+      storageFacilities,
+      eq(inquiry.sitelinkId, storageFacilities.sitelinkId)
+    )
+    .where(
+      and(
+        isNotNull(inquiry.datePlaced),
+        startDate ? gte(inquiry.datePlaced, startDate) : undefined,
+        endDate ? lte(inquiry.datePlaced, endDate) : undefined,
+        inquiryTypeFilter
+          ? eq(inquiry.inquiryType, inquiryTypeFilter)
+          : undefined,
+        sourceFilter ? eq(inquiry.source, sourceFilter) : undefined
+      )
+    )
+    .groupBy(
+      inquiry.sitelinkId,
+      storageFacilities.facilityAbbreviation,
+      inquiry.inquiryType,
+      inquiry.source,
+      sql`TO_CHAR(${inquiry.datePlaced}, 'YYYY-MM')`
+    )
+    .as("rentalsFromInquiriesByMonth");
+
   const leasesByMonth = db
     .select({
       sitelinkId: inquiry.sitelinkId,
@@ -125,14 +161,15 @@ export async function getInquiryTotalsByInquiryTypeSourceAndMonth({
 
   const result = await db
     .select({
-      sitelinkId: sql<string>`COALESCE(${inquiriesByMonth.sitelinkId}, ${leasesByMonth.sitelinkId}, ${cancellationsByMonth.sitelinkId})`,
-      inquiryType: sql<string>`COALESCE(${inquiriesByMonth.inquiryType}, ${leasesByMonth.inquiryType}, ${cancellationsByMonth.inquiryType})`,
-      source: sql<string>`COALESCE(${inquiriesByMonth.source}, ${leasesByMonth.source}, ${cancellationsByMonth.source})`,
-      facilityAbbreviation: sql<string>`COALESCE(${inquiriesByMonth.facilityAbbreviation}, ${leasesByMonth.facilityAbbreviation}, ${cancellationsByMonth.facilityAbbreviation})`,
+      sitelinkId: sql<string>`COALESCE(${inquiriesByMonth.sitelinkId}, ${leasesByMonth.sitelinkId}, ${cancellationsByMonth.sitelinkId}, ${rentalsFromInquiriesByMonth.sitelinkId})`,
+      inquiryType: sql<string>`COALESCE(${inquiriesByMonth.inquiryType}, ${leasesByMonth.inquiryType}, ${cancellationsByMonth.inquiryType}, ${rentalsFromInquiriesByMonth.inquiryType})`,
+      source: sql<string>`COALESCE(${inquiriesByMonth.source}, ${leasesByMonth.source}, ${cancellationsByMonth.source}, ${rentalsFromInquiriesByMonth.source})`,
+      facilityAbbreviation: sql<string>`COALESCE(${inquiriesByMonth.facilityAbbreviation}, ${leasesByMonth.facilityAbbreviation}, ${cancellationsByMonth.facilityAbbreviation}, ${rentalsFromInquiriesByMonth.facilityAbbreviation}) `,
       monthKey:
-        sql<string>`COALESCE(${inquiriesByMonth.placedMonth}, ${leasesByMonth.leasedMonth}, ${cancellationsByMonth.cancelledMonth})`.as(
+        sql<string>`COALESCE(${inquiriesByMonth.placedMonth}, ${leasesByMonth.leasedMonth}, ${cancellationsByMonth.cancelledMonth}, ${rentalsFromInquiriesByMonth.inquiryMonth})`.as(
           "monthKey"
         ),
+      rentalsFromInquiriesByMonth: rentalsFromInquiriesByMonth.rentals,
       inquiriesPlaced: inquiriesByMonth.inquiriesPlaced,
       leasesSigned: leasesByMonth.leasesSigned,
       cancellations: cancellationsByMonth.cancellations,
@@ -156,12 +193,27 @@ export async function getInquiryTotalsByInquiryTypeSourceAndMonth({
         eq(inquiriesByMonth.placedMonth, cancellationsByMonth.cancelledMonth)
       )
     )
+    .fullJoin(
+      rentalsFromInquiriesByMonth,
+      and(
+        eq(inquiriesByMonth.sitelinkId, rentalsFromInquiriesByMonth.sitelinkId),
+        eq(
+          inquiriesByMonth.inquiryType,
+          rentalsFromInquiriesByMonth.inquiryType
+        ),
+        eq(inquiriesByMonth.source, rentalsFromInquiriesByMonth.source),
+        eq(
+          inquiriesByMonth.placedMonth,
+          rentalsFromInquiriesByMonth.inquiryMonth
+        )
+      )
+    )
     .orderBy(
-      sql`COALESCE(${inquiriesByMonth.placedMonth}, ${leasesByMonth.leasedMonth}, ${cancellationsByMonth.cancelledMonth})`,
-      sql`COALESCE(${inquiriesByMonth.sitelinkId}, ${leasesByMonth.sitelinkId}, ${cancellationsByMonth.sitelinkId})`,
-      sql`COALESCE(${inquiriesByMonth.inquiryType}, ${leasesByMonth.inquiryType}, ${cancellationsByMonth.inquiryType})`,
-      sql`COALESCE(${inquiriesByMonth.source}, ${leasesByMonth.source}, ${cancellationsByMonth.source})`
+      sql`COALESCE(${inquiriesByMonth.placedMonth}, ${leasesByMonth.leasedMonth}, ${cancellationsByMonth.cancelledMonth}, ${rentalsFromInquiriesByMonth.inquiryMonth})`,
+      sql`COALESCE(${inquiriesByMonth.sitelinkId}, ${leasesByMonth.sitelinkId}, ${cancellationsByMonth.sitelinkId}, ${rentalsFromInquiriesByMonth.sitelinkId})`,
+      sql`COALESCE(${inquiriesByMonth.inquiryType}, ${leasesByMonth.inquiryType}, ${cancellationsByMonth.inquiryType}, ${rentalsFromInquiriesByMonth.inquiryType})`,
+      sql`COALESCE(${inquiriesByMonth.source}, ${leasesByMonth.source}, ${cancellationsByMonth.source}, ${rentalsFromInquiriesByMonth.source})`
     );
-
+  console.log(result[0].rentalsFromInquiriesByMonth);
   return result;
 }
