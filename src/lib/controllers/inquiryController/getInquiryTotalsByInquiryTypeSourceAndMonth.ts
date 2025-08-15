@@ -69,7 +69,7 @@ export async function getInquiryTotalsByInquiryTypeSourceAndMonth({
     )
     .where(
       and(
-        isNotNull(inquiry.datePlaced),
+        isNotNull(inquiry.leaseDate),
         startDate ? gte(inquiry.datePlaced, startDate) : undefined,
         endDate ? lte(inquiry.datePlaced, endDate) : undefined,
         inquiryTypeFilter
