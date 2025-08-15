@@ -164,7 +164,7 @@ export async function getInquiryTotalsByInquiryTypeSourceAndMonth({
       sitelinkId: sql<string>`COALESCE(${inquiriesByMonth.sitelinkId}, ${leasesByMonth.sitelinkId}, ${cancellationsByMonth.sitelinkId}, ${rentalsFromInquiriesByMonth.sitelinkId})`,
       inquiryType: sql<string>`COALESCE(${inquiriesByMonth.inquiryType}, ${leasesByMonth.inquiryType}, ${cancellationsByMonth.inquiryType}, ${rentalsFromInquiriesByMonth.inquiryType})`,
       source: sql<string>`COALESCE(${inquiriesByMonth.source}, ${leasesByMonth.source}, ${cancellationsByMonth.source}, ${rentalsFromInquiriesByMonth.source})`,
-      facilityAbbreviation: sql<string>`COALESCE(${inquiriesByMonth.facilityAbbreviation}, ${leasesByMonth.facilityAbbreviation}, ${cancellationsByMonth.facilityAbbreviation}, ${rentalsFromInquiriesByMonth.facilityAbbreviation}) `,
+      facilityAbbreviation: sql<string>`COALESCE(${inquiriesByMonth.facilityAbbreviation}, ${leasesByMonth.facilityAbbreviation}, ${cancellationsByMonth.facilityAbbreviation}, ${rentalsFromInquiriesByMonth.facilityAbbreviation})`,
       monthKey:
         sql<string>`COALESCE(${inquiriesByMonth.placedMonth}, ${leasesByMonth.leasedMonth}, ${cancellationsByMonth.cancelledMonth}, ${rentalsFromInquiriesByMonth.inquiryMonth})`.as(
           "monthKey"
@@ -214,6 +214,5 @@ export async function getInquiryTotalsByInquiryTypeSourceAndMonth({
       sql`COALESCE(${inquiriesByMonth.inquiryType}, ${leasesByMonth.inquiryType}, ${cancellationsByMonth.inquiryType}, ${rentalsFromInquiriesByMonth.inquiryType})`,
       sql`COALESCE(${inquiriesByMonth.source}, ${leasesByMonth.source}, ${cancellationsByMonth.source}, ${rentalsFromInquiriesByMonth.source})`
     );
-  console.log(result[0].rentalsFromInquiriesByMonth);
   return result;
 }
