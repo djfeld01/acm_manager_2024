@@ -16,17 +16,19 @@ export async function GET(req: NextRequest) {
     const result = await getInquiryTotalsByInquiryTypeSourceAndMonth({
       startDate,
       endDate,
-      inquiryTypeFilter,
-      sourceFilter,
+      inquiryTypeFilter: inquiryTypeFilter,
+      sourceFilter: sourceFilter,
     });
 
-    const arrayResult = result.map((row) => [
+    const monthlyTotals = result.monthlyTotals;
+    const inquirySourceBreakdown = result.inquirySourceBreakdown;
+
+    const arrayResult = monthlyTotals.map((row) => [
       `=TEXT(DATE(${row.monthKey.split("-")[0]},${
         row.monthKey.split("-")[1]
       },1),"YYYY-MM")`,
       row.facilityAbbreviation,
       row.sitelinkId,
-      row.monthKey,
       row.inquiryType,
       row.source,
       row.inquiriesPlaced ? row.inquiriesPlaced : 0,
@@ -34,17 +36,46 @@ export async function GET(req: NextRequest) {
       row.cancellations ? row.cancellations : 0,
     ]);
     arrayResult.unshift([
-      "FormattedDateFormula",
+      "Month",
       "Facility",
       "SitelinkId",
-      "Month",
       "Inquiry Type",
       "Source",
       "Inquiries",
       "Rentals",
       "Cancellations",
     ]);
-    return NextResponse.json({ arrayResult, result });
+
+    const inquirySourceArray = inquirySourceBreakdown.map((row) => [
+      `=TEXT(DATE(${row.leasedMonth.split("-")[0]},${
+        row.leasedMonth.split("-")[1]
+      },1),"YYYY-MM")`,
+      row.facilityAbbreviation,
+      row.sitelinkId,
+      row.inquiryType,
+      row.source,
+      `=TEXT(DATE(${row.inquiryPlacedMonth.split("-")[0]},${
+        row.inquiryPlacedMonth.split("-")[1]
+      },1),"YYYY-MM")`,
+      row.leaseCountFromThisInquiryMonth,
+    ]);
+
+    inquirySourceArray.unshift([
+      "Leased Month",
+      "Facility",
+      "SitelinkId",
+      "Inquiry Type",
+      "Source",
+      "Inquiry Placed Month",
+      "Lease Count",
+    ]);
+
+    return NextResponse.json({
+      arrayResult,
+      inquirySourceArray,
+      result: monthlyTotals,
+      inquirySourceBreakdown,
+    });
   } catch (error) {
     console.error("API error:", error);
     return NextResponse.json(

@@ -17,7 +17,6 @@ export async function GET(req: NextRequest) {
       endDate,
       discountPlanNameFilter: discountPlanName,
     });
-
     const arrayResult = result.map((row) => [
       row.facilityAbbreviation,
       row.sitelinkId,

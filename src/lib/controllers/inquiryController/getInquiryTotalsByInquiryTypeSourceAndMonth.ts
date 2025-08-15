@@ -87,6 +87,51 @@ export async function getInquiryTotalsByInquiryTypeSourceAndMonth({
     )
     .as("leasesByMonth");
 
+  // NEW: Track when inquiries were placed for leases signed in each month
+  const inquirySourceByLeaseMonth = db
+    .select({
+      sitelinkId: inquiry.sitelinkId,
+      facilityAbbreviation: storageFacilities.facilityAbbreviation,
+      inquiryType: inquiry.inquiryType,
+      source: inquiry.source,
+      leasedMonth: sql<string>`TO_CHAR(${inquiry.leaseDate}, 'YYYY-MM')`.as(
+        "leasedMonth"
+      ),
+      inquiryPlacedMonth:
+        sql<string>`TO_CHAR(${inquiry.datePlaced}, 'YYYY-MM')`.as(
+          "inquiryPlacedMonth"
+        ),
+      leaseCountFromThisInquiryMonth: count().as(
+        "leaseCountFromThisInquiryMonth"
+      ),
+    })
+    .from(inquiry)
+    .innerJoin(
+      storageFacilities,
+      eq(inquiry.sitelinkId, storageFacilities.sitelinkId)
+    )
+    .where(
+      and(
+        isNotNull(inquiry.leaseDate),
+        isNotNull(inquiry.datePlaced),
+        startDate ? gte(inquiry.leaseDate, startDate) : undefined,
+        endDate ? lte(inquiry.leaseDate, endDate) : undefined,
+        inquiryTypeFilter
+          ? eq(inquiry.inquiryType, inquiryTypeFilter)
+          : undefined,
+        sourceFilter ? eq(inquiry.source, sourceFilter) : undefined
+      )
+    )
+    .groupBy(
+      inquiry.sitelinkId,
+      storageFacilities.facilityAbbreviation,
+      inquiry.inquiryType,
+      inquiry.source,
+      sql`TO_CHAR(${inquiry.leaseDate}, 'YYYY-MM')`,
+      sql`TO_CHAR(${inquiry.datePlaced}, 'YYYY-MM')`
+    )
+    .as("inquirySourceByLeaseMonth");
+
   const cancellationsByMonth = db
     .select({
       sitelinkId: inquiry.sitelinkId,
@@ -163,5 +208,34 @@ export async function getInquiryTotalsByInquiryTypeSourceAndMonth({
       sql`COALESCE(${inquiriesByMonth.source}, ${leasesByMonth.source}, ${cancellationsByMonth.source})`
     );
 
-  return result;
+  // NEW: Get the inquiry source breakdown separately
+  const inquirySourceBreakdown = await db
+    .select({
+      sitelinkId: inquirySourceByLeaseMonth.sitelinkId,
+      facilityAbbreviation: inquirySourceByLeaseMonth.facilityAbbreviation,
+      inquiryType: inquirySourceByLeaseMonth.inquiryType,
+      source: inquirySourceByLeaseMonth.source,
+      leasedMonth: inquirySourceByLeaseMonth.leasedMonth,
+      inquiryPlacedMonth: inquirySourceByLeaseMonth.inquiryPlacedMonth,
+      leaseCountFromThisInquiryMonth:
+        inquirySourceByLeaseMonth.leaseCountFromThisInquiryMonth,
+    })
+    .from(inquirySourceByLeaseMonth)
+    .orderBy(
+      inquirySourceByLeaseMonth.leasedMonth,
+      inquirySourceByLeaseMonth.sitelinkId,
+      inquirySourceByLeaseMonth.inquiryType,
+      inquirySourceByLeaseMonth.source,
+      inquirySourceByLeaseMonth.inquiryPlacedMonth
+    );
+
+  console.log("Main Results:");
+  console.log(result);
+  console.log("\nInquiry Source Breakdown:");
+  console.log(inquirySourceBreakdown);
+
+  return {
+    monthlyTotals: result,
+    inquirySourceBreakdown: inquirySourceBreakdown,
+  };
 }

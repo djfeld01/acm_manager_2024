@@ -55,6 +55,11 @@ export async function getInquiryTotalsByDiscountPlanAndMonth({
         "leasedMonth"
       ),
       leasesSigned: count().as("leasesSigned"),
+      // FIXED: Extract days from interval then round
+      avgDaysToLease:
+        sql<number>`ROUND(AVG(EXTRACT(DAY FROM (${inquiry.leaseDate} - ${inquiry.datePlaced}))), 1)`.as(
+          "avgDaysToLease"
+        ),
     })
     .from(inquiry)
     .innerJoin(
@@ -64,6 +69,7 @@ export async function getInquiryTotalsByDiscountPlanAndMonth({
     .where(
       and(
         isNotNull(inquiry.leaseDate),
+        isNotNull(inquiry.datePlaced),
         startDate ? gte(inquiry.leaseDate, startDate) : undefined,
         endDate ? lte(inquiry.leaseDate, endDate) : undefined,
         discountPlanNameFilter
@@ -124,6 +130,15 @@ export async function getInquiryTotalsByDiscountPlanAndMonth({
       inquiriesPlaced: inquiriesByMonth.inquiriesPlaced,
       leasesSigned: leasesByMonth.leasesSigned,
       cancellations: cancellationsByMonth.cancellations,
+      avgDaysToLease: leasesByMonth.avgDaysToLease, // NEW: Average days to conversion
+      // NEW: Conversion rate percentage calculation
+      conversionRate: sql<number>`
+        CASE 
+          WHEN ${inquiriesByMonth.inquiriesPlaced} > 0 
+          THEN ROUND((${leasesByMonth.leasesSigned}::decimal / ${inquiriesByMonth.inquiriesPlaced}::decimal) * 100, 1)
+          ELSE NULL 
+        END
+      `.as("conversionRate"),
     })
     .from(inquiriesByMonth)
     .fullJoin(
@@ -149,6 +164,156 @@ export async function getInquiryTotalsByDiscountPlanAndMonth({
       sql`COALESCE(${inquiriesByMonth.placedMonth}, ${leasesByMonth.leasedMonth})`,
       sql`COALESCE(${inquiriesByMonth.sitelinkId}, ${leasesByMonth.sitelinkId})`
     );
+
+  // NEW: Console log to see the enhanced data
+  console.log("Enhanced Inquiry Data with Conversion Metrics:");
+  console.log("=".repeat(60));
+
+  // Show summary stats
+  const totalInquiries = result.reduce(
+    (sum, row) => sum + (row.inquiriesPlaced || 0),
+    0
+  );
+  const totalLeases = result.reduce(
+    (sum, row) => sum + (row.leasesSigned || 0),
+    0
+  );
+  const overallConversionRate =
+    totalInquiries > 0 ? ((totalLeases / totalInquiries) * 100).toFixed(1) : 0;
+
+  console.log(
+    `Overall Stats: ${totalInquiries} inquiries → ${totalLeases} leases (${overallConversionRate}% conversion)`
+  );
+  console.log("");
+
+  // Show sample records with new fields
+  const sampleRecords = result
+    .filter(
+      (row) => row.leasesSigned && row.avgDaysToLease && row.conversionRate
+    )
+    .slice(0, 5);
+
+  console.log("Sample records with new metrics:");
+  sampleRecords.forEach((row) => {
+    console.log(
+      `${row.facilityAbbreviation} ${row.monthKey} (${row.discountPlanName}):`
+    );
+    console.log(
+      `  📊 ${row.inquiriesPlaced} inquiries → ${row.leasesSigned} leases (${row.conversionRate}% conversion)`
+    );
+    console.log(`  ⏱️  Average ${row.avgDaysToLease} days to lease`);
+    console.log("");
+  });
+
+  // Show conversion rate distribution
+  const conversionRates = result
+    .filter((row) => row.conversionRate !== null)
+    .map((row) => row.conversionRate!)
+    .sort((a, b) => b - a);
+
+  if (conversionRates.length > 0) {
+    console.log("Conversion Rate Distribution:");
+    console.log(`  Best: ${conversionRates[0]}%`);
+    console.log(`  Worst: ${conversionRates[conversionRates.length - 1]}%`);
+    console.log(
+      `  Average: ${(
+        conversionRates.reduce((a, b) => a + b, 0) / conversionRates.length
+      ).toFixed(1)}%`
+    );
+  }
+
+  console.log("=".repeat(60));
+
+  // NEW: Show exact shape of output data
+  console.log("EXACT OUTPUT SHAPE:");
+  console.log("=".repeat(40));
+
+  if (result.length > 0) {
+    // Show the structure of the first record
+    const firstRecord = result[0];
+    console.log("Sample Record Structure:");
+    console.log(JSON.stringify(firstRecord, null, 2));
+    console.log("");
+
+    // Show all field names and their types
+    console.log("All Fields and Types:");
+    Object.entries(firstRecord).forEach(([key, value]) => {
+      const type = value === null ? "null" : typeof value;
+      const sample =
+        value === null
+          ? "null"
+          : typeof value === "string"
+          ? `"${value}"`
+          : typeof value === "number"
+          ? value
+          : JSON.stringify(value);
+      console.log(`  ${key}: ${type} (example: ${sample})`);
+    });
+    console.log("");
+
+    // Show array structure for API response
+    console.log("Array Structure (for API response):");
+    console.log("Headers:");
+    console.log([
+      "Facility",
+      "SitelinkId",
+      "Month",
+      "Discount Plan",
+      "Inquiries",
+      "Rentals",
+      "Cancellations",
+      "Avg Days to Lease",
+      "Conversion Rate %",
+    ]);
+    console.log("");
+    console.log("Sample Data Row:");
+    const sampleRow = [
+      firstRecord.facilityAbbreviation,
+      firstRecord.sitelinkId,
+      firstRecord.monthKey,
+      firstRecord.discountPlanName,
+      firstRecord.inquiriesPlaced || 0,
+      firstRecord.leasesSigned || 0,
+      firstRecord.cancellations || 0,
+      firstRecord.avgDaysToLease || null,
+      firstRecord.conversionRate || null,
+    ];
+    console.log(sampleRow);
+    console.log("");
+
+    // Show total record count and field completion
+    console.log(`Total Records: ${result.length}`);
+    console.log("Field Completion Stats:");
+    console.log(
+      `  inquiriesPlaced: ${result.filter((r) => r.inquiriesPlaced).length}/${
+        result.length
+      }`
+    );
+    console.log(
+      `  leasesSigned: ${result.filter((r) => r.leasesSigned).length}/${
+        result.length
+      }`
+    );
+    console.log(
+      `  cancellations: ${result.filter((r) => r.cancellations).length}/${
+        result.length
+      }`
+    );
+    console.log(
+      `  avgDaysToLease: ${result.filter((r) => r.avgDaysToLease).length}/${
+        result.length
+      }`
+    );
+    console.log(
+      `  conversionRate: ${result.filter((r) => r.conversionRate).length}/${
+        result.length
+      }`
+    );
+  } else {
+    console.log("No records found in result set");
+  }
+
+  console.log("=".repeat(40));
 
   return result;
 }
