@@ -23,18 +23,23 @@ function getGoalBadgeVariant(percent: number, monthPercent: number) {
 }
 
 export default function DashboardPage() {
-  const { isAuthenticated, isLoading: authLoading, userFacilities, isAdmin } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    userFacilities,
+    isAdmin,
+  } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       if (!isAuthenticated) return;
-      
+
       try {
-        const response = await fetch('/api/dashboard');
+        const response = await fetch("/api/dashboard");
         if (!response.ok) {
-          throw new Error('Failed to fetch dashboard data');
+          throw new Error("Failed to fetch dashboard data");
         }
         const data = await response.json();
         setDashboardData(data.response);
@@ -44,7 +49,7 @@ export default function DashboardPage() {
         setIsLoading(false);
       }
     }
-    
+
     if (isAuthenticated) {
       fetchData();
     }
@@ -99,7 +104,7 @@ export default function DashboardPage() {
   return (
     <main className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-4">Locations Overview</h1>
-      
+
       {/* User facility access summary */}
       <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
         <p className="text-sm text-blue-800">
@@ -108,12 +113,11 @@ export default function DashboardPage() {
           ) : (
             <span className="font-semibold">Your Facilities: </span>
           )}
-          {isAdmin 
+          {isAdmin
             ? `Viewing all ${response.length} facilities`
-            : userFacilities.length > 0 
-              ? userFacilities.map(f => f.facilityAbbreviation).join(', ')
-              : 'No facilities assigned'
-          }
+            : userFacilities.length > 0
+            ? userFacilities.map((f) => f.facilityAbbreviation).join(", ")
+            : "No facilities assigned"}
         </p>
       </div>
 
@@ -241,6 +245,12 @@ export default function DashboardPage() {
                     className="px-2 py-1 rounded bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition"
                   >
                     Deposits
+                  </Link>
+                  <Link
+                    href={`/monthlyCompare/${loc.sitelinkId}`}
+                    className="px-2 py-1 rounded bg-orange-700 text-white text-xs font-medium hover:bg-orange-800 transition"
+                  >
+                    Income Compare
                   </Link>
                 </div>
                 <Users className="h-4 w-4 text-gray-400" />
