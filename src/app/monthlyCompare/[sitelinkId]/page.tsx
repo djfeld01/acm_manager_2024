@@ -12,7 +12,7 @@ type PaymentData = {
 export default async function MonthlyComparePage({
   params,
 }: {
-  params: { sitelinkId: string };
+  params: Promise<{ sitelinkId: string }>;
 }) {
   const sitelinkId = (await params).sitelinkId;
 
