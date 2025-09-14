@@ -1,9 +1,50 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// For now, let's simplify the middleware to avoid Edge Runtime issues
-// Page-level auth will handle the protection
+// Routes that require authentication
+const PROTECTED_ROUTES = [
+  "/dashboard",
+  "/payroll",
+  "/locations",
+  "/reports",
+  "/admin",
+];
+
+// Routes that require specific roles
+const ROLE_PROTECTED_ROUTES = {
+  "/admin": ["ADMIN", "OWNER"],
+  "/reports": ["SUPERVISOR", "ADMIN", "OWNER"],
+};
+
+// Public routes that don't require authentication
+const PUBLIC_ROUTES = [
+  "/",
+  "/auth/signin",
+  "/auth/signout",
+  "/unauthorized",
+  "/api/auth",
+];
+
 export default function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Skip middleware for static files and API routes (except auth)
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/images") ||
+    pathname.startsWith("/favicon") ||
+    (pathname.startsWith("/api") && !pathname.startsWith("/api/auth"))
+  ) {
+    return NextResponse.next();
+  }
+
+  // Allow public routes
+  if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
+  // For protected routes, let page-level auth handle the protection
+  // This avoids Edge Runtime issues with database connections
   return NextResponse.next();
 }
 
