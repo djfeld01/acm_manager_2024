@@ -66,60 +66,62 @@ export async function getDashboardData(
     ],
   });
 
-  const response = result.map((facility) => {
-    const accountBalances = facility.bankAccount
-      .map((account) => {
-        const latestBalance = account.bankBalance[0]?.balance || 0;
-        const latestBalanceDate = account.bankBalance[0]?.date || new Date();
+  const response = result
+    .map((facility) => {
+      const accountBalances = facility.bankAccount
+        .map((account) => {
+          const latestBalance = account.bankBalance[0]?.balance || 0;
+          const latestBalanceDate = account.bankBalance[0]?.date || new Date();
 
-        return {
-          bankAccountId: account.bankAccountId,
-          bankName: account.bankName,
-          latestBalance,
-          latestBalanceDate,
-        };
-      })
-      .sort((a, b) => {
-        return Number(b.latestBalance) - Number(a.latestBalance);
-      });
-    const rentalGoal = facility.monthlyGoals[0]?.rentalGoal || 0;
-    const dailyRentals = facility.dailyManagementActivity[0]?.dailyTotal;
-    const monthlyRentals = facility.dailyManagementActivity[0]?.monthlyTotal;
-    const weeklyRentals =
-      facility.dailyManagementActivity.length === 2
-        ? facility.dailyManagementActivity[0].dailyTotal
-        : facility.dailyManagementActivity[0]?.yearlyTotal -
-          facility.dailyManagementActivity[1]?.yearlyTotal;
-    const monthlyMoveouts =
-      facility.dailyManagementActivity.length === 2
-        ? facility.dailyManagementActivity[1]?.monthlyTotal
-        : facility.dailyManagementActivity[2]?.monthlyTotal;
-    const financialOccupancy =
-      facility.dailyManagementOccupancy[0]?.financialOccupancy;
-    const unitOccupancy = facility.dailyManagementOccupancy[0]?.unitOccupancy;
-    const squareFootageOccupancy =
-      facility.dailyManagementOccupancy[0]?.squareFootageOccupancy;
-    const monthlyNetRentals = monthlyRentals - monthlyMoveouts;
-    const occupiedUnits =
-      facility.dailyManagementOccupancy[0]?.occupiedUnits || 0;
+          return {
+            bankAccountId: account.bankAccountId,
+            bankName: account.bankName,
+            latestBalance,
+            latestBalanceDate,
+          };
+        })
+        .sort((a, b) => {
+          return Number(b.latestBalance) - Number(a.latestBalance);
+        });
+      const rentalGoal = facility.monthlyGoals[0]?.rentalGoal || 0;
+      const dailyRentals = facility.dailyManagementActivity[0]?.dailyTotal;
+      const monthlyRentals = facility.dailyManagementActivity[0]?.monthlyTotal;
+      const weeklyRentals =
+        facility.dailyManagementActivity.length === 2
+          ? facility.dailyManagementActivity[0].dailyTotal
+          : facility.dailyManagementActivity[0]?.yearlyTotal -
+            facility.dailyManagementActivity[1]?.yearlyTotal;
+      const monthlyMoveouts =
+        facility.dailyManagementActivity.length === 2
+          ? facility.dailyManagementActivity[1]?.monthlyTotal
+          : facility.dailyManagementActivity[2]?.monthlyTotal;
+      const financialOccupancy =
+        facility.dailyManagementOccupancy[0]?.financialOccupancy;
+      const unitOccupancy = facility.dailyManagementOccupancy[0]?.unitOccupancy;
+      const squareFootageOccupancy =
+        facility.dailyManagementOccupancy[0]?.squareFootageOccupancy;
+      const monthlyNetRentals = monthlyRentals - monthlyMoveouts;
+      const occupiedUnits =
+        facility.dailyManagementOccupancy[0]?.occupiedUnits || 0;
 
-    return {
-      sitelinkId: facility.sitelinkId,
-      facilityName: facility.facilityName,
-      abbreviatedName: facility.facilityAbbreviation,
-      rentalGoal,
-      dailyRentals,
-      monthlyRentals,
-      weeklyRentals,
-      monthlyMoveouts,
-      financialOccupancy,
-      unitOccupancy,
-      squareFootageOccupancy,
-      monthlyNetRentals,
-      occupiedUnits,
-      accountBalances,
-    };
-  });
+      return {
+        sitelinkId: facility.sitelinkId,
+        facilityName: facility.facilityName,
+        abbreviatedName: facility.facilityAbbreviation,
+        rentalGoal,
+        dailyRentals,
+        monthlyRentals,
+        weeklyRentals,
+        monthlyMoveouts,
+        financialOccupancy,
+        unitOccupancy,
+        squareFootageOccupancy,
+        monthlyNetRentals,
+        occupiedUnits,
+        accountBalances,
+      };
+    })
+    .sort((a, b) => b.dailyRentals - a.dailyRentals);
   return {
     response,
     lastUpdated:

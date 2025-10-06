@@ -30,6 +30,7 @@ export default function DashboardPage() {
     isAdmin,
   } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
+  const [dataLastUpdated, setDataLastUpdated] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function DashboardPage() {
         }
         const data = await response.json();
         setDashboardData(data.response);
+        setDataLastUpdated(data.lastUpdated);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
@@ -118,6 +120,11 @@ export default function DashboardPage() {
             : userFacilities.length > 0
             ? userFacilities.map((f) => f.facilityAbbreviation).join(", ")
             : "No facilities assigned"}
+        </p>
+        <p className="text-sm text-blue-800">
+          <span className="font-semibold">
+            Data Last Updated: {dataLastUpdated}{" "}
+          </span>
         </p>
       </div>
 
@@ -247,7 +254,7 @@ export default function DashboardPage() {
                     Deposits
                   </Link>
                   <Link
-                    href={`/monthlyCompare/${loc.sitelinkId}`}
+                    href={`/monthlyCompare/deposits/${loc.sitelinkId}`}
                     className="px-2 py-1 rounded bg-orange-700 text-white text-xs font-medium hover:bg-orange-800 transition"
                   >
                     Income Compare
