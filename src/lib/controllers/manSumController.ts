@@ -108,6 +108,8 @@ export async function getDashboardData(
         sitelinkId: facility.sitelinkId,
         facilityName: facility.facilityName,
         abbreviatedName: facility.facilityAbbreviation,
+        city: facility.city,
+        state: facility.state,
         rentalGoal,
         dailyRentals,
         monthlyRentals,
