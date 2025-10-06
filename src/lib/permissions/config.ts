@@ -54,6 +54,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     { resource: "reports", action: "read", scope: "all" },
     { resource: "admin", action: "read", scope: "all" },
     { resource: "admin", action: "write", scope: "all" },
+    { resource: "employees", action: "read", scope: "all" },
   ],
 
   [Role.OWNER]: [
@@ -71,6 +72,8 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     { resource: "admin", action: "read", scope: "all" },
     { resource: "admin", action: "write", scope: "all" },
     { resource: "admin", action: "admin", scope: "all" },
+    { resource: "employees", action: "read", scope: "all" },
+    { resource: "employees", action: "write", scope: "all" },
   ],
 };
 
@@ -113,6 +116,10 @@ export const ROUTE_PERMISSIONS: Record<
     permissions: [{ resource: "reports", action: "read", scope: "team" }],
   },
   "/admin": {
+    roles: [Role.ADMIN, Role.OWNER],
+    permissions: [{ resource: "admin", action: "read", scope: "all" }],
+  },
+  "/employees": {
     roles: [Role.ADMIN, Role.OWNER],
     permissions: [{ resource: "admin", action: "read", scope: "all" }],
   },

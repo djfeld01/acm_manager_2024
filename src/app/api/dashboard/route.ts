@@ -19,8 +19,11 @@ export async function GET() {
       ? undefined
       : userFacilities.map((f) => f.sitelinkId);
 
-    const { response } = await getDashboardData(undefined, facilityIds);
-    return NextResponse.json({ response });
+    const { response, lastUpdated } = await getDashboardData(
+      undefined,
+      facilityIds
+    );
+    return NextResponse.json({ response, lastUpdated });
   } catch (error) {
     console.error("Dashboard API error:", error);
     return NextResponse.json(

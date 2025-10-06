@@ -1,5 +1,8 @@
 import { Role } from "@/db/schema/user";
 
+// Re-export Role for convenience
+export { Role };
+
 export interface User {
   id: string;
   name: string | null;
