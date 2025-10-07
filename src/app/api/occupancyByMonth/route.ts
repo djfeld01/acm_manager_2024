@@ -22,6 +22,9 @@ export async function GET(req: NextRequest) {
     );
 
     const arrayResult = result.map((row) => [
+      `=TEXT(DATE(${row.yearMonth.split("-")[0]},${
+        row.yearMonth.split("-")[1]
+      },1),"YYYY-MM")`,
       row.facilityAbbreviation,
       row.facilityId,
       row.yearMonth,
@@ -34,6 +37,7 @@ export async function GET(req: NextRequest) {
         : "N/A",
     ]);
     arrayResult.unshift([
+      "Formatted Date Formula",
       "Facility",
       "FacilityId",
       "Month",
