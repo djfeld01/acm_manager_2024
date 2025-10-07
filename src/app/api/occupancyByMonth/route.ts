@@ -28,12 +28,12 @@ export async function GET(req: NextRequest) {
       row.facilityAbbreviation,
       row.facilityId,
       row.yearMonth,
-      row.unitOccupancy ? (row.unitOccupancy * 100).toFixed(2) + "%" : "N/A",
+      row.unitOccupancy ? (row.unitOccupancy * 100).toFixed(3) + "%" : "N/A",
       row.financialOccupancy
-        ? (row.financialOccupancy * 100).toFixed(2) + "%"
+        ? (row.financialOccupancy * 100).toFixed(3) + "%"
         : "N/A",
       row.squareFootageOccupancy
-        ? (row.squareFootageOccupancy * 100).toFixed(2) + "%"
+        ? (row.squareFootageOccupancy * 100).toFixed(3) + "%"
         : "N/A",
     ]);
     arrayResult.unshift([
