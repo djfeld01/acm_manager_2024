@@ -10,12 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Image from "next/legacy/image";
-import { Package2, Menu, Search, CircleUser } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { ModeToggle } from "@/components/ModeToggle";
+import { Menu, CircleUser } from "lucide-react";
 import { auth } from "@/auth";
-import { db } from "@/db";
-import { storageFacilities, usersToFacilities } from "@/db/schema";
 import { getFacilityConnections } from "@/lib/controllers/facilityController";
 // Logo path - using public directory
 import { SignInButton, SignOutButton } from "@/components/auth/AuthButtons";
@@ -32,13 +28,16 @@ export default async function TopMenu() {
           href="/"
           className="flex items-center gap-2 text-lg font-semibold md:text-base"
         >
-          <Image
-            alt="Advantage Consulting & Management Logo"
-            src="/images/acm_logo.svg"
-            height={150}
-            width={150}
-          />
-
+          <div className="relative h-8 w-32 flex-shrink-0">
+            <Image
+              alt="Advantage Consulting & Management Logo"
+              src="/images/acm_logo.svg"
+              layout="fill"
+              objectFit="contain"
+              priority
+              className="dark:invert"
+            />
+          </div>
           <span className="sr-only">ACM Dashboard</span>
         </Link>
         {/* <Link
@@ -134,12 +133,16 @@ export default async function TopMenu() {
               href="/"
               className="flex items-center gap-2 text-lg font-semibold"
             >
-              <Image
-                alt="Advantage Consulting & Management Logo"
-                src="/images/acm_logo.svg"
-                height={150}
-                width={150}
-              />
+              <div className="relative h-8 w-32 flex-shrink-0">
+                <Image
+                  alt="Advantage Consulting & Management Logo"
+                  src="/images/acm_logo.svg"
+                  layout="fill"
+                  objectFit="contain"
+                  priority
+                  className="dark:invert"
+                />
+              </div>
               <span className="sr-only">ACM Dashboard</span>
             </Link>
             <DropdownMenu>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter as FontSans } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { ThemeProvider } from "next-themes";
+
 import TopMenu from "@/components/navigation/TopMenu";
 import { Toaster } from "@/components/ui/toaster";
 import { Analytics } from "@vercel/analytics/react";
@@ -21,10 +21,6 @@ export const metadata: Metadata = {
       {
         url: "/favicon.svg",
         type: "image/svg+xml",
-      },
-      {
-        url: "/favicon.ico",
-        sizes: "any",
       },
     ],
     shortcut: "/favicon.svg",

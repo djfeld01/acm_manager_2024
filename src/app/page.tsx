@@ -256,23 +256,6 @@ export default function DashboardPage() {
 
   return (
     <main className="p-6 bg-gray-50 min-h-screen">
-      {/* ACM Logo Header */}
-      <div className="flex justify-center mb-6">
-        <Link
-          href="/"
-          className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
-        >
-          <Image
-            src="/images/acm_logo.svg"
-            alt="Advantage Consulting & Management Logo"
-            width={200}
-            height={80}
-            className="h-16 w-auto sm:h-20"
-            priority
-          />
-        </Link>
-      </div>
-
       <h1 className="text-3xl font-bold mb-4">Locations Overview</h1>
 
       {/* User facility access summary */}
