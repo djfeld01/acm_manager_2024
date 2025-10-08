@@ -3,6 +3,7 @@
 import React from "react";
 import { z } from "zod";
 import { UseFormReturn } from "react-hook-form";
+import { UseFormValidationReturn } from "@/lib/hooks/useFormValidation";
 import {
   TextField,
   TextareaField,
@@ -99,7 +100,7 @@ export interface FormSection {
 }
 
 export interface FormBuilderProps<T extends z.ZodType> {
-  form: UseFormReturn<z.infer<T>>;
+  form: UseFormReturn<z.infer<T>> | UseFormValidationReturn<T>;
   sections: FormSection[];
   onSubmit?: (data: z.infer<T>) => Promise<void> | void;
   isSubmitting?: boolean;
@@ -149,7 +150,13 @@ export function FormBuilder<T extends z.ZodType>({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onSubmit) {
+
+    // Check if form has custom handleSubmit (from useFormValidation)
+    if ("handleSubmit" in form && typeof form.handleSubmit === "function") {
+      // Use the custom handleSubmit which handles validation and submission
+      await (form as any).handleSubmit(e);
+    } else if (onSubmit) {
+      // Use the standard approach for regular react-hook-form
       const data = form.getValues();
       await onSubmit(data);
     }
@@ -286,8 +293,17 @@ export function FormBuilder<T extends z.ZodType>({
     );
   };
 
+  // Create a clean form object for the Form component
+  const {
+    isSubmitting: _,
+    submitError: __,
+    handleSubmit: ___,
+    clearSubmitError: ____,
+    ...cleanForm
+  } = form as any;
+
   const formContent = (
-    <Form {...form}>
+    <Form {...cleanForm}>
       <form onSubmit={handleSubmit} className={cn("space-y-6", className)}>
         {title && (
           <div className="space-y-2">

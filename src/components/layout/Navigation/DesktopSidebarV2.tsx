@@ -31,6 +31,8 @@ import { ChevronUp, LogOut, User } from "lucide-react";
 import { Role } from "@/db/schema/user";
 import { useNavigation } from "@/lib/navigation/NavigationContext";
 import { signOut } from "next-auth/react";
+import { getAriaLabel } from "@/lib/accessibility/aria-utils";
+import { ScreenReaderOnly } from "@/lib/accessibility/screen-reader";
 
 interface DesktopSidebarV2Props {
   className?: string;
@@ -152,10 +154,18 @@ export default function DesktopSidebarV2({ className }: DesktopSidebarV2Props) {
   }
 
   return (
-    <Sidebar className={className}>
+    <Sidebar
+      className={className}
+      role="navigation"
+      aria-label={getAriaLabel("MAIN_NAVIGATION")}
+    >
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-semibold">
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
+            role="img"
+            aria-label="ACM Manager logo"
+          >
             ACM
           </div>
           {state === "expanded" && (
@@ -173,21 +183,32 @@ export default function DesktopSidebarV2({ className }: DesktopSidebarV2Props) {
         <SidebarGroup>
           <SidebarGroupLabel>Main Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu role="menu">
               {mainNavItems.map((item) => (
-                <SidebarMenuItem key={item.id}>
+                <SidebarMenuItem key={item.id} role="none">
                   <SidebarMenuButton
                     asChild
                     isActive={isActiveRoute(item.href)}
                     tooltip={state === "collapsed" ? item.label : undefined}
                   >
-                    <Link href={item.href}>
-                      <item.icon className="h-4 w-4" />
+                    <Link
+                      href={item.href}
+                      role="menuitem"
+                      aria-current={
+                        isActiveRoute(item.href) ? "page" : undefined
+                      }
+                      className="focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    >
+                      <item.icon className="h-4 w-4" aria-hidden="true" />
                       <span>{item.label}</span>
+                      {isActiveRoute(item.href) && (
+                        <ScreenReaderOnly>(current page)</ScreenReaderOnly>
+                      )}
                       {item.badge && (
                         <Badge
                           variant={item.badge.variant}
                           className="ml-auto h-5 px-1.5 text-xs"
+                          aria-label={`${item.badge.text} notifications`}
                         >
                           {item.badge.text}
                         </Badge>
@@ -206,17 +227,27 @@ export default function DesktopSidebarV2({ className }: DesktopSidebarV2Props) {
             <SidebarGroup>
               <SidebarGroupLabel>Settings</SidebarGroupLabel>
               <SidebarGroupContent>
-                <SidebarMenu>
+                <SidebarMenu role="menu">
                   {secondaryNavItems.map((item) => (
-                    <SidebarMenuItem key={item.id}>
+                    <SidebarMenuItem key={item.id} role="none">
                       <SidebarMenuButton
                         asChild
                         isActive={isActiveRoute(item.href)}
                         tooltip={state === "collapsed" ? item.label : undefined}
                       >
-                        <Link href={item.href}>
-                          <item.icon className="h-4 w-4" />
+                        <Link
+                          href={item.href}
+                          role="menuitem"
+                          aria-current={
+                            isActiveRoute(item.href) ? "page" : undefined
+                          }
+                          className="focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        >
+                          <item.icon className="h-4 w-4" aria-hidden="true" />
                           <span>{item.label}</span>
+                          {isActiveRoute(item.href) && (
+                            <ScreenReaderOnly>(current page)</ScreenReaderOnly>
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -235,7 +266,9 @@ export default function DesktopSidebarV2({ className }: DesktopSidebarV2Props) {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  aria-label={getAriaLabel("USER_MENU")}
+                  aria-haspopup="menu"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
                     <AvatarImage
@@ -254,7 +287,7 @@ export default function DesktopSidebarV2({ className }: DesktopSidebarV2Props) {
                       {user.role}
                     </span>
                   </div>
-                  <ChevronUp className="ml-auto size-4" />
+                  <ChevronUp className="ml-auto size-4" aria-hidden="true" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -262,6 +295,8 @@ export default function DesktopSidebarV2({ className }: DesktopSidebarV2Props) {
                 side="bottom"
                 align="end"
                 sideOffset={4}
+                role="menu"
+                aria-label="User account menu"
               >
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
@@ -286,17 +321,22 @@ export default function DesktopSidebarV2({ className }: DesktopSidebarV2Props) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/profile" className="cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
+                  <Link
+                    href="/profile"
+                    className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    role="menuitem"
+                  >
+                    <User className="mr-2 h-4 w-4" aria-hidden="true" />
                     Profile
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="cursor-pointer text-red-600 focus:text-red-600"
+                  className="cursor-pointer text-red-600 focus:text-red-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                   onClick={() => signOut({ callbackUrl: "/" })}
+                  role="menuitem"
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
+                  <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>

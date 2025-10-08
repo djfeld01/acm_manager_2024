@@ -1,3 +1,4 @@
+import React from "react";
 import { useForm, UseFormProps, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,11 +11,27 @@ export interface UseFormValidationOptions<T extends z.ZodType>
   onError?: (error: Error) => void;
 }
 
-export interface UseFormValidationReturn<T extends z.ZodType>
-  extends UseFormReturn<z.infer<T>> {
+export interface UseFormValidationReturn<T extends z.ZodType> {
+  // Core form methods and state from UseFormReturn
+  control: UseFormReturn<z.infer<T>>["control"];
+  handleSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
+  reset: UseFormReturn<z.infer<T>>["reset"];
+  getValues: UseFormReturn<z.infer<T>>["getValues"];
+  setValue: UseFormReturn<z.infer<T>>["setValue"];
+  watch: UseFormReturn<z.infer<T>>["watch"];
+  formState: UseFormReturn<z.infer<T>>["formState"];
+  trigger: UseFormReturn<z.infer<T>>["trigger"];
+  clearErrors: UseFormReturn<z.infer<T>>["clearErrors"];
+  setError: UseFormReturn<z.infer<T>>["setError"];
+  setFocus: UseFormReturn<z.infer<T>>["setFocus"];
+  getFieldState: UseFormReturn<z.infer<T>>["getFieldState"];
+  resetField: UseFormReturn<z.infer<T>>["resetField"];
+  unregister: UseFormReturn<z.infer<T>>["unregister"];
+  register: UseFormReturn<z.infer<T>>["register"];
+
+  // Additional validation-specific properties
   isSubmitting: boolean;
   submitError: string | null;
-  handleSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   clearSubmitError: () => void;
 }
 
@@ -235,7 +252,7 @@ export function useFieldDependency<T extends Record<string, any>>(
           return { visible: true, enabled: !conditionMet };
         case "clear":
           if (conditionMet) {
-            form.setValue(dependency.field, undefined as any);
+            form.setValue(dependency.field as any, undefined as any);
           }
           return { visible: true, enabled: true };
         default:

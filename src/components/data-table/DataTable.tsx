@@ -201,7 +201,7 @@ export function DataTable<T extends Record<string, any>>({
   const handleSort = (columnKey: keyof T | string) => {
     if (!sorting.enabled) return;
 
-    const newDirection =
+    const newDirection: "asc" | "desc" =
       sortConfig?.key === columnKey && sortConfig.direction === "asc"
         ? "desc"
         : "asc";
@@ -466,7 +466,7 @@ export function DataTable<T extends Record<string, any>>({
             renderItem={(item, index) => (
               <div
                 className="flex border-b hover:bg-muted/50 cursor-pointer"
-                onClick={() => onRowClick?.(item)}
+                onClick={() => onRowClick?.(item, index)}
               >
                 {selection.enabled && (
                   <div className="flex items-center justify-center w-12 border-r">

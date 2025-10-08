@@ -23,7 +23,7 @@ export type FormActionResult<T = any> = {
 };
 
 // Generic server action wrapper with validation
-export async function createFormAction<T extends z.ZodType>(
+function createFormAction<T extends z.ZodType>(
   schema: T,
   handler: (data: z.infer<T>) => Promise<any>
 ) {
@@ -44,10 +44,20 @@ export async function createFormAction<T extends z.ZodType>(
       };
     } catch (error) {
       if (error instanceof z.ZodError) {
+        const flattened = error.flatten().fieldErrors;
+        const fieldErrors: Record<string, string[]> = {};
+
+        // Filter out undefined values
+        Object.entries(flattened).forEach(([key, value]) => {
+          if (value) {
+            fieldErrors[key] = value;
+          }
+        });
+
         return {
           success: false,
           error: "Validation failed",
-          fieldErrors: error.flatten().fieldErrors,
+          fieldErrors,
         };
       }
 
@@ -84,7 +94,7 @@ export async function updateUserProfile(
     }
   );
 
-  return action(formData);
+  return await action(formData);
 }
 
 export async function changeUserPassword(
@@ -109,7 +119,7 @@ export async function changeUserPassword(
     }
   );
 
-  return action(formData);
+  return await action(formData);
 }
 
 // Location Management Actions
@@ -136,7 +146,7 @@ export async function createLocation(
     return newLocation;
   });
 
-  return action(formData);
+  return await action(formData);
 }
 
 export async function updateLocation(
@@ -164,7 +174,7 @@ export async function updateLocation(
     return updatedLocation;
   });
 
-  return action(formData);
+  return await action(formData);
 }
 
 export async function deleteLocation(
@@ -224,7 +234,7 @@ export async function submitContactForm(
     }
   );
 
-  return action(formData);
+  return await action(formData);
 }
 
 // Bulk Operations

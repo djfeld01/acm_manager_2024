@@ -85,7 +85,6 @@ export function UserProfileForm({
     <FormBuilder
       form={form}
       sections={formSections}
-      onSubmit={form.handleSubmit}
       isSubmitting={form.isSubmitting}
       submitError={form.submitError}
       submitButtonText="Update Profile"

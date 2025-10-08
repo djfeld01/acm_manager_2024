@@ -56,7 +56,7 @@ export function useServerAction<T = any>(
               if (showToast && successMessage) {
                 toast.success(successMessage);
               }
-              if (onSuccess) {
+              if (onSuccess && result.data !== undefined) {
                 onSuccess(result.data);
               }
             } else {
@@ -150,9 +150,10 @@ export function useOptimisticAction<T, U = T>(
 
           if (result.success) {
             // Apply real update or keep optimistic update
-            const finalData = options.onSuccess
-              ? options.onSuccess(result.data, optimisticData)
-              : optimisticData;
+            const finalData =
+              options.onSuccess && result.data !== undefined
+                ? options.onSuccess(result.data, optimisticData)
+                : optimisticData;
 
             setData(finalData);
 

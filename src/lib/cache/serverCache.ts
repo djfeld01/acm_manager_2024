@@ -161,7 +161,10 @@ export const getCachedDashboardData = createCachedFunction(
     };
   },
   (userId, locationIds) =>
-    createCacheKey("dashboard", { userId, locations: locationIds.join(",") }),
+    createCacheKey("dashboard", {
+      userId,
+      locations: locationIds?.join(",") || "",
+    }),
   {
     tags: ["dashboard", "users", "locations"],
     revalidate: 60, // 1 minute

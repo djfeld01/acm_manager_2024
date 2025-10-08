@@ -180,10 +180,11 @@ export function LocationSelector({
                   const isSelected = selectedLocationIds.includes(
                     location.sitelinkId
                   );
-                  const isDisabled =
+                  const isDisabled = Boolean(
                     maxSelections &&
-                    !isSelected &&
-                    selectedLocationIds.length >= maxSelections;
+                      !isSelected &&
+                      selectedLocationIds.length >= maxSelections
+                  );
 
                   return (
                     <CommandItem

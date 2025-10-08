@@ -43,14 +43,7 @@ export function useOptimizedData<T>({
   const previousDataRef = useRef<T | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout>();
 
-  const {
-    data: rawData,
-    isLoading,
-    isStale,
-    error,
-    refetch: baseRefetch,
-    invalidate,
-  } = useCache({
+  const cacheResult = useCache({
     key,
     fetcher: useCallback(async () => {
       try {
@@ -64,20 +57,29 @@ export function useOptimizedData<T>({
           // Schedule retry with exponential backoff
           const delay = retryDelay * Math.pow(2, retryCount);
           retryTimeoutRef.current = setTimeout(() => {
-            baseRefetch();
+            cacheResult.refetch();
           }, delay);
 
           throw err;
         }
         throw err;
       }
-    }, [fetcher, retry, retryCount, retryDelay, baseRefetch]),
+    }, [fetcher, retry, retryCount, retryDelay]),
     enabled,
     ttl: cacheTime,
     staleTime,
     onSuccess,
     onError,
   });
+
+  const {
+    data: rawData,
+    isLoading,
+    isStale,
+    error,
+    refetch: baseRefetch,
+    invalidate,
+  } = cacheResult;
 
   // Apply data selector if provided
   const data = useMemo(() => {

@@ -17,20 +17,18 @@ export default async function MonthlyComparePage({
   const sitelinkId = (await params).sitelinkId;
 
   // Fetch data (assume the function returns a Promise<ActivityData[]>)
-  const data: ActivityData[] = await dailyPaymentFromManagementSummary(
-    sitelinkId
-  );
+  const data = await dailyPaymentFromManagementSummary(sitelinkId);
   const dataSummedByDate = data
     .reduce((acc, curr) => {
       const existing = acc.find((item) => item.date === curr.date);
       if (existing) {
-        existing.dailyMoveIns += curr.dailyMoveIns;
-        existing.dailyMoveOuts += curr.dailyMoveOuts;
+        existing.dailyAmount += curr.dailyAmount;
+        existing.monthlyAmount += curr.monthlyAmount;
       } else {
         acc.push({ ...curr });
       }
       return acc;
-    }, [] as ActivityData[])
+    }, [] as typeof data)
     .sort((a, b) => (a.date > b.date ? 1 : -1));
   // Group data by month
   const months = Array.from(
@@ -39,7 +37,7 @@ export default async function MonthlyComparePage({
       if (!acc.has(month)) acc.set(month, []);
       acc.get(month)!.push(item);
       return acc;
-    }, new Map<string, ActivityData[]>())
+    }, new Map<string, typeof data>())
   );
   const sortedMonths = new Map(
     Array.from(months).sort((a, b) => (a[0] < b[0] ? 1 : -1))
@@ -94,10 +92,10 @@ export default async function MonthlyComparePage({
                   <tr key={entry.date}>
                     <td>{entry.date}</td>
                     <td style={{ textAlign: "right" }}>
-                      {entry.dailyMoveIns.toLocaleString()}
+                      {entry.dailyAmount.toLocaleString()}
                     </td>
                     <td style={{ textAlign: "right" }}>
-                      {entry.dailyMoveOuts.toLocaleString()}
+                      {entry.monthlyAmount.toLocaleString()}
                     </td>
                   </tr>
                 ))}

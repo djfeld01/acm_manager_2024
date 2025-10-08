@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +22,7 @@ export default function UnauthorizedPage() {
           <CardContent className="space-y-6">
             <div className="text-center">
               <p className="text-gray-600">
-                You don't have permission to access this page. This area is
+                You don&apos;t have permission to access this page. This area is
                 restricted to authorized personnel only.
               </p>
             </div>

@@ -32,6 +32,9 @@ import {
 } from "@/lib/navigation/config";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
+import { getAriaLabel } from "@/lib/accessibility/aria-utils";
+import { ScreenReaderOnly } from "@/lib/accessibility/screen-reader";
+import { MIN_TOUCH_TARGET_SIZE } from "@/lib/accessibility/constants";
 
 interface MobileNavigationProps {
   className?: string;
@@ -100,10 +103,17 @@ export default function MobileNavigation({ className }: MobileNavigationProps) {
   return (
     <div className={cn("md:hidden", className)}>
       {/* Mobile Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header
+        className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+        role="banner"
+      >
         <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-semibold">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
+              role="img"
+              aria-label="ACM Manager logo"
+            >
               ACM
             </div>
             <span className="text-lg font-semibold">ACM Manager</span>
@@ -114,19 +124,38 @@ export default function MobileNavigation({ className }: MobileNavigationProps) {
             {secondaryNavItems.length > 0 && (
               <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <Menu className="h-5 w-5" />
-                    <span className="sr-only">Open menu</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    aria-label={getAriaLabel("MOBILE_MENU")}
+                    aria-expanded={isSheetOpen}
+                    aria-haspopup="menu"
+                  >
+                    <Menu className="h-5 w-5" aria-hidden="true" />
+                    <ScreenReaderOnly>
+                      {isSheetOpen ? "Close menu" : "Open menu"}
+                    </ScreenReaderOnly>
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-80">
+                <SheetContent
+                  side="right"
+                  className="w-80"
+                  role="dialog"
+                  aria-labelledby="mobile-menu-title"
+                  aria-describedby="mobile-menu-description"
+                >
                   <SheetHeader>
-                    <SheetTitle>Menu</SheetTitle>
-                    <SheetDescription>
+                    <SheetTitle id="mobile-menu-title">Menu</SheetTitle>
+                    <SheetDescription id="mobile-menu-description">
                       Additional navigation options
                     </SheetDescription>
                   </SheetHeader>
-                  <div className="mt-6 space-y-1">
+                  <nav
+                    className="mt-6 space-y-1"
+                    role="navigation"
+                    aria-label={getAriaLabel("SECONDARY_NAVIGATION")}
+                  >
                     {secondaryNavItems.map((item) => (
                       <Link
                         key={item.id}
@@ -134,24 +163,33 @@ export default function MobileNavigation({ className }: MobileNavigationProps) {
                         onClick={() => setIsSheetOpen(false)}
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                          "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                           isActiveItem(item.href)
                             ? "bg-primary text-primary-foreground"
                             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                         )}
+                        role="menuitem"
+                        aria-current={
+                          isActiveItem(item.href) ? "page" : undefined
+                        }
                       >
-                        <item.icon className="h-5 w-5" />
+                        <item.icon className="h-5 w-5" aria-hidden="true" />
                         <span>{item.label}</span>
+                        {isActiveItem(item.href) && (
+                          <ScreenReaderOnly>(current page)</ScreenReaderOnly>
+                        )}
                         {item.badge && (
                           <Badge
                             variant={item.badge.variant}
                             className="ml-auto h-5 px-1.5 text-xs"
+                            aria-label={`${item.badge.text} notifications`}
                           >
                             {item.badge.text}
                           </Badge>
                         )}
                       </Link>
                     ))}
-                  </div>
+                  </nav>
                 </SheetContent>
               </Sheet>
             )}
@@ -161,7 +199,9 @@ export default function MobileNavigation({ className }: MobileNavigationProps) {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="relative h-9 w-9 rounded-full"
+                  className="relative h-9 w-9 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  aria-label={getAriaLabel("USER_MENU")}
+                  aria-haspopup="menu"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage
@@ -174,7 +214,13 @@ export default function MobileNavigation({ className }: MobileNavigationProps) {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuContent
+                className="w-56"
+                align="end"
+                forceMount
+                role="menu"
+                aria-label="User account menu"
+              >
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
@@ -190,17 +236,22 @@ export default function MobileNavigation({ className }: MobileNavigationProps) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/profile" className="cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
+                  <Link
+                    href="/profile"
+                    className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    role="menuitem"
+                  >
+                    <User className="mr-2 h-4 w-4" aria-hidden="true" />
                     Profile
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="cursor-pointer text-red-600 focus:text-red-600"
+                  className="cursor-pointer text-red-600 focus:text-red-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                   onClick={() => signOut({ callbackUrl: "/" })}
+                  role="menuitem"
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
+                  <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -210,17 +261,28 @@ export default function MobileNavigation({ className }: MobileNavigationProps) {
       </header>
 
       {/* Bottom Tab Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-16 items-center justify-around px-2">
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+        role="navigation"
+        aria-label={getAriaLabel("MAIN_NAVIGATION")}
+      >
+        <div
+          className="flex h-16 items-center justify-around px-2"
+          role="tablist"
+        >
           {primaryNavItems.map((item) => {
             const isActive = isActiveItem(item.href);
             return (
               <Link
                 key={item.id}
                 href={item.href}
+                role="tab"
+                aria-selected={isActive}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-medium transition-colors",
-                  "min-h-[44px]", // Ensure 44px minimum touch target
+                  `min-h-[${MIN_TOUCH_TARGET_SIZE}px]`, // Ensure minimum touch target
+                  "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -232,11 +294,13 @@ export default function MobileNavigation({ className }: MobileNavigationProps) {
                       "h-5 w-5",
                       isActive ? "text-primary" : "text-muted-foreground"
                     )}
+                    aria-hidden="true"
                   />
                   {item.badge && (
                     <Badge
                       variant={item.badge.variant}
                       className="absolute -right-2 -top-2 h-4 min-w-4 px-1 text-[10px] leading-none"
+                      aria-label={`${item.badge.text} notifications`}
                     >
                       {item.badge.text}
                     </Badge>
@@ -250,6 +314,9 @@ export default function MobileNavigation({ className }: MobileNavigationProps) {
                 >
                   {item.label}
                 </span>
+                {isActive && (
+                  <ScreenReaderOnly>(current page)</ScreenReaderOnly>
+                )}
               </Link>
             );
           })}

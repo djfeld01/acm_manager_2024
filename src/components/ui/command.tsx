@@ -56,34 +56,39 @@ const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
   );
 };
 
-const CommandInput = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(({ className, value, onValueChange, ...props }, ref) => {
-  const context = React.useContext(CommandContext);
+interface CommandInputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {
+  onValueChange?: (value: string) => void;
+}
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    context?.setSearch(newValue);
-    props.onChange?.(e);
-  };
+const CommandInput = React.forwardRef<HTMLInputElement, CommandInputProps>(
+  ({ className, value, onValueChange, ...props }, ref) => {
+    const context = React.useContext(CommandContext);
 
-  return (
-    <div className="flex items-center border-b px-3">
-      <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-      <Input
-        ref={ref}
-        value={context?.search ?? value}
-        onChange={handleChange}
-        className={cn(
-          "flex h-11 w-full border-0 bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:ring-0 focus-visible:ring-offset-0",
-          className
-        )}
-        {...props}
-      />
-    </div>
-  );
-});
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      context?.setSearch(newValue);
+      onValueChange?.(newValue);
+      props.onChange?.(e);
+    };
+
+    return (
+      <div className="flex items-center border-b px-3">
+        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+        <Input
+          ref={ref}
+          value={context?.search ?? value}
+          onChange={handleChange}
+          className={cn(
+            "flex h-11 w-full border-0 bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:ring-0 focus-visible:ring-offset-0",
+            className
+          )}
+          {...props}
+        />
+      </div>
+    );
+  }
+);
 
 CommandInput.displayName = "CommandInput";
 

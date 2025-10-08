@@ -177,7 +177,6 @@ export function LocationForm({
     <FormBuilder
       form={form}
       sections={formSections}
-      onSubmit={form.handleSubmit}
       isSubmitting={form.isSubmitting}
       submitError={form.submitError}
       submitButtonText={isEditing ? "Update Location" : "Create Location"}

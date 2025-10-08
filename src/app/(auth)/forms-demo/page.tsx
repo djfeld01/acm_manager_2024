@@ -249,7 +249,7 @@ export default function FormsDemo() {
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
-              <Form {...individualForm}>
+              <Form {...(individualForm as any)}>
                 <form
                   onSubmit={individualForm.handleSubmit}
                   className="space-y-6"
@@ -348,7 +348,7 @@ export default function FormsDemo() {
 
         <TabsContent value="contact">
           <FormBuilder
-            form={contactForm}
+            form={contactForm as any}
             sections={contactFormSections}
             onSubmit={contactForm.handleSubmit}
             isSubmitting={contactForm.isSubmitting}
