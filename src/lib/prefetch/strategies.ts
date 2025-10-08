@@ -205,6 +205,8 @@ export class BehaviorBasedPrefetch {
 
   // Load patterns from localStorage
   private loadPatterns() {
+    if (typeof window === "undefined") return; // Skip during SSR
+
     try {
       const stored = localStorage.getItem("navigation-patterns");
       if (stored) {
@@ -218,6 +220,8 @@ export class BehaviorBasedPrefetch {
 
   // Save patterns to localStorage
   private savePatterns() {
+    if (typeof window === "undefined") return; // Skip during SSR
+
     try {
       const data = Array.from(this.patterns.entries());
       localStorage.setItem("navigation-patterns", JSON.stringify(data));
@@ -285,10 +289,12 @@ export class NetworkAwarePrefetch {
   private connection: any;
 
   constructor() {
-    this.connection =
-      (navigator as any).connection ||
-      (navigator as any).mozConnection ||
-      (navigator as any).webkitConnection;
+    if (typeof window !== "undefined" && typeof navigator !== "undefined") {
+      this.connection =
+        (navigator as any).connection ||
+        (navigator as any).mozConnection ||
+        (navigator as any).webkitConnection;
+    }
   }
 
   // Check if network conditions are good for prefetching
@@ -431,5 +437,27 @@ export class PrefetchManager {
   }
 }
 
-// Global prefetch manager instance
-export const prefetchManager = new PrefetchManager();
+// Global prefetch manager instance (lazy-loaded)
+let _prefetchManager: PrefetchManager | null = null;
+
+export const prefetchManager = {
+  get instance(): PrefetchManager {
+    if (!_prefetchManager && typeof window !== "undefined") {
+      _prefetchManager = new PrefetchManager();
+    }
+    return _prefetchManager!;
+  },
+
+  // Proxy methods to the instance
+  prefetchForRoute: (route: string) =>
+    prefetchManager.instance?.prefetchForRoute(route),
+  setEnabled: (enabled: boolean) =>
+    prefetchManager.instance?.setEnabled(enabled),
+  getStats: () =>
+    prefetchManager.instance?.getStats() || {
+      enabled: false,
+      networkConditions: { shouldPrefetch: false, priority: "normal" as const },
+      cacheStats: { global: null, query: null },
+    },
+  destroy: () => prefetchManager.instance?.destroy(),
+};
