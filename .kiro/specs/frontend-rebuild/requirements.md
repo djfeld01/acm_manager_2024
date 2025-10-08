@@ -90,7 +90,19 @@ This project involves rebuilding the frontend of ACM Manager 2024, a management 
 4. WHEN Admin processes payroll THEN the system SHALL provide comprehensive payroll management tools
 5. WHEN payroll data is displayed THEN the system SHALL ensure proper data isolation based on user roles
 
-### Requirement 8: Performance and Loading States
+### Requirement 8: Homepage Branding and Navigation
+
+**User Story:** As a user visiting the homepage, I want to see the company logo prominently displayed and be able to click it to return to the homepage from any page, so that I have a consistent way to navigate back to the main landing page.
+
+#### Acceptance Criteria
+
+1. WHEN viewing the homepage THEN the system SHALL display the ACM company logo prominently in the header area
+2. WHEN clicking the logo from any page THEN the system SHALL navigate back to the homepage
+3. WHEN the logo is displayed THEN the system SHALL maintain proper sizing and aspect ratio across all screen sizes
+4. WHEN viewing on mobile devices THEN the system SHALL ensure the logo remains visible and clickable
+5. WHEN the logo loads THEN the system SHALL provide appropriate alt text for accessibility
+
+### Requirement 9: Performance and Loading States
 
 **User Story:** As a user accessing the application, I want pages to load quickly and show clear feedback when data is being fetched, so that I understand the system is working and can plan my actions accordingly.
 

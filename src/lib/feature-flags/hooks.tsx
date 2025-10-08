@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useMemo,
   ReactNode,
 } from "react";
 import { FeatureFlagManager, getFeatureFlagManager } from "./core";
@@ -54,12 +55,21 @@ export function FeatureFlagProvider({
  */
 export function useFeatureFlag(flagKey: string): boolean {
   const manager = useContext(FeatureFlagContext);
-  const [isEnabled, setIsEnabled] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(() => {
+    // Initialize with the current state to avoid unnecessary re-renders
+    return manager ? manager.isEnabled(flagKey) : false;
+  });
 
   useEffect(() => {
     if (manager) {
       const enabled = manager.isEnabled(flagKey);
-      setIsEnabled(enabled);
+      setIsEnabled((prevEnabled) => {
+        // Only update state if the value actually changed
+        if (prevEnabled !== enabled) {
+          return enabled;
+        }
+        return prevEnabled;
+      });
     }
   }, [manager, flagKey]);
 
@@ -76,12 +86,20 @@ export function useFeatureFlag(flagKey: string): boolean {
  */
 export function useFeatureFlagDetails(flagKey: string): FeatureFlag | null {
   const manager = useContext(FeatureFlagContext);
-  const [flag, setFlag] = useState<FeatureFlag | null>(null);
+  const [flag, setFlag] = useState<FeatureFlag | null>(() => {
+    return manager ? manager.getFlag(flagKey) : null;
+  });
 
   useEffect(() => {
     if (manager) {
       const flagDetails = manager.getFlag(flagKey);
-      setFlag(flagDetails);
+      setFlag((prevFlag) => {
+        // Only update if the flag actually changed (deep comparison for objects)
+        if (JSON.stringify(prevFlag) !== JSON.stringify(flagDetails)) {
+          return flagDetails;
+        }
+        return prevFlag;
+      });
     }
   }, [manager, flagKey]);
 
@@ -93,12 +111,20 @@ export function useFeatureFlagDetails(flagKey: string): FeatureFlag | null {
  */
 export function useAllFeatureFlags(): Record<string, FeatureFlag> {
   const manager = useContext(FeatureFlagContext);
-  const [flags, setFlags] = useState<Record<string, FeatureFlag>>({});
+  const [flags, setFlags] = useState<Record<string, FeatureFlag>>(() => {
+    return manager ? manager.getAllFlags() : {};
+  });
 
   useEffect(() => {
     if (manager) {
       const allFlags = manager.getAllFlags();
-      setFlags(allFlags);
+      setFlags((prevFlags) => {
+        // Only update if flags actually changed
+        if (JSON.stringify(prevFlags) !== JSON.stringify(allFlags)) {
+          return allFlags;
+        }
+        return prevFlags;
+      });
     }
   }, [manager]);
 
@@ -117,17 +143,38 @@ export function useFeatureFlagManager(): FeatureFlagManager | null {
  */
 export function useFeatureFlags(flagKeys: string[]): Record<string, boolean> {
   const manager = useContext(FeatureFlagContext);
-  const [flags, setFlags] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
+  const [flags, setFlags] = useState<Record<string, boolean>>(() => {
     if (manager) {
-      const flagStates = flagKeys.reduce((acc, key) => {
+      return flagKeys.reduce((acc, key) => {
         acc[key] = manager.isEnabled(key);
         return acc;
       }, {} as Record<string, boolean>);
-      setFlags(flagStates);
     }
-  }, [manager, flagKeys]);
+    return {};
+  });
+
+  // Memoize flagKeys to prevent unnecessary re-renders
+  const memoizedFlagKeys = useMemo(() => flagKeys, [flagKeys]);
+
+  useEffect(() => {
+    if (manager) {
+      const flagStates = memoizedFlagKeys.reduce((acc, key) => {
+        acc[key] = manager.isEnabled(key);
+        return acc;
+      }, {} as Record<string, boolean>);
+
+      setFlags((prevFlags) => {
+        // Only update if any flag state changed
+        const hasChanged = memoizedFlagKeys.some(
+          (key) => prevFlags[key] !== flagStates[key]
+        );
+        if (hasChanged) {
+          return flagStates;
+        }
+        return prevFlags;
+      });
+    }
+  }, [manager, memoizedFlagKeys]);
 
   return flags;
 }
@@ -189,10 +236,13 @@ export function MultiFeatureFlagGate({
   fallback,
   mode = "any",
 }: MultiFeatureFlagGateProps) {
-  const flagKeys = Object.keys(flags);
+  const flagKeys = useMemo(() => Object.keys(flags), [flags]);
   const flagStates = useFeatureFlags(flagKeys);
 
-  const enabledFlags = flagKeys.filter((key) => flagStates[key]);
+  const enabledFlags = useMemo(
+    () => flagKeys.filter((key) => flagStates[key]),
+    [flagKeys, flagStates]
+  );
 
   if (mode === "all" && enabledFlags.length !== flagKeys.length) {
     return <>{fallback}</>;

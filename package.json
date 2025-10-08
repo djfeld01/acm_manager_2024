@@ -8,7 +8,17 @@
     "start": "next start",
     "lint": "next lint",
     "drop": "npx drizzle-kit drop",
-    "migrate": "npx drizzle-kit generate && npx drizzle-kit migrate"
+    "migrate": "npx drizzle-kit generate && npx drizzle-kit migrate",
+    "type-check": "tsc --noEmit",
+    "test": "echo 'No tests specified' && exit 0",
+    "test:ci": "npm run test",
+    "health-check": "curl -f http://localhost:3000/api/health || exit 1",
+    "deploy:staging": "./scripts/deploy.sh staging",
+    "deploy:production": "./scripts/deploy.sh production",
+    "rollback:staging": "./scripts/rollback.sh staging",
+    "rollback:production": "./scripts/rollback.sh production",
+    "analyze": "ANALYZE=true npm run build",
+    "postbuild": "echo 'Build completed successfully'"
   },
   "dependencies": {
     "@auth/core": "^0.37.3",

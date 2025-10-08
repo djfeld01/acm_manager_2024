@@ -16,6 +16,20 @@ const fontSans = FontSans({
 export const metadata: Metadata = {
   title: "ACM Dashboard",
   description: "Dashboard to help facilitate the ACM management company",
+  icons: {
+    icon: [
+      {
+        url: "/favicon.svg",
+        type: "image/svg+xml",
+      },
+      {
+        url: "/favicon.ico",
+        sizes: "any",
+      },
+    ],
+    shortcut: "/favicon.svg",
+    apple: "/images/acm_logo.svg",
+  },
 };
 
 export default function RootLayout({

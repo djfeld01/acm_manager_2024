@@ -271,10 +271,6 @@ function FeatureCard({
 }
 
 function RoleBasedFeatures() {
-  const payrollInterface = useFeatureFlag(
-    FEATURE_FLAG_KEYS.NEW_PAYROLL_INTERFACE
-  );
-
   return (
     <Card>
       <CardHeader>

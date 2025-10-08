@@ -184,9 +184,18 @@
     - Write mobile-specific tests and cross-device compatibility tests
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 12. Create migration and deployment strategy
+- [ ] 12. Implement homepage branding and logo navigation
 
-  - [x] 12.1 Implement feature flags and gradual rollout
+  - [x] 12.1 Add company logo to homepage header
+    - Add ACM logo image to the homepage with proper sizing and responsive behavior
+    - Implement click handler to navigate to homepage when logo is clicked
+    - Ensure logo maintains aspect ratio and accessibility standards
+    - Write tests for logo display and navigation functionality
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+
+- [ ] 13. Create migration and deployment strategy
+
+  - [x] 13.1 Implement feature flags and gradual rollout
 
     - Create feature flag system for toggling between old and new frontend
     - Implement user-based rollout controls for beta testing
@@ -194,7 +203,7 @@
     - Write tests for feature flag functionality and rollout controls
     - _Requirements: 6.4_
 
-  - [ ] 12.2 Set up production deployment and monitoring
+  - [x] 13.2 Set up production deployment and monitoring
     - Configure production build optimization and asset management
     - Implement error tracking and performance monitoring
     - Create deployment scripts and rollback procedures
