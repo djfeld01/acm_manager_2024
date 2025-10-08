@@ -520,7 +520,7 @@ export default function DashboardPage() {
                       Deposits
                     </Link>
                     <Link
-                      href={`/monthlyCompare/deposits/${loc.sitelinkId}`}
+                      href={`/monthlyCompare/${loc.sitelinkId}`}
                       className="px-2 py-1 rounded bg-orange-700 text-white text-xs font-medium hover:bg-orange-800 transition"
                     >
                       Income Compare
