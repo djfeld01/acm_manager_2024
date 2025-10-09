@@ -267,6 +267,20 @@
       "when": 1753306497366,
       "tag": "0037_mushy_absorbing_man",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1760051475394,
+      "tag": "0038_warm_ikaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1760051863634,
+      "tag": "0039_military_master_mold",
+      "breakpoints": true
     }
   ]
 }

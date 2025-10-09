@@ -107,7 +107,26 @@ export {
   default as transactionsToDailyPayments,
   transactionsToDailyPaymentsRelations,
   connectionTypes,
+  matchTypeEnum,
 } from "@/db/schema/transactionsToDailyPayments";
+
+export {
+  default as monthlyReconciliation,
+  monthlyReconciliationRelations,
+  reconciliationStatusEnum,
+} from "@/db/schema/monthlyReconciliation";
+
+export {
+  default as reconciliationDiscrepancies,
+  reconciliationDiscrepanciesRelations,
+  discrepancyTypeEnum,
+  discrepancyStatusEnum,
+} from "@/db/schema/reconciliationDiscrepancies";
+
+export {
+  default as multiDayDiscrepancies,
+  multiDayDiscrepanciesRelations,
+} from "@/db/schema/multiDayDiscrepancies";
 
 export {
   default as bankBalance,
