@@ -86,7 +86,8 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
       },
     });
     const bonusPay = await db.query.bonus.findMany({
-      where: (bonus, { eq }) => eq(bonus.payPeriodId, payrollId),
+      where: (bonus, { eq, and, ne }) =>
+        and(eq(bonus.payPeriodId, payrollId), ne(bonus.bonusType, "Christmas")),
       columns: {
         employeeId: true,
         bonusAmount: true,
