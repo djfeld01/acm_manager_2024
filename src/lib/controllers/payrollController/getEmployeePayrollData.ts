@@ -97,6 +97,19 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
         bonusType: true,
       },
     });
+    const christmasBonusPay = await db.query.bonus.findMany({
+      where: (bonus, { eq, and, ne }) =>
+        and(eq(bonus.payPeriodId, payrollId), eq(bonus.bonusType, "Christmas")),
+      columns: {
+        employeeId: true,
+        bonusAmount: true,
+        bonusMonth: true,
+        date: true,
+        facilityId: true,
+        bonusType: true,
+      },
+    });
+
     const mileageUsage = await db.query.mileage.findMany({
       where: (mileage, { eq }) => eq(mileage.payPeriodId, payrollId),
       columns: {
@@ -202,7 +215,20 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
             bonusItem.employeeId === employeeFacility.userId &&
             bonusItem.facilityId === employeeFacility.storageFacilityId
         );
+
         const monthlyBonus = monthlyBonusBreakdown.reduce(
+          (prev, bonusItem) => bonusItem.bonusAmount + prev,
+
+          0
+        );
+
+        const christmasBonusBreakdown = christmasBonusPay.filter(
+          (bonusItem) =>
+            bonusItem.employeeId === employeeFacility.userId &&
+            bonusItem.facilityId === employeeFacility.storageFacilityId
+        );
+
+        const christmasBonus = christmasBonusBreakdown.reduce(
           (prev, bonusItem) => bonusItem.bonusAmount + prev,
 
           0
@@ -218,6 +244,8 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
           locationName: employeeFacility.storageFacility.facilityName,
           monthlyBonus,
           monthlyBonusBreakdown,
+          christmasBonus,
+          christmasBonusBreakdown,
           mileageDollars,
           commission: storage,
           unpaidCommission,
@@ -225,7 +253,7 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
           rentals: filteredRentals,
           vacationHours: vacation,
           holidayHours: holiday,
-          christmasBonus: 0, // Assuming no christmas bonus in this context
+
           // Include the current payroll ID for the action
           currentPayrollId: payrollId,
           // Include employee and facility IDs for the action
@@ -248,7 +276,7 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
       item.holidayHours,
       item.vacationHours,
       ,
-      ,
+      item.christmasBonus,
       item.monthlyBonus,
       item.commission,
       item.mileageDollars,
