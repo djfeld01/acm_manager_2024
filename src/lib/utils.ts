@@ -110,7 +110,7 @@ export function calculateStorageBonus(
     return 33.34;
   }
 
-  let bonus = 75;
+  let bonus = 100;
 
   if (actualRentals < rentalsGoal && occupancy > 0.935) {
     return bonus;
