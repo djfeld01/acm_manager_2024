@@ -7,11 +7,10 @@ import {
   users,
   verificationTokens,
   sessions,
-  userDetails,
 } from "./db/schema";
 import { eq } from "drizzle-orm";
-import { userDetailsRelations } from "./db/schema";
 import { getUserFacilities } from "@/lib/controllers/userController/getUserFacilities";
+import { authConfig } from "./auth.config";
 
 declare module "next-auth" {
   interface User {
@@ -39,31 +38,35 @@ declare module "next-auth" {
   }
 }
 
+declare module "next-auth/jwt" {
+  interface JWT {
+    role?: string | null;
+    userDetailId?: string | null;
+    facilities?: Array<{
+      sitelinkId: string;
+      facilityName: string;
+      facilityAbbreviation: string;
+      position: string | null;
+      primarySite: boolean | null;
+      rentsUnits: boolean | null;
+    }>;
+  }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  // debug: true,
+  ...authConfig,
+  // JWT strategy so the Edge-compatible middleware can verify sessions
+  // without a database connection
+  session: { strategy: "jwt" },
   adapter: DrizzleAdapter(db, {
     usersTable: users,
     accountsTable: accounts,
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
-  providers: [
-    GOOGLE,
-    // GOOGLE({
-    //   profile(profile) {
-    //     console.log(profile.role);
-    //     return {
-    //       id: profile.sub,
-    //       name: profile.name,
-    //       email: profile.email,
-    //       image: profile.picture,
-    //       role: profile.role ?? "USER",
-    //     };
-    //   },
-    // }),
-  ],
   callbacks: {
-    async signIn({ user, email }) {
+    ...authConfig.callbacks,
+    async signIn({ user }) {
       try {
         const userDetail = await db.query.userDetails.findFirst({
           where: (userDetails, { eq }) =>
@@ -73,26 +76,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
 
-        // If user is not in userDetails table, deny sign in
         if (!userDetail) {
-          return false; // This will redirect to error page
+          return false;
         }
 
-        // Determine user's highest role from their facility positions
         const positions =
           userDetail.usersToFacilities
             ?.map((utf) => utf.position)
             .filter(Boolean) || [];
         let highestRole = "USER";
 
-        // Role hierarchy (highest to lowest)
         if (positions.includes("STORE_OWNER")) highestRole = "ADMIN";
         else if (positions.includes("AREA_MANAGER")) highestRole = "SUPERVISOR";
         else if (positions.includes("MANAGER")) highestRole = "MANAGER";
         else if (positions.includes("ASSISTANT")) highestRole = "ASSISTANT";
         else if (positions.includes("ACM_OFFICE")) highestRole = "ADMIN";
 
-        // Update user record with userDetailId and role if not already set
         if (!user?.userDetailId) {
           await db
             .update(users)
@@ -103,28 +102,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             .where(eq(users.email, userDetail?.email));
         }
 
+        // Attach to user object so jwt callback can pick it up
+        user.userDetailId = userDetail.id;
+        user.role = highestRole;
+
         return true;
       } catch (error) {
         console.error("Error in signIn callback:", error);
         return false;
       }
     },
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.role = user.role;
-        session.user.userDetailId = user.userDetailId;
-        session.user.id = user.id;
+    async jwt({ token, user }) {
+      // `user` is only present on the initial sign-in
+      if (user) {
+        token.role = user.role;
+        token.userDetailId = user.userDetailId;
+        token.sub = user.id;
 
-        // Fetch user facilities if userDetailId exists
         if (user.userDetailId) {
-          const facilities = await getUserFacilities(user.userDetailId);
-          session.user.facilities = facilities;
+          token.facilities = await getUserFacilities(user.userDetailId);
         }
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.sub!;
+        session.user.role = token.role;
+        session.user.userDetailId = token.userDetailId;
+        session.user.facilities = token.facilities;
       }
       return session;
     },
   },
   pages: {
-    error: "/unauthorized", // Redirect here when signIn returns false
+    error: "/unauthorized",
   },
 });

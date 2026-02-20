@@ -1,62 +1,35 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
 
-// Routes that require authentication
-const PROTECTED_ROUTES = [
-  "/dashboard",
-  "/payroll",
-  "/locations",
-  "/reports",
-  "/admin",
-];
+// Use edge-compatible NextAuth instance (no DB adapter) for middleware
+const { auth } = NextAuth(authConfig);
 
-// Routes that require specific roles
-const ROLE_PROTECTED_ROUTES = {
-  "/admin": ["ADMIN", "OWNER"],
-  "/reports": ["SUPERVISOR", "ADMIN", "OWNER"],
-};
+export default auth((req) => {
+  const { pathname } = req.nextUrl;
 
-// Public routes that don't require authentication
-const PUBLIC_ROUTES = [
-  "/",
-  "/auth/signin",
-  "/auth/signout",
-  "/unauthorized",
-  "/api/auth",
-];
+  // Pass through API routes — external callers don't have session cookies
+  if (pathname.startsWith("/api")) return;
 
-export default function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Skip middleware for static files and API routes (except auth)
+  // Pass through static assets and auth pages
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/images") ||
     pathname.startsWith("/favicon") ||
-    (pathname.startsWith("/api") && !pathname.startsWith("/api/auth"))
+    pathname.startsWith("/unauthorized")
   ) {
-    return NextResponse.next();
+    return;
   }
 
-  // Allow public routes
-  if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
-    return NextResponse.next();
+  // Redirect unauthenticated users to NextAuth sign-in
+  if (!req.auth) {
+    const signInUrl = new URL("/api/auth/signin", req.nextUrl.origin);
+    signInUrl.searchParams.set("callbackUrl", req.nextUrl.href);
+    return Response.redirect(signInUrl);
   }
-
-  // For protected routes, let page-level auth handle the protection
-  // This avoids Edge Runtime issues with database connections
-  return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     "/((?!_next/static|_next/image|favicon.ico|public|images).*)",
   ],
 };

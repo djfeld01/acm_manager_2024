@@ -93,7 +93,7 @@ function LocationCard({
   }
   return (
     <Card className="p-0">
-      <div className="font-semibold text-center text-xl mb-1 bg-slate-400 rounded-lg">
+      <div className="font-semibold text-center text-xl mb-1 bg-muted rounded-lg py-1">
         {endOfLastMonth.toLocaleString("default", { month: "long" })} Results
       </div>
 
@@ -128,7 +128,7 @@ function LocationCard({
               </span>
             </div>
             {rentalsBonus > 0 && (
-              <div className="flex justify-between bg-orange-300">
+              <div className="flex justify-between bg-primary/10 rounded px-1">
                 <span className="text-sm font-light ">GOAL REACHED!</span>
               </div>
             )}
@@ -152,7 +152,7 @@ function LocationCard({
               </span>
             </div>
             {retailBonus > 0 && (
-              <div className="flex justify-between bg-orange-300">
+              <div className="flex justify-between bg-primary/10 rounded px-1">
                 <span className="text-sm font-light ">GOAL REACHED!</span>
               </div>
             )}
@@ -172,7 +172,7 @@ function LocationCard({
               <span className="text-sm font-light">${receivableActual}</span>
             </div>
             {receivableBonus > 0 && (
-              <div className="flex justify-between bg-orange-300">
+              <div className="flex justify-between bg-primary/10 rounded px-1">
                 <span className="text-sm font-light ">GOAL REACHED!</span>
               </div>
             )}

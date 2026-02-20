@@ -151,7 +151,7 @@ function EmployeeCommittedPayroll({
     christmasBonusIsRefetching
   ) {
     return (
-      <div className="bg-gray-200 rounded-3xl">
+      <div className="bg-muted/50 rounded-lg border border-border">
         <div className="space-y-2">
           <Skeleton className="h-4 w-[250px]" />
           <Skeleton className="h-4 w-[200px]" />

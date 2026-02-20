@@ -91,8 +91,8 @@ function EmployeeActivityData({
         </div>
         <div className="col-span-2">{activity.tenantName}</div>
         <div className="col-span-1">{activity.hasInsurance ? "Ins" : ""}</div>
-        <CollapsibleTrigger>
-          <div className="col-span-1">
+        <div className="col-span-1 flex justify-center">
+          <CollapsibleTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
@@ -101,8 +101,8 @@ function EmployeeActivityData({
               <WrenchIcon className="h-4 w-4" />
               <span className="sr-only">Toggle</span>
             </Button>
-          </div>
-        </CollapsibleTrigger>
+          </CollapsibleTrigger>
+        </div>
       </div>
       <CollapsibleContent>
         <Form {...form}>
