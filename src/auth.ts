@@ -38,20 +38,6 @@ declare module "next-auth" {
   }
 }
 
-declare module "next-auth/jwt" {
-  interface JWT {
-    role?: string | null;
-    userDetailId?: string | null;
-    facilities?: Array<{
-      sitelinkId: string;
-      facilityName: string;
-      facilityAbbreviation: string;
-      position: string | null;
-      primarySite: boolean | null;
-      rentsUnits: boolean | null;
-    }>;
-  }
-}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -115,12 +101,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       // `user` is only present on the initial sign-in
       if (user) {
-        token.role = user.role;
-        token.userDetailId = user.userDetailId;
+        (token as any).role = user.role;
+        (token as any).userDetailId = user.userDetailId;
         token.sub = user.id;
 
         if (user.userDetailId) {
-          token.facilities = await getUserFacilities(user.userDetailId);
+          (token as any).facilities = await getUserFacilities(user.userDetailId);
         }
       }
       return token;
@@ -128,9 +114,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub!;
-        session.user.role = token.role;
-        session.user.userDetailId = token.userDetailId;
-        session.user.facilities = token.facilities;
+        session.user.role = (token as any).role ?? null;
+        session.user.userDetailId = (token as any).userDetailId ?? null;
+        session.user.facilities = (token as any).facilities ?? undefined;
       }
       return session;
     },
