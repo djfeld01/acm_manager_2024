@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { CircleUser } from "lucide-react";
 import { SignOutButton } from "@/components/auth/AuthButtons";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default async function PageHeader() {
   const session = await auth();
@@ -27,6 +28,8 @@ export default async function PageHeader() {
 
       {/* Spacer — breadcrumb can be added here later */}
       <div className="flex-1" />
+
+      <ThemeToggle />
 
       {/* User menu */}
       {session?.user ? (

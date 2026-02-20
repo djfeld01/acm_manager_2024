@@ -181,28 +181,27 @@ export default function DashboardPage() {
   const monthPercent = now.getDate() / daysInMonth;
 
   return (
-    <div className="p-6 space-y-4">
-      {/* Page title + meta */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Locations Overview</h1>
-        {dataLastUpdated && (
-          <span className="text-xs text-muted-foreground">
-            Updated {dataLastUpdated}
-          </span>
-        )}
-      </div>
+    <div className="space-y-4">
+      {/* Page header band */}
+      <div className="bg-muted/60 border-b border-border px-6 py-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-primary">Locations Overview</h1>
+          {dataLastUpdated && (
+            <span className="text-xs text-muted-foreground">
+              Updated {dataLastUpdated}
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {isAdmin
+            ? `Admin — all ${dashboardData.length} facilities`
+            : userFacilities.length > 0
+            ? `Your facilities: ${userFacilities.map((f) => f.facilityAbbreviation).join(", ")}`
+            : "No facilities assigned"}
+        </p>
 
-      {/* Facility access note */}
-      <p className="text-sm text-muted-foreground">
-        {isAdmin
-          ? `Admin — all ${dashboardData.length} facilities`
-          : userFacilities.length > 0
-          ? `Your facilities: ${userFacilities.map((f) => f.facilityAbbreviation).join(", ")}`
-          : "No facilities assigned"}
-      </p>
-
-      {/* Search + sort toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        {/* Search + sort toolbar */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -255,9 +254,11 @@ export default function DashboardPage() {
         <span className="text-xs text-muted-foreground shrink-0">
           {filteredAndSortedLocations.length} / {dashboardData.length}
         </span>
-      </div>
+        </div>{/* end toolbar */}
+      </div>{/* end header band */}
 
       {/* Cards grid */}
+      <div className="px-6 pb-6">
       {filteredAndSortedLocations.length === 0 ? (
         <div className="py-16 text-center">
           <Building2 className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
@@ -288,7 +289,7 @@ export default function DashboardPage() {
             return (
               <Card key={loc.sitelinkId} className="flex flex-col">
                 {/* Header: name + occupancy */}
-                <CardHeader className="pb-2 pt-3 px-3">
+                <CardHeader className="pb-2 pt-3 px-3 bg-muted/60 rounded-t-lg">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-base font-semibold leading-tight line-clamp-2">
                       {loc.facilityName}
@@ -370,6 +371,7 @@ export default function DashboardPage() {
           })}
         </div>
       )}
+      </div>{/* end cards px-6 */}
     </div>
   );
 }
