@@ -62,6 +62,11 @@ export function SidebarNav({ locations }: SidebarNavProps) {
     href: `/payroll/${loc.sitelinkId}`,
   }));
 
+  const locationChildren = locations.map((loc) => ({
+    label: loc.facilityAbbreviation,
+    href: `/location/${loc.sitelinkId}`,
+  }));
+
   const sections: NavSection[] = [
     {
       label: "Overview",
@@ -72,6 +77,12 @@ export function SidebarNav({ locations }: SidebarNavProps) {
     {
       label: "Operations",
       items: [
+        {
+          label: "Location Detail",
+          icon: Building2,
+          children: locationChildren.length > 0 ? locationChildren : undefined,
+          href: locationChildren.length === 0 ? "/location" : undefined,
+        },
         {
           label: "Daily Payments",
           icon: CreditCard,

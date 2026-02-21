@@ -356,6 +356,9 @@ export default function DashboardPage() {
 
                 {/* Action links */}
                 <CardFooter className="px-3 py-2 gap-1.5 flex-wrap">
+                  <Button variant="default" size="sm" asChild className="h-7 text-xs px-2">
+                    <Link href={`/location/${loc.sitelinkId}`}>Details</Link>
+                  </Button>
                   <Button variant="outline" size="sm" asChild className="h-7 text-xs px-2">
                     <Link href={`/payroll/${loc.sitelinkId}`}>Payroll</Link>
                   </Button>
