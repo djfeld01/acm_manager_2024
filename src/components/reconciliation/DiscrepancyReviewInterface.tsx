@@ -667,7 +667,7 @@ function DiscrepancyReviewCard({
   return (
     <div
       className={`border rounded-lg p-4 space-y-4 ${
-        isSelected ? "border-blue-500 bg-blue-50" : ""
+        isSelected ? "border-primary bg-primary/10" : ""
       }`}
     >
       <div className="flex items-start justify-between">
@@ -735,7 +735,7 @@ function DiscrepancyReviewCard({
 
       <div className="space-y-2">
         <div className="font-medium">Description:</div>
-        <div className="text-sm text-muted-foreground bg-gray-50 p-3 rounded">
+        <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded">
           {discrepancy.description}
         </div>
       </div>
@@ -743,7 +743,7 @@ function DiscrepancyReviewCard({
       {discrepancy.notes && (
         <div className="space-y-2">
           <div className="font-medium">Additional Notes:</div>
-          <div className="text-sm text-muted-foreground bg-gray-50 p-3 rounded">
+          <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded">
             {discrepancy.notes}
           </div>
         </div>

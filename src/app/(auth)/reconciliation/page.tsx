@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { MonthlyReconciliationDashboard } from "@/components/reconciliation/MonthlyReconciliationDashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function ReconciliationPage() {
   const session = await auth();
@@ -19,32 +21,26 @@ export default async function ReconciliationPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Bank Reconciliation
-          </h1>
-          <p className="text-muted-foreground">
-            Monthly reconciliation dashboard for all facilities
-          </p>
-        </div>
-        {["ADMIN", "OWNER"].includes(userRole) && (
-          <div className="flex gap-2">
-            <a
-              href="/reconciliation/review"
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-            >
-              Director Review Dashboard
-            </a>
-            <a
-              href="/reconciliation/discrepancies"
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
-            >
-              Discrepancy Management
-            </a>
+    <div className="flex flex-col gap-6 p-6">
+      <div className="bg-primary text-primary-foreground rounded-lg p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">Bank Reconciliation</h1>
+            <p className="text-primary-foreground/80 mt-0.5">
+              Monthly reconciliation dashboard for all facilities
+            </p>
           </div>
-        )}
+          {["ADMIN", "OWNER"].includes(userRole) && (
+            <div className="flex gap-2 shrink-0">
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/reconciliation/review">Director Review</Link>
+              </Button>
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/reconciliation/discrepancies">Discrepancies</Link>
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       <Suspense fallback={<DashboardSkeleton />}>
@@ -55,6 +51,7 @@ export default async function ReconciliationPage() {
       </Suspense>
     </div>
   );
+
 }
 
 function DashboardSkeleton() {

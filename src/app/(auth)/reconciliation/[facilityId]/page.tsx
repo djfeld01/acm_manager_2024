@@ -66,20 +66,17 @@ export default async function FacilityReconciliationPage({
   const facilityInfo = facility[0];
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Bank Reconciliation - {facilityInfo.facilityName}
-          </h1>
-          <p className="text-muted-foreground">
-            {new Date(year, month - 1).toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}{" "}
-            • {facilityInfo.bankName}
-          </p>
-        </div>
+    <div className="flex flex-col gap-6 p-6">
+      <div className="bg-primary text-primary-foreground rounded-lg p-5">
+        <h1 className="text-2xl font-bold">{facilityInfo.facilityName}</h1>
+        <p className="text-primary-foreground/80 mt-0.5">
+          Bank Reconciliation •{" "}
+          {new Date(year, month - 1).toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+          })}{" "}
+          • {facilityInfo.bankName}
+        </p>
       </div>
 
       <Suspense fallback={<WorkspaceSkeleton />}>
@@ -96,6 +93,7 @@ export default async function FacilityReconciliationPage({
     </div>
   );
 }
+
 
 function WorkspaceSkeleton() {
   return (

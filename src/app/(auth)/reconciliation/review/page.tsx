@@ -20,14 +20,14 @@ export default async function GlobalReviewPage() {
       <div className="container mx-auto p-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
+            <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertCircle className="h-5 w-5" />
               Access Denied - Director of Accounting Only
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-start gap-3">
-              <Shield className="h-5 w-5 text-red-600 mt-0.5" />
+              <Shield className="h-5 w-5 text-destructive mt-0.5" />
               <div>
                 <p className="font-medium">Restricted Access</p>
                 <p className="text-muted-foreground">
@@ -37,7 +37,7 @@ export default async function GlobalReviewPage() {
               </div>
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="bg-muted/50 p-4 rounded-lg">
               <p className="text-sm">
                 <strong>Your current role:</strong>{" "}
                 {userRole || "No role assigned"}
@@ -69,29 +69,16 @@ export default async function GlobalReviewPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Welcome Header */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-900">
-            <Shield className="h-5 w-5" />
-            Director of Accounting Review Dashboard
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-blue-800">
-            Welcome, {session.user.name || session.user.email}. This dashboard
-            provides a centralized view of all discrepancies requiring your
-            approval across all facilities.
-          </p>
-          <div className="mt-3 text-sm text-blue-700">
-            <p>• Review discrepancies from all facilities in one place</p>
-            <p>• Approve or reject items with detailed notes</p>
-            <p>• Use bulk actions for efficient processing</p>
-            <p>• Filter by priority, facility, or time period</p>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="flex flex-col gap-6 p-6">
+      <div className="bg-primary text-primary-foreground rounded-lg p-5">
+        <div className="flex items-center gap-2">
+          <Shield className="h-5 w-5" />
+          <h1 className="text-2xl font-bold">Director Review Dashboard</h1>
+        </div>
+        <p className="text-primary-foreground/80 mt-1">
+          Welcome, {session.user.name || session.user.email}. Review and approve discrepancies across all facilities.
+        </p>
+      </div>
 
       <Suspense fallback={<ReviewDashboardSkeleton />}>
         <DiscrepancyReviewInterface

@@ -27,7 +27,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
       <div className="container mx-auto p-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
+            <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertCircle className="h-5 w-5" />
               Access Denied
             </CardTitle>

@@ -249,7 +249,7 @@ export function MonthlyReconciliationDashboard({
           </Badge>
         );
       case "in_progress":
-        return <Badge className="bg-blue-100 text-blue-800">In Progress</Badge>;
+        return <Badge className="bg-primary/10 text-primary">In Progress</Badge>;
       case "not_started":
         return <Badge variant="outline">Not Started</Badge>;
       default:
@@ -272,7 +272,7 @@ export function MonthlyReconciliationDashboard({
     <div className="space-y-6">
       {/* Month/Year Selector */}
       <Card>
-        <CardHeader>
+        <CardHeader className="bg-muted/60 rounded-t-lg">
           <CardTitle className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5" />
             Reconciliation Period
@@ -397,7 +397,7 @@ export function MonthlyReconciliationDashboard({
 
       {/* Facilities Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="bg-muted/60 rounded-t-lg">
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
             Facility Reconciliation Status
