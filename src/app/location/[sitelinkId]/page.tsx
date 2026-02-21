@@ -5,18 +5,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Building2,
   Phone,
   Mail,
   Clock,
-  Users,
 } from "lucide-react";
-import GoalChart from "@/components/GoalChart";
+import { InfoTooltip } from "@/components/InfoTooltip";
 
 // ─── Formatting helpers ───────────────────────────────────────────────────────
 
@@ -163,8 +160,9 @@ export default async function LocationDetailPage({
         {/* Unit Occupancy */}
         <Card>
           <CardHeader className="pb-2 bg-muted/60 rounded-t-lg">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
               Unit Occupancy
+              <InfoTooltip content="Percentage of rentable units currently occupied (occupied ÷ total units). The 7-day and 30-day changes compare today's rate to those points in time." />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
@@ -194,8 +192,9 @@ export default async function LocationDetailPage({
         {/* Financial Occupancy */}
         <Card>
           <CardHeader className="pb-2 bg-muted/60 rounded-t-lg">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
               Financial Occupancy
+              <InfoTooltip content="Measures how much of the facility's potential rental income is being collected. Higher than unit occupancy means smaller/cheaper units are rented; lower means larger/pricier units are vacant." />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
@@ -224,8 +223,9 @@ export default async function LocationDetailPage({
         {/* Rent Revenue */}
         <Card>
           <CardHeader className="pb-2 bg-muted/60 rounded-t-lg">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
               Rent Revenue
+              <InfoTooltip content="Actual: the monthly rent currently being collected from all active tenants. Potential: the theoretical maximum if every unit were rented at its full street rate. Capture rate = Actual ÷ Potential." />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
@@ -256,8 +256,9 @@ export default async function LocationDetailPage({
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2 bg-muted/60 rounded-t-lg">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
                 Activity
+                <InfoTooltip content="Move-in, move-out, and other tenant activity counts from SiteLink's daily management report. Today shows the most recent day on record; MTD and YTD are cumulative totals for the month and year." />
               </CardTitle>
               {latestActivityDate && (
                 <span className="text-xs text-muted-foreground">
@@ -316,8 +317,9 @@ export default async function LocationDetailPage({
         {/* Goals — 1/3 width */}
         <Card>
           <CardHeader className="pb-2 bg-muted/60 rounded-t-lg">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
               Monthly Goals
+              <InfoTooltip content="Targets set for the current calendar month. Rental goal = target new move-ins. Collections goal = target delinquent dollars collected. Retail goal = target merchandise/sundry sales." />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4 space-y-5">
@@ -371,8 +373,9 @@ export default async function LocationDetailPage({
         <Card>
           <CardHeader className="pb-2 bg-muted/60 rounded-t-lg">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
                 Receivables Aging
+                <InfoTooltip content="Unpaid tenant balances grouped by how many days past due, sourced from SiteLink's daily receivables report. Earlier buckets (0–10 days) are often tenants still within their grace period." />
               </CardTitle>
               {latestReceivableDate && (
                 <span className="text-xs text-muted-foreground">
@@ -436,8 +439,9 @@ export default async function LocationDetailPage({
         {/* Recent Logons */}
         <Card>
           <CardHeader className="pb-2 bg-muted/60 rounded-t-lg">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
               Recent Logons
+              <InfoTooltip content="The last 8 times an employee logged into SiteLink at this facility, most recent first. Computer name is the workstation they logged in from." />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 px-0">
