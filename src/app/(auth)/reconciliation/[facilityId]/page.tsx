@@ -1,163 +1,224 @@
-import { Suspense } from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { TransactionMatchingWorkspace } from "@/components/reconciliation/TransactionMatchingWorkspace";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/db";
-import { storageFacilities, bankAccount } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import {
+  storageFacilities,
+  bankAccount,
+  monthlyReconciliation,
+  bankTransaction,
+  dailyPayments,
+  transactionsToDailyPayments,
+} from "@/db/schema";
+import { eq, and, sql, inArray } from "drizzle-orm";
+import { ReconciliationWorkspace } from "@/components/reconciliation/ReconciliationWorkspace";
+import { MonthNav } from "@/components/reconciliation/MonthNav";
 
 interface PageProps {
-  params: Promise<{
-    facilityId: string;
-  }>;
-  searchParams: Promise<{
-    month?: string;
-    year?: string;
-  }>;
+  params: Promise<{ facilityId: string }>;
+  searchParams: Promise<{ month?: string; year?: string }>;
 }
 
-export default async function FacilityReconciliationPage({
-  params,
-  searchParams,
-}: PageProps) {
+export default async function FacilityReconciliationPage({ params, searchParams }: PageProps) {
   const session = await auth();
+  if (!session?.user) redirect("/api/auth/signin");
 
-  if (!session?.user) {
-    redirect("/auth/signin");
-  }
-
-  // Check if user has appropriate role
   const userRole = session.user.role || "";
-  if (!["ADMIN", "OWNER", "SUPERVISOR", "MANAGER"].includes(userRole)) {
-    redirect("/unauthorized");
-  }
+  if (!["ADMIN", "OWNER", "SUPERVISOR", "MANAGER"].includes(userRole)) redirect("/unauthorized");
 
   const { facilityId } = await params;
-  const resolvedSearchParams = await searchParams;
-  const month = parseInt(resolvedSearchParams.month || "0");
-  const year = parseInt(resolvedSearchParams.year || "0");
+  const sp = await searchParams;
+  const now = new Date();
+  const month = Math.min(12, Math.max(1, parseInt(sp.month || String(now.getMonth() + 1))));
+  const year = parseInt(sp.year || String(now.getFullYear()));
 
-  if (!month || !year || month < 1 || month > 12) {
-    redirect("/reconciliation");
-  }
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const endDate = new Date(year, month, 0).toISOString().split("T")[0];
 
-  // Get facility information
-  const facility = await db
+  // Facility + bank accounts
+  const facilityRows = await db
     .select({
-      facilityId: storageFacilities.sitelinkId,
       facilityName: storageFacilities.facilityName,
       bankAccountId: bankAccount.bankAccountId,
       bankName: bankAccount.bankName,
+      depositType: bankAccount.depositType,
     })
     .from(storageFacilities)
-    .innerJoin(
-      bankAccount,
-      eq(storageFacilities.sitelinkId, bankAccount.sitelinkId)
+    .innerJoin(bankAccount, eq(storageFacilities.sitelinkId, bankAccount.sitelinkId))
+    .where(eq(storageFacilities.sitelinkId, facilityId));
+
+  if (facilityRows.length === 0) redirect("/reconciliation");
+
+  const facilityName = facilityRows[0].facilityName;
+  const bankAccounts = facilityRows.map((r) => ({
+    bankAccountId: r.bankAccountId,
+    bankName: r.bankName,
+    depositType: r.depositType,
+  }));
+  const bankAccountIds = bankAccounts.map((a) => a.bankAccountId);
+
+  // Monthly reconciliation record (if any)
+  const recRows = await db
+    .select({
+      reconciliationId: monthlyReconciliation.reconciliationId,
+      status: monthlyReconciliation.status,
+      totalExpectedCashCheck: monthlyReconciliation.totalExpectedCashCheck,
+      totalExpectedCreditCard: monthlyReconciliation.totalExpectedCreditCard,
+      totalActualCashCheck: monthlyReconciliation.totalActualCashCheck,
+      totalActualCreditCard: monthlyReconciliation.totalActualCreditCard,
+      totalTransactionsMatched: monthlyReconciliation.totalTransactionsMatched,
+      totalTransactionsUnmatched: monthlyReconciliation.totalTransactionsUnmatched,
+      totalDiscrepancies: monthlyReconciliation.totalDiscrepancies,
+      notes: monthlyReconciliation.notes,
+    })
+    .from(monthlyReconciliation)
+    .where(
+      and(
+        eq(monthlyReconciliation.facilityId, facilityId),
+        eq(monthlyReconciliation.reconciliationMonth, month),
+        eq(monthlyReconciliation.reconciliationYear, year),
+      ),
+    );
+  const recRow = recRows[0] ?? null;
+
+  // Bank transactions for the period
+  const bankTxns =
+    bankAccountIds.length > 0
+      ? await db
+          .select({
+            bankTransactionId: bankTransaction.bankTransactionId,
+            bankAccountId: bankTransaction.bankAccountId,
+            transactionDate: bankTransaction.transactionDate,
+            transactionType: bankTransaction.transactionType,
+            transactionAmount: bankTransaction.transactionAmount,
+          })
+          .from(bankTransaction)
+          .where(
+            and(
+              inArray(bankTransaction.bankAccountId, bankAccountIds),
+              sql`${bankTransaction.transactionDate} >= ${startDate}`,
+              sql`${bankTransaction.transactionDate} <= ${endDate}`,
+            ),
+          )
+          .orderBy(bankTransaction.transactionDate)
+      : [];
+
+  // Daily payments for the period
+  const payments = await db
+    .select({
+      dailyPaymentId: dailyPayments.Id,
+      date: dailyPayments.date,
+      cash: dailyPayments.cash,
+      check: dailyPayments.check,
+      visa: dailyPayments.visa,
+      mastercard: dailyPayments.mastercard,
+      americanExpress: dailyPayments.americanExpress,
+      discover: dailyPayments.discover,
+      ach: dailyPayments.ach,
+      dinersClub: dailyPayments.dinersClub,
+      debit: dailyPayments.debit,
+    })
+    .from(dailyPayments)
+    .where(
+      and(
+        eq(dailyPayments.facilityId, facilityId),
+        sql`${dailyPayments.date} >= ${startDate}`,
+        sql`${dailyPayments.date} <= ${endDate}`,
+      ),
     )
-    .where(eq(storageFacilities.sitelinkId, facilityId))
-    .limit(1);
+    .orderBy(dailyPayments.date);
 
-  if (facility.length === 0) {
-    redirect("/reconciliation");
-  }
+  // Existing matches for these bank transactions
+  const bankTxnIds = bankTxns.map((t) => t.bankTransactionId);
+  const matchRows =
+    bankTxnIds.length > 0
+      ? await db
+          .select({
+            bankTransactionId: transactionsToDailyPayments.bankTransactionId,
+            dailyPaymentId: transactionsToDailyPayments.dailyPaymentId,
+            amount: transactionsToDailyPayments.amount,
+            connectionType: transactionsToDailyPayments.connectionType,
+            depositDifference: transactionsToDailyPayments.depositDifference,
+            matchType: transactionsToDailyPayments.matchType,
+          })
+          .from(transactionsToDailyPayments)
+          .where(inArray(transactionsToDailyPayments.bankTransactionId, bankTxnIds))
+      : [];
 
-  const facilityInfo = facility[0];
+  const monthLabel = new Date(year, month - 1).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  // Serialize numeric fields (Drizzle returns numeric columns as strings)
+  const serializedBankTxns = bankTxns.map((t) => ({
+    ...t,
+    transactionAmount: parseFloat(t.transactionAmount?.toString() ?? "0"),
+  }));
+
+  const serializedPayments = payments.map((p) => ({
+    dailyPaymentId: p.dailyPaymentId,
+    date: p.date ?? "",
+    cash: parseFloat(p.cash?.toString() ?? "0"),
+    check: parseFloat(p.check?.toString() ?? "0"),
+    visa: parseFloat(p.visa?.toString() ?? "0"),
+    mastercard: parseFloat(p.mastercard?.toString() ?? "0"),
+    americanExpress: parseFloat(p.americanExpress?.toString() ?? "0"),
+    discover: parseFloat(p.discover?.toString() ?? "0"),
+    ach: parseFloat(p.ach?.toString() ?? "0"),
+    dinersClub: parseFloat(p.dinersClub?.toString() ?? "0"),
+    debit: parseFloat(p.debit?.toString() ?? "0"),
+  }));
+
+  const serializedMatches = matchRows.map((m) => ({
+    ...m,
+    amount: parseFloat(m.amount?.toString() ?? "0"),
+    depositDifference: parseFloat(m.depositDifference?.toString() ?? "0"),
+  }));
+
+  const serializedRec = recRow
+    ? {
+        reconciliationId: recRow.reconciliationId,
+        status: recRow.status,
+        totalExpectedCashCheck: parseFloat(recRow.totalExpectedCashCheck?.toString() ?? "0"),
+        totalExpectedCreditCard: parseFloat(recRow.totalExpectedCreditCard?.toString() ?? "0"),
+        totalActualCashCheck: parseFloat(recRow.totalActualCashCheck?.toString() ?? "0"),
+        totalActualCreditCard: parseFloat(recRow.totalActualCreditCard?.toString() ?? "0"),
+        totalTransactionsMatched: recRow.totalTransactionsMatched ?? 0,
+        totalTransactionsUnmatched: recRow.totalTransactionsUnmatched ?? 0,
+        totalDiscrepancies: recRow.totalDiscrepancies ?? 0,
+        notes: recRow.notes,
+      }
+    : null;
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      {/* Header */}
       <div className="bg-primary text-primary-foreground rounded-lg p-5">
-        <h1 className="text-2xl font-bold">{facilityInfo.facilityName}</h1>
-        <p className="text-primary-foreground/80 mt-0.5">
-          Bank Reconciliation •{" "}
-          {new Date(year, month - 1).toLocaleDateString("en-US", {
-            month: "long",
-            year: "numeric",
-          })}{" "}
-          • {facilityInfo.bankName}
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">{facilityName}</h1>
+            <p className="text-primary-foreground/80 mt-0.5">
+              Bank Reconciliation · {monthLabel}
+              {bankAccounts.length > 0 && ` · ${bankAccounts.map((a) => a.bankName).join(", ")}`}
+            </p>
+          </div>
+          <MonthNav month={month} year={year} />
+        </div>
       </div>
 
-      <Suspense fallback={<WorkspaceSkeleton />}>
-        <TransactionMatchingWorkspace
-          facilityId={facilityId}
-          facilityName={facilityInfo.facilityName}
-          bankAccountId={facilityInfo.bankAccountId}
-          month={month}
-          year={year}
-          userId={session.user.id}
-          userRole={userRole}
-        />
-      </Suspense>
-    </div>
-  );
-}
-
-
-function WorkspaceSkeleton() {
-  return (
-    <div className="space-y-6">
-      {/* Status Cards Skeleton */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-16 mb-2" />
-              <Skeleton className="h-3 w-32" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Matching Interface Skeleton */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center space-x-4 p-3 border rounded"
-                >
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-8 w-16" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center space-x-4 p-3 border rounded"
-                >
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-8 w-16" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <ReconciliationWorkspace
+        facilityId={facilityId}
+        facilityName={facilityName}
+        month={month}
+        year={year}
+        bankAccounts={bankAccounts}
+        reconciliation={serializedRec}
+        bankTransactions={serializedBankTxns}
+        dailyPayments={serializedPayments}
+        matches={serializedMatches}
+        userId={session.user.id}
+        userRole={userRole}
+      />
     </div>
   );
 }
