@@ -6,6 +6,7 @@ import {
   bankTransaction,
   dailyPayments,
   transactionsToDailyPayments,
+  reconciliationDiscrepancies,
 } from "@/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 
@@ -439,6 +440,153 @@ export async function createMatchesAction(
       })),
     );
   }
+}
+
+// ─── Match with discrepancy ────────────────────────────────────────────────
+// Same as createMatchesAction but also records an explanation for the
+// amount difference in the reconciliation_discrepancies table.
+
+export type DiscrepancyType =
+  | "bank_fee"
+  | "timing_difference"
+  | "refund"
+  | "error"
+  | "multi_day_combination"
+  | "other";
+
+export async function createMatchWithDiscrepancyAction(
+  bankTransactionIds: number[],
+  dailyPaymentIds: number[],
+  connectionType: ConnectionType,
+  facilityId: string,
+  reconciliationId: number,
+  discrepancyType: DiscrepancyType,
+  note: string,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+  if (bankTransactionIds.length === 0 || dailyPaymentIds.length === 0) return;
+  if (!note.trim()) throw new Error("A note is required for discrepancy matches");
+
+  // Fetch actual amounts (same logic as createMatchesAction)
+  const bankTxns = await db
+    .select({
+      bankTransactionId: bankTransaction.bankTransactionId,
+      amount: bankTransaction.transactionAmount,
+    })
+    .from(bankTransaction)
+    .where(inArray(bankTransaction.bankTransactionId, bankTransactionIds));
+
+  const payments = await db
+    .select({
+      dailyPaymentId: dailyPayments.Id,
+      cash: dailyPayments.cash,
+      check: dailyPayments.check,
+      visa: dailyPayments.visa,
+      mastercard: dailyPayments.mastercard,
+      americanExpress: dailyPayments.americanExpress,
+      discover: dailyPayments.discover,
+      ach: dailyPayments.ach,
+      dinersClub: dailyPayments.dinersClub,
+      debit: dailyPayments.debit,
+    })
+    .from(dailyPayments)
+    .where(inArray(dailyPayments.Id, dailyPaymentIds));
+
+  const totalBank = bankTxns.reduce(
+    (s, t) => s + parseFloat(t.amount?.toString() ?? "0"),
+    0,
+  );
+  const totalSitelink = payments.reduce((s, p) => {
+    const amt =
+      connectionType === "cash"
+        ? parseFloat(p.cash?.toString() ?? "0") + parseFloat(p.check?.toString() ?? "0")
+        : ccAmt({
+            visa: parseFloat(p.visa?.toString() ?? "0"),
+            mastercard: parseFloat(p.mastercard?.toString() ?? "0"),
+            americanExpress: parseFloat(p.americanExpress?.toString() ?? "0"),
+            discover: parseFloat(p.discover?.toString() ?? "0"),
+            ach: parseFloat(p.ach?.toString() ?? "0"),
+            dinersClub: parseFloat(p.dinersClub?.toString() ?? "0"),
+            debit: parseFloat(p.debit?.toString() ?? "0"),
+          });
+    return s + amt;
+  }, 0);
+
+  const difference = totalBank - totalSitelink;
+
+  // Build match records
+  const records: {
+    bankTransactionId: number;
+    dailyPaymentId: number;
+    connectionType: ConnectionType;
+    amount: number;
+    depositDifference: number;
+    reconciliationNotes: string;
+  }[] = [];
+
+  if (bankTransactionIds.length === 1) {
+    const bankId = bankTransactionIds[0];
+    for (const p of payments) {
+      const amt =
+        connectionType === "cash"
+          ? parseFloat(p.cash?.toString() ?? "0") + parseFloat(p.check?.toString() ?? "0")
+          : ccAmt({
+              visa: parseFloat(p.visa?.toString() ?? "0"),
+              mastercard: parseFloat(p.mastercard?.toString() ?? "0"),
+              americanExpress: parseFloat(p.americanExpress?.toString() ?? "0"),
+              discover: parseFloat(p.discover?.toString() ?? "0"),
+              ach: parseFloat(p.ach?.toString() ?? "0"),
+              dinersClub: parseFloat(p.dinersClub?.toString() ?? "0"),
+              debit: parseFloat(p.debit?.toString() ?? "0"),
+            });
+      records.push({
+        bankTransactionId: bankId,
+        dailyPaymentId: p.dailyPaymentId,
+        connectionType,
+        amount: amt,
+        depositDifference: difference,
+        reconciliationNotes: note,
+      });
+    }
+  } else {
+    const paymentId = dailyPaymentIds[0];
+    for (const t of bankTxns) {
+      records.push({
+        bankTransactionId: t.bankTransactionId,
+        dailyPaymentId: paymentId,
+        connectionType,
+        amount: parseFloat(t.amount?.toString() ?? "0"),
+        depositDifference: difference,
+        reconciliationNotes: note,
+      });
+    }
+  }
+
+  if (records.length > 0) {
+    await db.insert(transactionsToDailyPayments).values(
+      records.map((r) => ({
+        ...r,
+        matchType: "manual" as const,
+        isManualMatch: true,
+        matchedBy: session.user.id,
+        matchedAt: new Date(),
+      })),
+    );
+  }
+
+  // Record the discrepancy for review
+  await db.insert(reconciliationDiscrepancies).values({
+    reconciliationId,
+    discrepancyType,
+    description: note,
+    amount: Math.abs(difference).toFixed(2),
+    status: "pending_approval",
+    createdBy: session.user.id,
+    createdAt: new Date(),
+    referenceTransactionIds: JSON.stringify(bankTransactionIds),
+    referenceDailyPaymentIds: JSON.stringify(dailyPaymentIds),
+  });
 }
 
 // ─── Unmatch action ────────────────────────────────────────────────────────

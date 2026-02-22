@@ -18,7 +18,9 @@ import {
 import {
   autoMatchAction,
   createMatchesAction,
+  createMatchWithDiscrepancyAction,
   unmatchAction,
+  type DiscrepancyType,
 } from "@/app/(auth)/reconciliation/actions";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -248,6 +250,11 @@ export function ReconciliationWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<string | null>(null);
 
+  // Discrepancy form state
+  const [showDiscrepancyForm, setShowDiscrepancyForm] = useState(false);
+  const [discrepancyType, setDiscrepancyType] = useState<DiscrepancyType>("other");
+  const [discrepancyNote, setDiscrepancyNote] = useState("");
+
   const cashRows = buildRows(dailyPayments, bankTransactions, matches, "cash");
   const creditRows = buildRows(dailyPayments, bankTransactions, matches, "credit");
   const currentRows = tab === "cash" ? cashRows : creditRows;
@@ -290,6 +297,9 @@ export function ReconciliationWorkspace({
   const clearSelection = () => {
     setSelectedSitelinkIds(new Set());
     setSelectedBankIds(new Set());
+    setShowDiscrepancyForm(false);
+    setDiscrepancyNote("");
+    setDiscrepancyType("other");
     setError(null);
   };
 
@@ -386,6 +396,42 @@ export function ReconciliationWorkspace({
     });
   };
 
+  const handleMatchWithDiscrepancy = () => {
+    if (!discrepancyNote.trim()) {
+      setError("Please enter a note explaining the discrepancy.");
+      return;
+    }
+    if (!reconciliation) return;
+
+    const bankIds = Array.from(selectedBankIds);
+    const sitelinkIds = Array.from(selectedSitelinkIds);
+    const connType = tab === "cash" ? "cash" : "creditCard";
+
+    if (bankIds.length > 1 && sitelinkIds.length > 1) {
+      setError("Cannot match multiple bank rows to multiple SiteLink rows at once.");
+      return;
+    }
+
+    setError(null);
+    startTransition(async () => {
+      try {
+        await createMatchWithDiscrepancyAction(
+          bankIds,
+          sitelinkIds,
+          connType,
+          facilityId,
+          reconciliation.reconciliationId,
+          discrepancyType,
+          discrepancyNote.trim(),
+        );
+        clearSelection();
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Match failed");
+      }
+    });
+  };
+
   const handleUnmatch = (bankTransactionId: number, dailyPaymentId: number) => {
     setError(null);
     startTransition(async () => {
@@ -470,14 +516,24 @@ export function ReconciliationWorkspace({
           )}
           {isEditable && selectedSitelinkIds.size > 0 && selectedBankIds.size > 0 && (
             <>
-              <Button
-                size="sm"
-                onClick={handleMatch}
-                disabled={!selectionBalances || isPending}
-              >
-                <Link2 className="mr-1.5 h-3.5 w-3.5" />
-                Match Selected
-              </Button>
+              {selectionBalances && (
+                <Button size="sm" onClick={handleMatch} disabled={isPending}>
+                  <Link2 className="mr-1.5 h-3.5 w-3.5" />
+                  Match Selected
+                </Button>
+              )}
+              {!selectionBalances && !showDiscrepancyForm && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-yellow-400 text-yellow-700 hover:bg-yellow-50 dark:text-yellow-400 dark:hover:bg-yellow-900/20"
+                  onClick={() => setShowDiscrepancyForm(true)}
+                  disabled={isPending}
+                >
+                  <AlertTriangle className="mr-1.5 h-3.5 w-3.5" />
+                  Match with Note…
+                </Button>
+              )}
               <Button variant="ghost" size="sm" onClick={clearSelection}>
                 <X className="mr-1 h-3.5 w-3.5" />
                 Clear
@@ -525,6 +581,78 @@ export function ReconciliationWorkspace({
               ✓ Amounts balance — ready to match
             </span>
           )}
+        </div>
+      )}
+
+      {/* Discrepancy form — shown when "Match with Note" is clicked */}
+      {isEditable && showDiscrepancyForm && (
+        <div className="border border-yellow-300 dark:border-yellow-700 rounded-lg p-4 bg-yellow-50/50 dark:bg-yellow-900/10 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 shrink-0" />
+            <span className="text-sm font-medium">
+              Match with Discrepancy —{" "}
+              <span className="text-yellow-700 dark:text-yellow-400">
+                {selectionImbalance !== null
+                  ? `${selectionImbalance > 0 ? "+" : ""}${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(selectionImbalance)} difference`
+                  : "amounts differ"}
+              </span>
+            </span>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Reason
+              </label>
+              <select
+                value={discrepancyType}
+                onChange={(e) => setDiscrepancyType(e.target.value as DiscrepancyType)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="bank_fee">Bank Fee</option>
+                <option value="timing_difference">Timing Difference</option>
+                <option value="error">Recording Error</option>
+                <option value="refund">Refund / Chargeback</option>
+                <option value="multi_day_combination">Multi-day Combination</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Note <span className="text-destructive">*</span>
+              </label>
+              <textarea
+                value={discrepancyNote}
+                onChange={(e) => setDiscrepancyNote(e.target.value)}
+                placeholder="Explain the discrepancy…"
+                rows={2}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={handleMatchWithDiscrepancy}
+              disabled={isPending || !discrepancyNote.trim()}
+              className="bg-yellow-600 hover:bg-yellow-700 text-white"
+            >
+              {isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+              Confirm Match
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setShowDiscrepancyForm(false);
+                setDiscrepancyNote("");
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
       )}
 
