@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,13 @@ import {
   AlertTriangle,
   Loader2,
   CircleDashed,
+  X,
 } from "lucide-react";
+import {
+  autoMatchAction,
+  createMatchesAction,
+  unmatchAction,
+} from "@/app/(auth)/reconciliation/actions";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -29,6 +35,7 @@ interface BankTransaction {
   transactionDate: string;
   transactionType: string;
   transactionAmount: number;
+  isNextMonth?: boolean;
 }
 
 interface DailyPayment {
@@ -81,7 +88,7 @@ export interface ReconciliationWorkspaceProps {
   userRole: string;
 }
 
-// ─── Row types for the matching table ──────────────────────────────────────
+// ─── Row types ──────────────────────────────────────────────────────────────
 
 type MatchedRow = {
   type: "matched";
@@ -93,6 +100,7 @@ type MatchedRow = {
   connectionType: string;
   matchType: string;
   diff: number;
+  isNextMonth?: boolean;
 };
 
 type SitelinkOnlyRow = {
@@ -107,27 +115,29 @@ type BankOnlyRow = {
   date: string;
   bankAmount: number;
   bankTransactionId: number;
+  isNextMonth?: boolean;
 };
 
 type TableRow = MatchedRow | SitelinkOnlyRow | BankOnlyRow;
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
-function fmt$(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
-}
+const fmt$ = (n: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
 function fmtDate(d: string) {
   if (!d) return "—";
   const [y, m, day] = d.split("-");
-  return new Date(Number(y), Number(m) - 1, Number(day)).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  return new Date(Number(y), Number(m) - 1, Number(day)).toLocaleDateString(
+    "en-US",
+    { month: "short", day: "numeric" },
+  );
 }
 
 function ccTotal(p: DailyPayment) {
-  return p.visa + p.mastercard + p.americanExpress + p.discover + p.ach + p.dinersClub + p.debit;
+  return (
+    p.visa + p.mastercard + p.americanExpress + p.discover + p.ach + p.dinersClub + p.debit
+  );
 }
 
 function buildRows(
@@ -145,8 +155,13 @@ function buildRows(
 
   const rows: TableRow[] = [];
 
-  // Matched pairs
+  // Matched pairs — deduplicated on (bankTransactionId, dailyPaymentId)
+  const seenPairs = new Set<string>();
   for (const match of tabMatches) {
+    const key = `${match.bankTransactionId}-${match.dailyPaymentId}`;
+    if (seenPairs.has(key)) continue;
+    seenPairs.add(key);
+
     const payment = payments.find((p) => p.dailyPaymentId === match.dailyPaymentId);
     const txn = bankTxns.find((t) => t.bankTransactionId === match.bankTransactionId);
     if (!payment || !txn) continue;
@@ -162,6 +177,7 @@ function buildRows(
       connectionType: connType,
       matchType: match.matchType,
       diff: txn.transactionAmount - sitelinkAmount,
+      isNextMonth: txn.isNextMonth,
     });
   }
 
@@ -178,7 +194,7 @@ function buildRows(
     });
   }
 
-  // Unmatched bank transactions (for this tab's type)
+  // Unmatched bank transactions for this tab's type
   for (const t of bankTxns) {
     if (matchedBankIds.has(t.bankTransactionId)) continue;
     if (t.transactionType !== txnType) continue;
@@ -187,22 +203,29 @@ function buildRows(
       date: t.transactionDate,
       bankAmount: t.transactionAmount,
       bankTransactionId: t.bankTransactionId,
+      isNextMonth: t.isNextMonth,
     });
   }
 
   return rows.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-// ─── Status config ─────────────────────────────────────────────────────────
+// ─── Status config ──────────────────────────────────────────────────────────
 
 const STATUS = {
   in_progress: { label: "In Progress", cls: "bg-primary/10 text-primary" },
-  pending_review: { label: "Pending Review", cls: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
-  completed: { label: "Completed", cls: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
+  pending_review: {
+    label: "Pending Review",
+    cls: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  },
+  completed: {
+    label: "Completed",
+    cls: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  },
   rejected: { label: "Rejected", cls: "bg-destructive/10 text-destructive" },
 } as const;
 
-// ─── Main component ────────────────────────────────────────────────────────
+// ─── Main component ─────────────────────────────────────────────────────────
 
 export function ReconciliationWorkspace({
   facilityId,
@@ -215,166 +238,229 @@ export function ReconciliationWorkspace({
   matches,
 }: ReconciliationWorkspaceProps) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [tab, setTab] = useState<"cash" | "credit">("cash");
-  const [selectedSitelinkId, setSelectedSitelinkId] = useState<number | null>(null);
-  const [selectedBankId, setSelectedBankId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+
+  // Multi-select: sets of selected IDs
+  const [selectedSitelinkIds, setSelectedSitelinkIds] = useState<Set<number>>(new Set());
+  const [selectedBankIds, setSelectedBankIds] = useState<Set<number>>(new Set());
+
   const [error, setError] = useState<string | null>(null);
+  const [lastResult, setLastResult] = useState<string | null>(null);
 
   const cashRows = buildRows(dailyPayments, bankTransactions, matches, "cash");
   const creditRows = buildRows(dailyPayments, bankTransactions, matches, "credit");
   const currentRows = tab === "cash" ? cashRows : creditRows;
+
+  // Running totals for selection
+  const selectedSitelinkTotal = Array.from(selectedSitelinkIds).reduce((sum, id) => {
+    const p = dailyPayments.find((p) => p.dailyPaymentId === id);
+    if (!p) return sum;
+    return sum + (tab === "cash" ? p.cash + p.check : ccTotal(p));
+  }, 0);
+
+  const selectedBankTotal = Array.from(selectedBankIds).reduce((sum, id) => {
+    const t = bankTransactions.find((t) => t.bankTransactionId === id);
+    return sum + (t?.transactionAmount ?? 0);
+  }, 0);
+
+  const selectionBalances =
+    selectedSitelinkIds.size > 0 &&
+    selectedBankIds.size > 0 &&
+    Math.abs(selectedSitelinkTotal - selectedBankTotal) < 0.02;
+
+  const selectionImbalance =
+    selectedSitelinkIds.size > 0 && selectedBankIds.size > 0 && !selectionBalances
+      ? selectedBankTotal - selectedSitelinkTotal
+      : null;
 
   const totalSitelink = {
     cash: dailyPayments.reduce((s, p) => s + p.cash + p.check, 0),
     credit: dailyPayments.reduce((s, p) => s + ccTotal(p), 0),
   };
   const totalBank = {
-    cash: bankTransactions.filter((t) => t.transactionType === "cash").reduce((s, t) => s + t.transactionAmount, 0),
-    credit: bankTransactions.filter((t) => t.transactionType === "creditCard").reduce((s, t) => s + t.transactionAmount, 0),
+    cash: bankTransactions
+      .filter((t) => t.transactionType === "cash")
+      .reduce((s, t) => s + t.transactionAmount, 0),
+    credit: bankTransactions
+      .filter((t) => t.transactionType === "creditCard")
+      .reduce((s, t) => s + t.transactionAmount, 0),
   };
 
   const clearSelection = () => {
-    setSelectedSitelinkId(null);
-    setSelectedBankId(null);
+    setSelectedSitelinkIds(new Set());
+    setSelectedBankIds(new Set());
+    setError(null);
   };
 
-  const handleStart = async () => {
-    setLoading(true);
+  const toggleSitelink = (id: number) => {
     setError(null);
-    try {
-      const res = await fetch("/api/reconciliation/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ facilityId, month, year }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to start reconciliation");
-      }
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
+    setLastResult(null);
+    setSelectedSitelinkIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
-  const handleAutoMatch = async () => {
-    setLoading(true);
+  const toggleBank = (id: number) => {
     setError(null);
-    try {
-      for (const account of bankAccounts) {
-        const res = await fetch("/api/reconciliation/auto-match/run", {
+    setLastResult(null);
+    setSelectedBankIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  const handleStart = () => {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/reconciliation/start", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ facilityId, bankAccountId: account.bankAccountId, month, year }),
+          body: JSON.stringify({ facilityId, month, year }),
         });
         if (!res.ok) {
           const data = await res.json();
-          throw new Error(data.error || "Auto-match failed");
+          throw new Error(data.error || "Failed to start reconciliation");
         }
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Unknown error");
       }
-      clearSelection();
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
-  const handleMatch = async () => {
-    if (!selectedSitelinkId || !selectedBankId) return;
-    setLoading(true);
+  const handleAutoMatch = () => {
     setError(null);
-    try {
-      const payment = dailyPayments.find((p) => p.dailyPaymentId === selectedSitelinkId);
-      const txn = bankTransactions.find((t) => t.bankTransactionId === selectedBankId);
-      if (!payment || !txn) throw new Error("Selection not found");
-
-      const connectionType = tab === "cash" ? "cash" : "creditCard";
-      const amount = tab === "cash" ? payment.cash + payment.check : ccTotal(payment);
-
-      const res = await fetch("/api/reconciliation/match", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bankTransactionId: selectedBankId, dailyPaymentId: selectedSitelinkId, connectionType, amount }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Match failed");
+    setLastResult(null);
+    const bankAccountIds = bankAccounts.map((a) => a.bankAccountId);
+    startTransition(async () => {
+      try {
+        const result = await autoMatchAction(facilityId, bankAccountIds, month, year);
+        setLastResult(
+          result.matched > 0
+            ? `Auto-match created ${result.matched} match${result.matched === 1 ? "" : "es"}.`
+            : "No new automatic matches found.",
+        );
+        clearSelection();
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Auto-match failed");
       }
-      clearSelection();
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
-  // ── Not started ──────────────────────────────────────────────────────────
+  const handleMatch = () => {
+    if (!selectionBalances) return;
+    setError(null);
+    setLastResult(null);
+
+    const bankIds = Array.from(selectedBankIds);
+    const sitelinkIds = Array.from(selectedSitelinkIds);
+    const connType = tab === "cash" ? "cash" : "creditCard";
+
+    // Validate: only allow 1:N or N:1 (not N:M)
+    if (bankIds.length > 1 && sitelinkIds.length > 1) {
+      setError(
+        "Cannot match multiple bank rows to multiple SiteLink rows at once. " +
+          "Match one side at a time.",
+      );
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        await createMatchesAction(bankIds, sitelinkIds, connType, facilityId);
+        clearSelection();
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Match failed");
+      }
+    });
+  };
+
+  const handleUnmatch = (bankTransactionId: number, dailyPaymentId: number) => {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await unmatchAction(bankTransactionId, dailyPaymentId);
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Unmatch failed");
+      }
+    });
+  };
+
+  // ── Not started ────────────────────────────────────────────────────────────
 
   if (!reconciliation) {
     const cashDiff = totalBank.cash - totalSitelink.cash;
     const creditDiff = totalBank.credit - totalSitelink.credit;
     return (
-      <div className="space-y-6">
-        <div className="border rounded-lg p-8 text-center space-y-6">
-          <div>
-            <CircleDashed className="h-12 w-12 mx-auto mb-3 text-muted-foreground/40" />
-            <h2 className="text-lg font-semibold">Reconciliation Not Started</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {bankTransactions.length} bank transactions · {dailyPayments.length} SiteLink daily payments
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 max-w-md mx-auto text-left">
-            <PreviewCard label="SiteLink Cash / Check" value={fmt$(totalSitelink.cash)} />
-            <PreviewCard label="Bank Cash Deposits" value={fmt$(totalBank.cash)} diff={cashDiff} />
-            <PreviewCard label="SiteLink Credit Card" value={fmt$(totalSitelink.credit)} />
-            <PreviewCard label="Bank CC Deposits" value={fmt$(totalBank.credit)} diff={creditDiff} />
-          </div>
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <Button onClick={handleStart} disabled={loading} size="lg">
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Start Reconciliation
-          </Button>
+      <div className="border rounded-lg p-8 text-center space-y-6">
+        <div>
+          <CircleDashed className="h-12 w-12 mx-auto mb-3 text-muted-foreground/40" />
+          <h2 className="text-lg font-semibold">Reconciliation Not Started</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {bankTransactions.length} bank transactions ·{" "}
+            {dailyPayments.length} SiteLink daily payments
+          </p>
         </div>
+        <div className="grid grid-cols-2 gap-3 max-w-md mx-auto text-left">
+          <SummaryCard label="SiteLink Cash / Check" value={fmt$(totalSitelink.cash)} />
+          <SummaryCard label="Bank Cash Deposits" value={fmt$(totalBank.cash)} diff={cashDiff} />
+          <SummaryCard label="SiteLink Credit Card" value={fmt$(totalSitelink.credit)} />
+          <SummaryCard
+            label="Bank CC Deposits"
+            value={fmt$(totalBank.credit)}
+            diff={creditDiff}
+          />
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button onClick={handleStart} disabled={isPending} size="lg">
+          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Start Reconciliation
+        </Button>
       </div>
     );
   }
 
-  // ── In progress / review / completed ─────────────────────────────────────
+  // ── Workspace ──────────────────────────────────────────────────────────────
 
   const statusCfg = STATUS[reconciliation.status as keyof typeof STATUS] ?? {
     label: reconciliation.status,
     cls: "bg-muted text-muted-foreground",
   };
   const isEditable = reconciliation.status === "in_progress";
-
-  const totalMatched = matches.length;
-  const totalRows = currentRows.length;
-  const unmatchedInTab = currentRows.filter((r) => r.type !== "matched").length;
+  const cashUnmatched = cashRows.filter((r) => r.type !== "matched").length;
+  const creditUnmatched = creditRows.filter((r) => r.type !== "matched").length;
 
   return (
     <div className="space-y-4">
-
-      {/* Status bar */}
+      {/* Status + action bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Badge className={statusCfg.cls}>{statusCfg.label}</Badge>
-          <span className="text-sm text-muted-foreground">
-            {totalMatched} matched · {unmatchedInTab} unmatched in view
-          </span>
+          {lastResult && (
+            <span className="text-sm text-muted-foreground">{lastResult}</span>
+          )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {isEditable && (
-            <Button variant="outline" size="sm" onClick={handleAutoMatch} disabled={loading}>
-              {loading ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAutoMatch}
+              disabled={isPending}
+            >
+              {isPending ? (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               ) : (
                 <Zap className="mr-1.5 h-3.5 w-3.5" />
@@ -382,11 +468,21 @@ export function ReconciliationWorkspace({
               Auto-match
             </Button>
           )}
-          {isEditable && selectedSitelinkId && selectedBankId && (
-            <Button size="sm" onClick={handleMatch} disabled={loading}>
-              <Link2 className="mr-1.5 h-3.5 w-3.5" />
-              Match Selected
-            </Button>
+          {isEditable && selectedSitelinkIds.size > 0 && selectedBankIds.size > 0 && (
+            <>
+              <Button
+                size="sm"
+                onClick={handleMatch}
+                disabled={!selectionBalances || isPending}
+              >
+                <Link2 className="mr-1.5 h-3.5 w-3.5" />
+                Match Selected
+              </Button>
+              <Button variant="ghost" size="sm" onClick={clearSelection}>
+                <X className="mr-1 h-3.5 w-3.5" />
+                Clear
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -397,15 +493,58 @@ export function ReconciliationWorkspace({
         </div>
       )}
 
-      {/* Totals row */}
+      {/* Selection totals — shown when anything is selected */}
+      {isEditable && (selectedSitelinkIds.size > 0 || selectedBankIds.size > 0) && (
+        <div className="border rounded-lg p-3 bg-muted/40 flex flex-wrap gap-4 text-sm">
+          <span>
+            <span className="text-muted-foreground">Selected SiteLink:</span>{" "}
+            <span className="font-semibold">{fmt$(selectedSitelinkTotal)}</span>
+            {selectedSitelinkIds.size > 1 && (
+              <span className="text-muted-foreground ml-1">
+                ({selectedSitelinkIds.size} rows)
+              </span>
+            )}
+          </span>
+          <span>
+            <span className="text-muted-foreground">Selected Bank:</span>{" "}
+            <span className="font-semibold">{fmt$(selectedBankTotal)}</span>
+            {selectedBankIds.size > 1 && (
+              <span className="text-muted-foreground ml-1">
+                ({selectedBankIds.size} rows)
+              </span>
+            )}
+          </span>
+          {selectionImbalance !== null && (
+            <span className={selectionImbalance < 0 ? "text-destructive" : "text-yellow-600"}>
+              {selectionImbalance > 0 ? "+" : ""}
+              {fmt$(selectionImbalance)} difference — adjust selection to balance
+            </span>
+          )}
+          {selectionBalances && (
+            <span className="text-green-700 dark:text-green-400 font-medium">
+              ✓ Amounts balance — ready to match
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Totals summary row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <SummaryCard label="SiteLink Cash / Check" value={fmt$(totalSitelink.cash)} />
-        <SummaryCard label="Bank Cash Deposits" value={fmt$(totalBank.cash)} diff={totalBank.cash - totalSitelink.cash} />
+        <SummaryCard
+          label="Bank Cash Deposits"
+          value={fmt$(totalBank.cash)}
+          diff={totalBank.cash - totalSitelink.cash}
+        />
         <SummaryCard label="SiteLink Credit Card" value={fmt$(totalSitelink.credit)} />
-        <SummaryCard label="Bank CC Deposits" value={fmt$(totalBank.credit)} diff={totalBank.credit - totalSitelink.credit} />
+        <SummaryCard
+          label="Bank CC Deposits"
+          value={fmt$(totalBank.credit)}
+          diff={totalBank.credit - totalSitelink.credit}
+        />
       </div>
 
-      {/* Tab + Table */}
+      {/* Tabs + table */}
       <Tabs
         value={tab}
         onValueChange={(v) => {
@@ -416,17 +555,17 @@ export function ReconciliationWorkspace({
         <TabsList>
           <TabsTrigger value="cash">
             Cash / Check
-            {cashRows.filter((r) => r.type !== "matched").length > 0 && (
-              <span className="ml-1.5 text-xs bg-yellow-100 text-yellow-800 rounded-full px-1.5 py-0.5 dark:bg-yellow-900/30 dark:text-yellow-400">
-                {cashRows.filter((r) => r.type !== "matched").length}
+            {cashUnmatched > 0 && (
+              <span className="ml-1.5 rounded-full bg-yellow-100 px-1.5 py-0.5 text-xs text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                {cashUnmatched}
               </span>
             )}
           </TabsTrigger>
           <TabsTrigger value="credit">
             Credit Card
-            {creditRows.filter((r) => r.type !== "matched").length > 0 && (
-              <span className="ml-1.5 text-xs bg-yellow-100 text-yellow-800 rounded-full px-1.5 py-0.5 dark:bg-yellow-900/30 dark:text-yellow-400">
-                {creditRows.filter((r) => r.type !== "matched").length}
+            {creditUnmatched > 0 && (
+              <span className="ml-1.5 rounded-full bg-yellow-100 px-1.5 py-0.5 text-xs text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                {creditUnmatched}
               </span>
             )}
           </TabsTrigger>
@@ -439,14 +578,19 @@ export function ReconciliationWorkspace({
                 <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
                 <th className="text-right p-3 font-medium text-muted-foreground">SiteLink</th>
                 <th className="text-right p-3 font-medium text-muted-foreground">Bank</th>
-                <th className="text-right p-3 font-medium text-muted-foreground hidden sm:table-cell">Diff</th>
+                <th className="text-right p-3 font-medium text-muted-foreground hidden sm:table-cell">
+                  Diff
+                </th>
                 <th className="text-center p-3 font-medium text-muted-foreground">Status</th>
+                {isEditable && (
+                  <th className="w-8 p-3" />
+                )}
               </tr>
             </thead>
             <tbody className="divide-y">
               {currentRows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-muted-foreground text-sm">
+                  <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                     No transactions for this period.
                   </td>
                 </tr>
@@ -455,10 +599,13 @@ export function ReconciliationWorkspace({
                   <MatchRow
                     key={i}
                     row={row}
-                    selectedSitelinkId={selectedSitelinkId}
-                    selectedBankId={selectedBankId}
-                    onSelectSitelink={isEditable ? setSelectedSitelinkId : undefined}
-                    onSelectBank={isEditable ? setSelectedBankId : undefined}
+                    isEditable={isEditable}
+                    selectedSitelinkIds={selectedSitelinkIds}
+                    selectedBankIds={selectedBankIds}
+                    onToggleSitelink={toggleSitelink}
+                    onToggleBank={toggleBank}
+                    onUnmatch={handleUnmatch}
+                    isPending={isPending}
                   />
                 ))
               )}
@@ -468,45 +615,40 @@ export function ReconciliationWorkspace({
       </Tabs>
 
       {/* Helper text */}
-      {isEditable && (
+      {isEditable && selectedSitelinkIds.size === 0 && selectedBankIds.size === 0 && (
         <p className="text-xs text-muted-foreground">
-          {!selectedSitelinkId && !selectedBankId &&
-            'Click a "SiteLink only" row to select it, then click the matching bank row, then click "Match Selected".'}
-          {selectedSitelinkId && !selectedBankId &&
-            "SiteLink payment selected — now click the matching bank deposit row."}
-          {selectedSitelinkId && selectedBankId &&
-            'Both sides selected — click "Match Selected" to confirm.'}
+          Click unmatched rows to select them. Select one or more SiteLink rows and one or more
+          bank rows whose amounts balance, then click{" "}
+          <span className="font-medium">Match Selected</span>.
         </p>
       )}
     </div>
   );
 }
 
-// ─── Sub-components ────────────────────────────────────────────────────────
+// ─── Sub-components ─────────────────────────────────────────────────────────
 
-function PreviewCard({ label, value, diff }: { label: string; value: string; diff?: number }) {
+function SummaryCard({
+  label,
+  value,
+  diff,
+}: {
+  label: string;
+  value: string;
+  diff?: number;
+}) {
+  const fmt$ = (n: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
   return (
     <div className="border rounded-lg p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="font-semibold mt-0.5">{value}</div>
       {diff !== undefined && Math.abs(diff) > 0.01 && (
-        <div className={`text-xs mt-0.5 ${diff < 0 ? "text-destructive" : "text-green-600"}`}>
-          {diff > 0 ? "+" : ""}{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(diff)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SummaryCard({ label, value, diff }: { label: string; value: string; diff?: number }) {
-  return (
-    <div className="border rounded-lg p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="font-semibold mt-0.5">{value}</div>
-      {diff !== undefined && Math.abs(diff) > 0.01 && (
-        <div className={`text-xs mt-0.5 font-medium ${diff < 0 ? "text-destructive" : "text-green-600"}`}>
+        <div
+          className={`text-xs mt-0.5 font-medium ${diff < 0 ? "text-destructive" : "text-green-600"}`}
+        >
           {diff > 0 ? "+" : ""}
-          {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(diff)} vs SiteLink
+          {fmt$(diff)} vs SiteLink
         </div>
       )}
     </div>
@@ -515,26 +657,46 @@ function SummaryCard({ label, value, diff }: { label: string; value: string; dif
 
 function MatchRow({
   row,
-  selectedSitelinkId,
-  selectedBankId,
-  onSelectSitelink,
-  onSelectBank,
+  isEditable,
+  selectedSitelinkIds,
+  selectedBankIds,
+  onToggleSitelink,
+  onToggleBank,
+  onUnmatch,
+  isPending,
 }: {
   row: TableRow;
-  selectedSitelinkId: number | null;
-  selectedBankId: number | null;
-  onSelectSitelink?: (id: number | null) => void;
-  onSelectBank?: (id: number | null) => void;
+  isEditable: boolean;
+  selectedSitelinkIds: Set<number>;
+  selectedBankIds: Set<number>;
+  onToggleSitelink: (id: number) => void;
+  onToggleBank: (id: number) => void;
+  onUnmatch: (bankId: number, paymentId: number) => void;
+  isPending: boolean;
 }) {
+  const fmt$ = (n: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+
   if (row.type === "matched") {
     const hasDiff = Math.abs(row.diff) > 0.01;
     return (
-      <tr className="hover:bg-muted/20">
-        <td className="p-3 text-muted-foreground">{fmtDate(row.date)}</td>
-        <td className="p-3 text-right">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(row.sitelinkAmount)}</td>
-        <td className="p-3 text-right">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(row.bankAmount)}</td>
-        <td className={`p-3 text-right hidden sm:table-cell ${hasDiff ? "text-destructive font-medium" : "text-muted-foreground/50"}`}>
-          {hasDiff ? (row.diff > 0 ? "+" : "") + new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(row.diff) : "—"}
+      <tr className="hover:bg-muted/20 group">
+        <td className="p-3 text-muted-foreground">
+          {fmtDate(row.date)}
+          {row.isNextMonth && (
+            <span className="ml-1 text-[10px] text-yellow-600 dark:text-yellow-400 font-medium">
+              next mo.
+            </span>
+          )}
+        </td>
+        <td className="p-3 text-right">{fmt$(row.sitelinkAmount)}</td>
+        <td className="p-3 text-right">{fmt$(row.bankAmount)}</td>
+        <td
+          className={`p-3 text-right hidden sm:table-cell ${hasDiff ? "text-destructive font-medium" : "text-muted-foreground/40"}`}
+        >
+          {hasDiff
+            ? (row.diff > 0 ? "+" : "") + fmt$(row.diff)
+            : "—"}
         </td>
         <td className="p-3 text-center">
           <span className="inline-flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
@@ -542,52 +704,73 @@ function MatchRow({
             {row.matchType === "automatic" ? "Auto" : "Matched"}
           </span>
         </td>
+        {isEditable && (
+          <td className="p-3 text-center">
+            <button
+              onClick={() => onUnmatch(row.bankTransactionId, row.dailyPaymentId)}
+              disabled={isPending}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/50 hover:text-destructive"
+              title="Remove match"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </td>
+        )}
       </tr>
     );
   }
 
   if (row.type === "sitelink_only") {
-    const isSelected = selectedSitelinkId === row.dailyPaymentId;
+    const isSelected = selectedSitelinkIds.has(row.dailyPaymentId);
     return (
       <tr
         className={`transition-colors ${
           isSelected ? "bg-primary/10" : "hover:bg-muted/30"
-        } ${onSelectSitelink ? "cursor-pointer" : ""}`}
-        onClick={() => onSelectSitelink?.(isSelected ? null : row.dailyPaymentId)}
+        } ${isEditable ? "cursor-pointer" : ""}`}
+        onClick={() => isEditable && onToggleSitelink(row.dailyPaymentId)}
       >
         <td className="p-3 text-muted-foreground">{fmtDate(row.date)}</td>
-        <td className="p-3 text-right font-medium">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(row.sitelinkAmount)}</td>
-        <td className="p-3 text-right text-muted-foreground/40">—</td>
-        <td className="p-3 text-right hidden sm:table-cell text-muted-foreground/40">—</td>
+        <td className="p-3 text-right font-medium">{fmt$(row.sitelinkAmount)}</td>
+        <td className="p-3 text-right text-muted-foreground/30">—</td>
+        <td className="p-3 text-right hidden sm:table-cell text-muted-foreground/30">—</td>
         <td className="p-3 text-center">
           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
             SiteLink only
           </span>
         </td>
+        {isEditable && <td className="p-3" />}
       </tr>
     );
   }
 
   // bank_only
-  const isSelected = selectedBankId === row.bankTransactionId;
+  const isSelected = selectedBankIds.has(row.bankTransactionId);
   return (
     <tr
       className={`transition-colors ${
         isSelected ? "bg-primary/10" : "hover:bg-muted/30"
-      } ${onSelectBank ? "cursor-pointer" : ""}`}
-      onClick={() => onSelectBank?.(isSelected ? null : row.bankTransactionId)}
+      } ${isEditable ? "cursor-pointer" : ""}`}
+      onClick={() => isEditable && onToggleBank(row.bankTransactionId)}
     >
-      <td className="p-3 text-muted-foreground">{fmtDate(row.date)}</td>
-      <td className="p-3 text-right text-muted-foreground/40">—</td>
-      <td className="p-3 text-right font-medium">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(row.bankAmount)}</td>
-      <td className="p-3 text-right hidden sm:table-cell text-muted-foreground/40">—</td>
+      <td className="p-3 text-muted-foreground">
+        {fmtDate(row.date)}
+        {row.isNextMonth && (
+          <span className="ml-1 text-[10px] text-yellow-600 dark:text-yellow-400 font-medium">
+            next mo.
+          </span>
+        )}
+      </td>
+      <td className="p-3 text-right text-muted-foreground/30">—</td>
+      <td className="p-3 text-right font-medium">{fmt$(row.bankAmount)}</td>
+      <td className="p-3 text-right hidden sm:table-cell text-muted-foreground/30">—</td>
       <td className="p-3 text-center">
         <span className="inline-flex items-center gap-1 text-xs text-yellow-700 dark:text-yellow-400">
           <AlertTriangle className="h-3.5 w-3.5" />
           Bank only
         </span>
       </td>
+      {isEditable && <td className="p-3" />}
     </tr>
   );
 }

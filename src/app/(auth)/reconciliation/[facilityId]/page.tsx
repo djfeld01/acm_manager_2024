@@ -32,7 +32,13 @@ export default async function FacilityReconciliationPage({ params, searchParams 
   const year = parseInt(sp.year || String(now.getFullYear()));
 
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-  const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+  // Month-end date (for daily payments — only fetch the current month)
+  const monthEndDate = new Date(year, month, 0).toISOString().split("T")[0];
+  // Extended end for bank transactions: +10 days to catch deposits that clear
+  // in early next month (e.g. Jan 30 SiteLink → Feb 2 bank deposit)
+  const extendedBankEnd = new Date(year, month, 10).toISOString().split("T")[0];
+  // Keep endDate alias for existing code that uses it
+  const endDate = monthEndDate;
 
   // Facility + bank accounts
   const facilityRows = await db
@@ -80,7 +86,8 @@ export default async function FacilityReconciliationPage({ params, searchParams 
     );
   const recRow = recRows[0] ?? null;
 
-  // Bank transactions for the period
+  // Bank transactions: fetch current month + 10-day buffer into next month
+  // so late-clearing deposits are visible in this reconciliation period
   const bankTxns =
     bankAccountIds.length > 0
       ? await db
@@ -96,7 +103,7 @@ export default async function FacilityReconciliationPage({ params, searchParams 
             and(
               inArray(bankTransaction.bankAccountId, bankAccountIds),
               sql`${bankTransaction.transactionDate} >= ${startDate}`,
-              sql`${bankTransaction.transactionDate} <= ${endDate}`,
+              sql`${bankTransaction.transactionDate} <= ${extendedBankEnd}`,
             ),
           )
           .orderBy(bankTransaction.transactionDate)
@@ -150,9 +157,11 @@ export default async function FacilityReconciliationPage({ params, searchParams 
   });
 
   // Serialize numeric fields (Drizzle returns numeric columns as strings)
+  // Tag transactions that fall after month-end (late-clearing deposits)
   const serializedBankTxns = bankTxns.map((t) => ({
     ...t,
     transactionAmount: parseFloat(t.transactionAmount?.toString() ?? "0"),
+    isNextMonth: (t.transactionDate ?? "") > monthEndDate,
   }));
 
   const serializedPayments = payments.map((p) => ({
