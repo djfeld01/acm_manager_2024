@@ -5,11 +5,12 @@ import {
   dailyManagementActivity,
   dailyManagementOccupancy,
   dailyManagementReceivable,
+  dailyManagementPaymentReceipt,
   storageFacilities,
   tenantActivities,
   usersToFacilities,
 } from "@/db/schema";
-import { and, eq, gte, inArray, sql, desc, count, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, sql, desc, count, lte, sum } from "drizzle-orm";
 import { date } from "drizzle-orm/pg-core";
 import { NextRequest, NextResponse } from "next/server";
 import { parseLocalDate } from "../utils";
@@ -116,6 +117,7 @@ export async function getLocationDetailData(sitelinkId: string) {
     latestReceivableDateArr,
     latestLogons,
     thisMonthsRentals,
+    latestPaymentDateArr,
   ] = await Promise.all([
     db.query.storageFacilities.findFirst({
       where: (sf, { eq }) => eq(sf.sitelinkId, sitelinkId),
@@ -180,12 +182,20 @@ export async function getLocationDetailData(sitelinkId: string) {
           lte(tenantActivities.date, today)
         )
       ),
+    // Latest date with payment receipt data (for MTD collections)
+    db
+      .select({ date: dailyManagementPaymentReceipt.date })
+      .from(dailyManagementPaymentReceipt)
+      .where(eq(dailyManagementPaymentReceipt.facilityId, sitelinkId))
+      .orderBy(desc(dailyManagementPaymentReceipt.date))
+      .limit(1),
   ]);
 
   const latestActivityDate = latestActivityDateArr[0]?.date;
   const latestReceivableDate = latestReceivableDateArr[0]?.date;
+  const latestPaymentDate = latestPaymentDateArr[0]?.date ?? null;
 
-  const [activityData, receivableData] = await Promise.all([
+  const [activityData, receivableData, mtdCollectionsArr] = await Promise.all([
     latestActivityDate
       ? db
           .select()
@@ -210,9 +220,22 @@ export async function getLocationDetailData(sitelinkId: string) {
           )
           .orderBy(dailyManagementReceivable.lowerDayRange)
       : Promise.resolve([]),
+    // Sum all MTD payment receipt rows for the latest date
+    latestPaymentDate
+      ? db
+          .select({ total: sum(dailyManagementPaymentReceipt.monthlyAmount) })
+          .from(dailyManagementPaymentReceipt)
+          .where(
+            and(
+              eq(dailyManagementPaymentReceipt.facilityId, sitelinkId),
+              eq(dailyManagementPaymentReceipt.date, latestPaymentDate)
+            )
+          )
+      : Promise.resolve([{ total: null }]),
   ]);
 
   const goal = facility?.monthlyGoals?.[0];
+  const mtdCollections = parseFloat(mtdCollectionsArr[0]?.total ?? "0");
 
   return {
     facility,
@@ -228,6 +251,8 @@ export async function getLocationDetailData(sitelinkId: string) {
     rentalGoal: goal?.rentalGoal ?? 0,
     collectionsGoal: parseFloat(goal?.collectionsGoal ?? "0"),
     retailGoal: parseFloat(goal?.retailGoal ?? "0"),
+    mtdCollections,
+    mtdCollectionsDate: latestPaymentDate,
   };
 }
 

@@ -60,6 +60,29 @@ function DeltaBadge({ value }: { value: number | null }) {
   );
 }
 
+function UnitDeltaBadge({ value }: { value: number | null }) {
+  if (value === null) return <span className="text-muted-foreground text-xs">—</span>;
+  if (value === 0)
+    return (
+      <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+        <Minus className="h-3 w-3" />
+        flat
+      </span>
+    );
+  if (value > 0)
+    return (
+      <span className="inline-flex items-center gap-0.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+        <TrendingUp className="h-3 w-3" />+{value} units
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-0.5 text-xs text-red-500 font-medium">
+      <TrendingDown className="h-3 w-3" />
+      {value} units
+    </span>
+  );
+}
+
 function ProgressBar({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   return (
@@ -104,12 +127,22 @@ export default async function LocationDetailPage({
     rentalGoal,
     collectionsGoal,
     retailGoal,
+    mtdCollections,
+    mtdCollectionsDate,
   } = await getLocationDetailData(sitelinkId);
 
   const lastLogon = latestLogons[0];
 
-  const unitOccDelta7 = delta(latestOccupancy?.unitOccupancy, sevenDayOccupancy?.unitOccupancy);
-  const unitOccDelta30 = delta(latestOccupancy?.unitOccupancy, thirtyDayOccupancy?.unitOccupancy);
+  // Unit count deltas (integer: how many more/fewer units occupied vs. N days ago)
+  const unitCountDelta7 =
+    latestOccupancy?.occupiedUnits != null && sevenDayOccupancy?.occupiedUnits != null
+      ? Math.round(latestOccupancy.occupiedUnits - sevenDayOccupancy.occupiedUnits)
+      : null;
+  const unitCountDelta30 =
+    latestOccupancy?.occupiedUnits != null && thirtyDayOccupancy?.occupiedUnits != null
+      ? Math.round(latestOccupancy.occupiedUnits - thirtyDayOccupancy.occupiedUnits)
+      : null;
+
   const finOccDelta7 = delta(latestOccupancy?.financialOccupancy, sevenDayOccupancy?.financialOccupancy);
   const finOccDelta30 = delta(latestOccupancy?.financialOccupancy, thirtyDayOccupancy?.financialOccupancy);
 
@@ -172,11 +205,11 @@ export default async function LocationDetailPage({
             <div className="mt-3 space-y-1.5 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">7-day change</span>
-                <DeltaBadge value={unitOccDelta7} />
+                <UnitDeltaBadge value={unitCountDelta7} />
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">30-day change</span>
-                <DeltaBadge value={unitOccDelta30} />
+                <UnitDeltaBadge value={unitCountDelta30} />
               </div>
               <div className="flex items-center justify-between pt-1 border-t">
                 <span className="text-muted-foreground">Occupied / Total</span>
@@ -224,26 +257,25 @@ export default async function LocationDetailPage({
         <Card>
           <CardHeader className="pb-2 bg-muted/60 rounded-t-lg">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-              Rent Revenue
-              <InfoTooltip content="Actual: the monthly rent currently being collected from all active tenants. Potential: the theoretical maximum if every unit were rented at its full street rate. Capture rate = Actual ÷ Potential." />
+              MTD Collections
+              <InfoTooltip content="Month-to-date payments collected at this facility, summed from SiteLink's daily payment receipt report. Potential rent is the theoretical maximum if every unit were rented at full street rate." />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="text-3xl font-bold text-primary">
-              {fmt$(latestOccupancy?.rentActual ?? null)}
+              {fmt$(mtdCollections || null)}
             </div>
+            {mtdCollectionsDate && (
+              <div className="text-xs text-muted-foreground mt-0.5">as of {mtdCollectionsDate}</div>
+            )}
             <div className="mt-3 space-y-1.5 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Potential</span>
+                <span className="text-muted-foreground">Potential rent</span>
                 <span className="font-medium">{fmt$(latestOccupancy?.rentPotential ?? null)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Capture rate</span>
-                <span className="font-medium">
-                  {latestOccupancy?.rentPotential && latestOccupancy?.rentActual
-                    ? `${((latestOccupancy.rentActual / latestOccupancy.rentPotential) * 100).toFixed(1)}%`
-                    : "—"}
-                </span>
+                <span className="text-muted-foreground">Rent actual</span>
+                <span className="font-medium">{fmt$(latestOccupancy?.rentActual ?? null)}</span>
               </div>
             </div>
           </CardContent>
