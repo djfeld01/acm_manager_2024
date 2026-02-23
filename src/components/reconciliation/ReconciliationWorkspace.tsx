@@ -308,6 +308,19 @@ export function ReconciliationWorkspace({
       .reduce((s, t) => s + t.transactionAmount, 0),
   };
 
+  // Matched bank totals — deduplicate by bankTransactionId so 1:N matches
+  // don't double-count the same bank transaction
+  const matchedBankTotal = {
+    cash: [...new Set(matches.filter((m) => m.connectionType === "cash").map((m) => m.bankTransactionId))].reduce(
+      (s, id) => s + (bankTransactions.find((t) => t.bankTransactionId === id)?.transactionAmount ?? 0),
+      0,
+    ),
+    credit: [...new Set(matches.filter((m) => m.connectionType === "creditCard").map((m) => m.bankTransactionId))].reduce(
+      (s, id) => s + (bankTransactions.find((t) => t.bankTransactionId === id)?.transactionAmount ?? 0),
+      0,
+    ),
+  };
+
   const clearSelection = () => {
     setSelectedSitelinkIds(new Set());
     setSelectedBankIds(new Set());
@@ -838,12 +851,14 @@ export function ReconciliationWorkspace({
         <SummaryCard
           label="Bank Cash Deposits"
           value={fmt$(totalBank.cash)}
+          matched={matchedBankTotal.cash}
           diff={totalBank.cash - totalSitelink.cash}
         />
         <SummaryCard label="SiteLink Credit Card" value={fmt$(totalSitelink.credit)} />
         <SummaryCard
           label="Bank CC Deposits"
           value={fmt$(totalBank.credit)}
+          matched={matchedBankTotal.credit}
           diff={totalBank.credit - totalSitelink.credit}
         />
       </div>
@@ -936,10 +951,12 @@ function SummaryCard({
   label,
   value,
   diff,
+  matched,
 }: {
   label: string;
   value: string;
   diff?: number;
+  matched?: number;
 }) {
   const fmt$ = (n: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
@@ -947,6 +964,11 @@ function SummaryCard({
     <div className="border rounded-lg p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="font-semibold mt-0.5">{value}</div>
+      {matched !== undefined && (
+        <div className="text-xs mt-0.5 text-muted-foreground">
+          {fmt$(matched)} matched
+        </div>
+      )}
       {diff !== undefined && Math.abs(diff) > 0.01 && (
         <div
           className={`text-xs mt-0.5 font-medium ${diff < 0 ? "text-destructive" : "text-green-600"}`}
