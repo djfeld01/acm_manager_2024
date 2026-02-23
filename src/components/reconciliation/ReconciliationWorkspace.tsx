@@ -14,12 +14,20 @@ import {
   Loader2,
   CircleDashed,
   X,
+  SendHorizontal,
+  RotateCcw,
+  CheckCheck,
 } from "lucide-react";
 import {
   autoMatchAction,
   createMatchesAction,
   createMatchWithDiscrepancyAction,
   unmatchAction,
+  submitForReviewAction,
+  markCompleteAction,
+  requestChangesAction,
+  approveDiscrepancyAction,
+  rejectDiscrepancyAction,
   type DiscrepancyType,
 } from "@/app/(auth)/reconciliation/actions";
 
@@ -238,6 +246,7 @@ export function ReconciliationWorkspace({
   bankTransactions,
   dailyPayments,
   matches,
+  userRole,
 }: ReconciliationWorkspaceProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -254,6 +263,11 @@ export function ReconciliationWorkspace({
   const [showDiscrepancyForm, setShowDiscrepancyForm] = useState(false);
   const [discrepancyType, setDiscrepancyType] = useState<DiscrepancyType>("other");
   const [discrepancyNote, setDiscrepancyNote] = useState("");
+
+  // Finalization state
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [showReviewPanel, setShowReviewPanel] = useState(false);
+  const [reviewNotes, setReviewNotes] = useState("");
 
   const cashRows = buildRows(dailyPayments, bankTransactions, matches, "cash");
   const creditRows = buildRows(dailyPayments, bankTransactions, matches, "credit");
@@ -444,6 +458,50 @@ export function ReconciliationWorkspace({
     });
   };
 
+  const handleSubmitForReview = () => {
+    if (!reconciliation) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await submitForReviewAction(reconciliation.reconciliationId);
+        setShowSubmitConfirm(false);
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to submit for review");
+      }
+    });
+  };
+
+  const handleMarkComplete = () => {
+    if (!reconciliation) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await markCompleteAction(reconciliation.reconciliationId, reviewNotes.trim() || undefined);
+        setReviewNotes("");
+        setShowReviewPanel(false);
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to mark complete");
+      }
+    });
+  };
+
+  const handleRequestChanges = () => {
+    if (!reconciliation) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await requestChangesAction(reconciliation.reconciliationId, reviewNotes.trim() || undefined);
+        setReviewNotes("");
+        setShowReviewPanel(false);
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to request changes");
+      }
+    });
+  };
+
   // ── Not started ────────────────────────────────────────────────────────────
 
   if (!reconciliation) {
@@ -485,6 +543,11 @@ export function ReconciliationWorkspace({
     cls: "bg-muted text-muted-foreground",
   };
   const isEditable = reconciliation.status === "in_progress";
+  const isPendingReview = reconciliation.status === "pending_review";
+  const isCompleted = reconciliation.status === "completed";
+  const canReview = ["ADMIN", "OWNER", "SUPERVISOR"].includes(userRole);
+  const totalUnmatched = cashRows.filter((r) => r.type !== "matched").length +
+    creditRows.filter((r) => r.type !== "matched").length;
   const cashUnmatched = cashRows.filter((r) => r.type !== "matched").length;
   const creditUnmatched = creditRows.filter((r) => r.type !== "matched").length;
 
@@ -540,8 +603,121 @@ export function ReconciliationWorkspace({
               </Button>
             </>
           )}
+          {isEditable && selectedSitelinkIds.size === 0 && selectedBankIds.size === 0 && (
+            <Button
+              size="sm"
+              onClick={() => setShowSubmitConfirm(true)}
+              disabled={isPending}
+            >
+              <SendHorizontal className="mr-1.5 h-3.5 w-3.5" />
+              Submit for Review
+            </Button>
+          )}
+          {isPendingReview && canReview && !showReviewPanel && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowReviewPanel(true)}
+              disabled={isPending}
+            >
+              Review & Finalize
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Submit for review confirmation */}
+      {showSubmitConfirm && isEditable && (
+        <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
+          <p className="text-sm font-medium">
+            Submit this reconciliation for review?
+          </p>
+          {totalUnmatched > 0 && (
+            <p className="text-sm text-yellow-700 dark:text-yellow-400 flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {totalUnmatched} unmatched transaction{totalUnmatched !== 1 ? "s" : ""} remain. You can still submit, but the reviewer will see them.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSubmitForReview} disabled={isPending}>
+              {isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+              Confirm Submit
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowSubmitConfirm(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Reviewer panel — shown to ADMIN/OWNER/SUPERVISOR when status is pending_review */}
+      {isPendingReview && canReview && showReviewPanel && (
+        <div className="border border-primary/30 rounded-lg p-4 bg-primary/5 space-y-3">
+          <p className="text-sm font-medium">
+            Review this reconciliation and mark it complete, or send it back for changes.
+          </p>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Review Notes (optional)
+            </label>
+            <textarea
+              value={reviewNotes}
+              onChange={(e) => setReviewNotes(e.target.value)}
+              placeholder="Add notes for the office manager…"
+              rows={2}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleMarkComplete}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Mark as Complete
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-destructive/50 text-destructive hover:bg-destructive/10"
+              onClick={handleRequestChanges}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Request Changes
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowReviewPanel(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Pending review banner for non-reviewers */}
+      {isPendingReview && !canReview && (
+        <div className="border border-yellow-300 dark:border-yellow-700 rounded-lg p-3 bg-yellow-50/50 dark:bg-yellow-900/10 flex items-center gap-2 text-sm text-yellow-800 dark:text-yellow-300">
+          <Clock className="h-4 w-4 shrink-0" />
+          This reconciliation has been submitted and is awaiting review by the accounting team.
+        </div>
+      )}
+
+      {/* Completed banner */}
+      {isCompleted && (
+        <div className="border border-green-300 dark:border-green-700 rounded-lg p-3 bg-green-50/50 dark:bg-green-900/10 flex items-center gap-2 text-sm text-green-800 dark:text-green-400">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          This reconciliation has been reviewed and marked complete.
+        </div>
+      )}
 
       {error && (
         <div className="border border-destructive/50 bg-destructive/10 rounded-lg p-3 text-sm text-destructive">

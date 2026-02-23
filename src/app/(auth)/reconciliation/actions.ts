@@ -7,6 +7,7 @@ import {
   dailyPayments,
   transactionsToDailyPayments,
   reconciliationDiscrepancies,
+  monthlyReconciliation,
 } from "@/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 
@@ -606,4 +607,97 @@ export async function unmatchAction(
         eq(transactionsToDailyPayments.dailyPaymentId, dailyPaymentId),
       ),
     );
+}
+
+// ─── Finalization actions ──────────────────────────────────────────────────
+
+// Ashley (Office Manager / Manager): in_progress → pending_review
+export async function submitForReviewAction(reconciliationId: number): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  await db
+    .update(monthlyReconciliation)
+    .set({
+      status: "pending_review",
+      submittedForReviewAt: new Date(),
+    })
+    .where(eq(monthlyReconciliation.reconciliationId, reconciliationId));
+}
+
+// David (Accounting Manager / Admin / Owner): pending_review → completed
+export async function markCompleteAction(
+  reconciliationId: number,
+  notes?: string,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  await db
+    .update(monthlyReconciliation)
+    .set({
+      status: "completed",
+      reviewedBy: session.user.id,
+      reviewedAt: new Date(),
+      completedAt: new Date(),
+      ...(notes ? { reviewNotes: notes } : {}),
+    })
+    .where(eq(monthlyReconciliation.reconciliationId, reconciliationId));
+}
+
+// David: pending_review → in_progress (send back for changes)
+export async function requestChangesAction(
+  reconciliationId: number,
+  notes?: string,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  await db
+    .update(monthlyReconciliation)
+    .set({
+      status: "in_progress",
+      reviewedBy: session.user.id,
+      reviewedAt: new Date(),
+      ...(notes ? { reviewNotes: notes } : {}),
+    })
+    .where(eq(monthlyReconciliation.reconciliationId, reconciliationId));
+}
+
+// David: approve a single discrepancy
+export async function approveDiscrepancyAction(
+  discrepancyId: number,
+  notes?: string,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  await db
+    .update(reconciliationDiscrepancies)
+    .set({
+      status: "approved",
+      approvedBy: session.user.id,
+      approvedAt: new Date(),
+      ...(notes ? { approvalNotes: notes } : {}),
+    })
+    .where(eq(reconciliationDiscrepancies.discrepancyId, discrepancyId));
+}
+
+// David: reject a single discrepancy (sends it back as rejected)
+export async function rejectDiscrepancyAction(
+  discrepancyId: number,
+  notes?: string,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  await db
+    .update(reconciliationDiscrepancies)
+    .set({
+      status: "rejected",
+      approvedBy: session.user.id,
+      approvedAt: new Date(),
+      ...(notes ? { approvalNotes: notes } : {}),
+    })
+    .where(eq(reconciliationDiscrepancies.discrepancyId, discrepancyId));
 }

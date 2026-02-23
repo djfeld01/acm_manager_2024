@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,10 +30,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  TrendingUp,
   FileText,
   Filter,
-  Eye,
   Calendar,
   Building,
   User,
@@ -45,6 +43,10 @@ import {
   getCurrentMonthYear,
   getMonthName,
 } from "@/lib/reconciliation/clientUtils";
+import {
+  approveDiscrepancyAction,
+  rejectDiscrepancyAction,
+} from "@/app/(auth)/reconciliation/actions";
 
 interface Discrepancy {
   discrepancyId: number;
@@ -107,6 +109,7 @@ export function DiscrepancyReviewInterface({
   >(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [bulkNotes, setBulkNotes] = useState("");
 
   // Filters
@@ -272,40 +275,23 @@ export function DiscrepancyReviewInterface({
     }
   };
 
-  const handleSingleAction = async (
+  const handleSingleAction = (
     discrepancyId: number,
     action: "approve" | "reject",
     notes?: string
   ) => {
-    setIsProcessing(true);
-    try {
-      const endpoint =
-        action === "approve"
-          ? "/api/reconciliation/discrepancies/approve"
-          : "/api/reconciliation/discrepancies/reject";
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          discrepancyId,
-          [action === "approve" ? "approvalNotes" : "rejectionNotes"]:
-            notes || null,
-        }),
-      });
-
-      if (response.ok) {
+    startTransition(async () => {
+      try {
+        if (action === "approve") {
+          await approveDiscrepancyAction(discrepancyId, notes || undefined);
+        } else {
+          await rejectDiscrepancyAction(discrepancyId, notes || undefined);
+        }
         await loadDiscrepancies();
-      } else {
-        console.error(`Failed to ${action} discrepancy`);
+      } catch (error) {
+        console.error(`Failed to ${action} discrepancy:`, error);
       }
-    } catch (error) {
-      console.error(`Failed to ${action} discrepancy:`, error);
-    } finally {
-      setIsProcessing(false);
-    }
+    });
   };
 
   const currentYear = new Date().getFullYear();
@@ -530,7 +516,7 @@ export function DiscrepancyReviewInterface({
               <div className="flex gap-4">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button disabled={isProcessing}>
+                    <Button disabled={isProcessing || isPending}>
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Approve All ({selectedDiscrepancies.size})
                     </Button>
@@ -559,7 +545,7 @@ export function DiscrepancyReviewInterface({
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive" disabled={isProcessing}>
+                    <Button variant="destructive" disabled={isProcessing || isPending}>
                       <XCircle className="h-4 w-4 mr-2" />
                       Reject All ({selectedDiscrepancies.size})
                     </Button>
@@ -629,7 +615,7 @@ export function DiscrepancyReviewInterface({
                   }
                   onAction={handleSingleAction}
                   showActions={statusFilter === "pending_approval"}
-                  isProcessing={isProcessing}
+                  isProcessing={isProcessing || isPending}
                 />
               ))}
             </div>
