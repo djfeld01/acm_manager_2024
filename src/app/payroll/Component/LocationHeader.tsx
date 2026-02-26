@@ -18,7 +18,7 @@ function LocationHeader({ sitelinkId }: LocationHeaderProps) {
     latestLogonDate || new Date(2024, 1, 1)
   );
   return (
-    <div className="bg-blue-600 text-white p-6 rounded-lg mb-1 text-center">
+    <div className="bg-primary text-primary-foreground p-5 rounded-lg mb-2 text-center">
       <h1 className="text-2xl font-bold">{facility?.facilityName}</h1>
       <p>Paycor: {facility?.paycorNumber}</p>
       <p>{facility?.streetAddress}</p>

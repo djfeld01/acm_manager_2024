@@ -75,7 +75,7 @@ export function EmployeePayrollCard({
   // if (isDesktop) {
   return (
     // <Dialog open={open} onOpenChange={setOpen}>
-    <Card className="bg-gray-300 p-1 rounded-lg  flex-1 basis-1/3 text-center">
+    <Card className="bg-card border border-border p-1 rounded-lg flex-1 basis-1/3 text-center">
       <CardTitle>
         {employee?.firstName || "Unlinked Rentals"} {employee?.lastName || ""}
       </CardTitle>

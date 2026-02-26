@@ -74,8 +74,8 @@ export function BankTransactionList({
                 className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                   selectedTransaction?.bankTransactionId ===
                   transaction.bankTransactionId
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    ? "border-primary bg-primary/10"
+                    : "border-border hover:border-border hover:bg-muted/40"
                 }`}
                 onClick={() => onTransactionSelect(transaction)}
               >
