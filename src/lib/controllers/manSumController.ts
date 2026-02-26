@@ -11,7 +11,7 @@ import { and, asc, desc, eq, or, sql, inArray } from "drizzle-orm";
 
 export async function getDashboardData(
   todayParam?: string,
-  facilityIds?: string[]
+  facilityIds?: string[],
 ) {
   let today = new Date();
   if (todayParam) {
@@ -28,9 +28,10 @@ export async function getDashboardData(
   const result = await db.query.storageFacilities.findMany({
     where: and(
       eq(storageFacilities.currentClient, true),
+      eq(storageFacilities.isCorporate, false),
       facilityIds && facilityIds.length > 0
         ? inArray(storageFacilities.sitelinkId, facilityIds)
-        : undefined
+        : undefined,
     ),
     with: {
       monthlyGoals: {
@@ -40,12 +41,12 @@ export async function getDashboardData(
         where: and(
           or(
             eq(dailyManagementActivity.date, today.toDateString()),
-            eq(dailyManagementActivity.date, sundayDate.toDateString())
+            eq(dailyManagementActivity.date, sundayDate.toDateString()),
           ),
           or(
             eq(dailyManagementActivity.activityType, "Move-Outs"),
-            eq(dailyManagementActivity.activityType, "Move-Ins")
-          )
+            eq(dailyManagementActivity.activityType, "Move-Ins"),
+          ),
         ),
         orderBy: [
           asc(dailyManagementActivity.activityType),
@@ -129,10 +130,10 @@ export async function getDashboardData(
     lastUpdated:
       `${result[0].dailyManagementActivity[0]?.dateUpdated?.toLocaleDateString(
         "en-US",
-        { timeZone: "America/New_York" }
+        { timeZone: "America/New_York" },
       )} ${result[0].dailyManagementActivity[0]?.dateUpdated?.toLocaleTimeString(
         "en-US",
-        { timeZone: "America/New_York" }
+        { timeZone: "America/New_York" },
       )}` || "No data available",
     timestamp: new Date().toISOString(),
     today: today.toDateString(),
