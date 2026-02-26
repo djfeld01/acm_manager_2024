@@ -21,6 +21,8 @@ import {
 } from "@/db/schema";
 import holiday from "./holiday";
 
+export const employeeTypeEnum = pgEnum("employee_type", ["HOURLY", "SALARY"]);
+
 const userDetails = pgTable("user_detail", {
   id: text("id")
     .primaryKey()
@@ -44,6 +46,8 @@ const userDetails = pgTable("user_detail", {
   hireDate: date("hire_date"),
   terminationDate: date("termination_date"),
   isActiveEmployee: boolean("is_active_employee").default(true),
+  employeeType: employeeTypeEnum("employee_type").notNull().default("HOURLY"),
+  nextScheduledRaise: date("next_scheduled_raise"),
 });
 
 export const insertUserDetailsSchema = createInsertSchema(userDetails, {
