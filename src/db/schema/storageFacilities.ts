@@ -39,6 +39,7 @@ const storageFacilities = pgTable(
     website: varchar("website"),
     domainRegistrar: varchar("domain_registrar"),
     currentClient: boolean("current_client").default(true),
+    isCorporate: boolean("is_corporate").notNull().default(false),
     storageCommissionRate: real("storage_commission_rate").default(5).notNull(),
     insuranceCommissionRate: real("insurance_commission_rate")
       .default(1.5)

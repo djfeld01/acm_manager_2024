@@ -52,6 +52,7 @@ export {
 export {
   default as userDetails,
   userDetailsRelations,
+  employeeTypeEnum,
 } from "@/db/schema/userDetails";
 export {
   default as payPeriod,
@@ -141,3 +142,24 @@ export {
 export { default as unit, unitRelations } from "@/db/schema/unit";
 export { default as inquiry, inquiryRelations } from "@/db/schema/inquiry";
 export { default as tenant, tenantRelations } from "@/db/schema/tenant";
+
+export {
+  default as employeeCompensation,
+  compensationTypeEnum,
+  changeReasonEnum,
+} from "@/db/schema/employeeCompensation";
+
+export {
+  default as hoursEntry,
+  hoursStatusEnum,
+} from "@/db/schema/hoursEntry";
+
+export {
+  default as vacationRequest,
+  vacationRequestStatusEnum,
+} from "@/db/schema/vacationRequest";
+
+export {
+  default as payrollPeriodStatus,
+  payrollPeriodStatusEnum,
+} from "@/db/schema/payrollPeriodStatus";
