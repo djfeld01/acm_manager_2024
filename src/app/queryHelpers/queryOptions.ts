@@ -9,6 +9,7 @@ import {
   monthlyNumbers,
 } from "@/lib/controllers/activityController";
 import { getFacilityPageData } from "@/lib/controllers/facilityController";
+import { getHoursEntry } from "@/lib/controllers/payrollController/payrollController";
 import { getLastMonthDateRange } from "@/lib/utils";
 import { queryOptions, useMutation } from "@tanstack/react-query";
 import { inArray } from "drizzle-orm";
@@ -82,12 +83,7 @@ export function hoursEntryOptions(
 ) {
   return queryOptions({
     queryKey: ["hoursEntry", payPeriodId, sitelinkId, employeeId],
-    queryFn: async () => {
-      const { getHoursEntry } = await import(
-        "@/lib/controllers/payrollController/payrollController"
-      );
-      return getHoursEntry(employeeId, payPeriodId, sitelinkId);
-    },
+    queryFn: () => getHoursEntry(employeeId, payPeriodId, sitelinkId),
   });
 }
 
