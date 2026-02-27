@@ -17,6 +17,7 @@ import {
   DollarSign,
   PlusCircle,
   ClipboardList,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -108,6 +109,7 @@ export function SidebarNav({ locations }: SidebarNavProps) {
         },
         { label: "Add Bonuses", href: "/payroll/addBonus", icon: PlusCircle },
         { label: "Submit Hours", href: "/payroll/submit", icon: ClipboardList },
+        { label: "Review Submissions", href: "/payroll/review", icon: ClipboardCheck },
       ],
     },
     {

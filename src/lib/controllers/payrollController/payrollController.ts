@@ -7,8 +7,10 @@ import vacation, { AddVacationHours } from "@/db/schema/vacation";
 import hoursEntry from "@/db/schema/hoursEntry";
 import vacationRequest from "@/db/schema/vacationRequest";
 import payrollPeriodStatus from "@/db/schema/payrollPeriodStatus";
+import userDetails from "@/db/schema/userDetails";
+import usersToFacilities from "@/db/schema/usersToFacilities";
 import { auth } from "@/auth";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 export async function addVacation(vacationValues: AddVacationHours) {
   try {
@@ -118,6 +120,141 @@ export async function getMileageForPeriod(employeeId: string, payPeriodId: strin
       )
     )
     .orderBy(mileage.date);
+}
+
+// ── Supervisor actions ───────────────────────────────────────────────────────
+
+/**
+ * For a given facility + pay period, returns all employees who have
+ * EMPLOYEE_SUBMITTED status, along with their hours, vacation requests,
+ * and mileage for that period.
+ */
+export async function getSubmittedPayrollForFacility(
+  sitelinkId: string,
+  payPeriodId: string
+) {
+  // Find all employees at this facility
+  const facilityEmployees = await db
+    .select({ employeeId: usersToFacilities.userId, position: usersToFacilities.position })
+    .from(usersToFacilities)
+    .where(eq(usersToFacilities.storageFacilityId, sitelinkId));
+
+  if (!facilityEmployees.length) return [];
+
+  const employeeIds = facilityEmployees.map((e) => e.employeeId);
+
+  // Get payroll period statuses for submitted employees
+  const statuses = await db
+    .select()
+    .from(payrollPeriodStatus)
+    .where(
+      and(
+        inArray(payrollPeriodStatus.employeeId, employeeIds),
+        eq(payrollPeriodStatus.payPeriodId, payPeriodId)
+      )
+    );
+
+  if (!statuses.length) return [];
+
+  // Get employee names
+  const employees = await db
+    .select({ id: userDetails.id, fullName: userDetails.fullName })
+    .from(userDetails)
+    .where(inArray(userDetails.id, employeeIds));
+
+  // Get hours entries
+  const hours = await db
+    .select()
+    .from(hoursEntry)
+    .where(
+      and(
+        inArray(hoursEntry.employeeId, employeeIds),
+        eq(hoursEntry.payPeriodId, payPeriodId),
+        eq(hoursEntry.facilityId, sitelinkId)
+      )
+    );
+
+  // Get vacation requests
+  const vacationRequests = await db
+    .select()
+    .from(vacationRequest)
+    .where(
+      and(
+        inArray(vacationRequest.employeeId, employeeIds),
+        eq(vacationRequest.payPeriodId, payPeriodId)
+      )
+    );
+
+  // Get mileage
+  const mileageEntries = await db
+    .select()
+    .from(mileage)
+    .where(
+      and(
+        inArray(mileage.employeeId, employeeIds),
+        eq(mileage.payPeriodId, payPeriodId),
+        eq(mileage.facilityId, sitelinkId)
+      )
+    );
+
+  return statuses.map((status) => ({
+    status,
+    employee: employees.find((e) => e.id === status.employeeId),
+    position: facilityEmployees.find((e) => e.employeeId === status.employeeId)?.position,
+    hours: hours.find((h) => h.employeeId === status.employeeId) ?? null,
+    vacationRequests: vacationRequests.filter((v) => v.employeeId === status.employeeId),
+    mileageEntries: mileageEntries.filter((m) => m.employeeId === status.employeeId),
+  }));
+}
+
+export async function approveFacilityPayroll(
+  employeeIds: string[],
+  payPeriodId: string,
+  notes?: string
+) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+  const approvedBy = session.user.userDetailId!;
+  return db
+    .insert(payrollPeriodStatus)
+    .values(
+      employeeIds.map((id) => ({
+        employeeId: id,
+        payPeriodId,
+        status: "SUPERVISOR_APPROVED" as const,
+        supervisorApprovedAt: new Date(),
+        supervisorApprovedBy: approvedBy,
+        supervisorNotes: notes ?? null,
+      }))
+    )
+    .onConflictDoUpdate({
+      target: [payrollPeriodStatus.employeeId, payrollPeriodStatus.payPeriodId],
+      set: {
+        status: "SUPERVISOR_APPROVED",
+        supervisorApprovedAt: new Date(),
+        supervisorApprovedBy: approvedBy,
+        supervisorNotes: notes ?? null,
+      },
+    });
+}
+
+export async function requestPayrollChanges(
+  employeeId: string,
+  payPeriodId: string,
+  notes: string
+) {
+  return db
+    .insert(payrollPeriodStatus)
+    .values({
+      employeeId,
+      payPeriodId,
+      status: "NOT_STARTED" as const,
+      supervisorNotes: notes,
+    })
+    .onConflictDoUpdate({
+      target: [payrollPeriodStatus.employeeId, payrollPeriodStatus.payPeriodId],
+      set: { status: "NOT_STARTED", supervisorNotes: notes },
+    });
 }
 
 export async function submitFacilityForReview(employeeIds: string[], payPeriodId: string) {
