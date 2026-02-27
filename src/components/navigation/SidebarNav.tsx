@@ -16,6 +16,7 @@ import {
   LogOut,
   DollarSign,
   PlusCircle,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -106,6 +107,7 @@ export function SidebarNav({ locations }: SidebarNavProps) {
           href: payrollChildren.length === 0 ? "/payroll" : undefined,
         },
         { label: "Add Bonuses", href: "/payroll/addBonus", icon: PlusCircle },
+        { label: "Submit Hours", href: "/payroll/submit", icon: ClipboardList },
       ],
     },
     {
