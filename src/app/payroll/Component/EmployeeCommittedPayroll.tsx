@@ -6,6 +6,7 @@ import {
   Vacations,
 } from "./EmployeeComissionComponent";
 import { CircleMinus } from "lucide-react";
+import EmployeeHoursComponent from "./EmployeeHoursComponent";
 import { Button } from "@/components/ui/button";
 
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -165,6 +166,11 @@ function EmployeeCommittedPayroll({
     <div className="bg-gray-200 rounded-3xl">
       <CardHeader className="p-1">Committed For This Payroll</CardHeader>
       <CardContent className="flex">
+        <EmployeeHoursComponent
+          sitelinkId={sitelinkId}
+          employeeId={employeeId}
+          payPeriodId={payPeriodId}
+        />
         {committedActivities.length > 0 ? (
           <HoverCard>
             <HoverCardTrigger asChild>

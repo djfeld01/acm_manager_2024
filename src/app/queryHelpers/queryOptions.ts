@@ -75,6 +75,22 @@ export function committedHolidayHoursOptions(
   });
 }
 
+export function hoursEntryOptions(
+  sitelinkId: string,
+  employeeId: string,
+  payPeriodId: string
+) {
+  return queryOptions({
+    queryKey: ["hoursEntry", payPeriodId, sitelinkId, employeeId],
+    queryFn: async () => {
+      const { getHoursEntry } = await import(
+        "@/lib/controllers/payrollController/payrollController"
+      );
+      return getHoursEntry(employeeId, payPeriodId, sitelinkId);
+    },
+  });
+}
+
 export function committedBonusOptions(
   sitelinkId: string,
   employeeId: string,
