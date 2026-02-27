@@ -8,6 +8,7 @@ import hoursEntry from "@/db/schema/hoursEntry";
 import vacationRequest from "@/db/schema/vacationRequest";
 import payrollPeriodStatus from "@/db/schema/payrollPeriodStatus";
 import { auth } from "@/auth";
+import { and, eq } from "drizzle-orm";
 
 export async function addVacation(vacationValues: AddVacationHours) {
   try {
@@ -75,6 +76,48 @@ export async function submitVacationRequest(values: {
   hoursRequested: string;
 }) {
   return db.insert(vacationRequest).values({ ...values, status: "PENDING" }).returning();
+}
+
+export async function getHoursEntry(employeeId: string, payPeriodId: string, facilityId: string) {
+  const result = await db
+    .select()
+    .from(hoursEntry)
+    .where(
+      and(
+        eq(hoursEntry.employeeId, employeeId),
+        eq(hoursEntry.payPeriodId, payPeriodId),
+        eq(hoursEntry.facilityId, facilityId)
+      )
+    )
+    .limit(1);
+  return result[0] ?? null;
+}
+
+export async function getVacationRequestsForPeriod(employeeId: string, payPeriodId: string) {
+  return db
+    .select()
+    .from(vacationRequest)
+    .where(
+      and(
+        eq(vacationRequest.employeeId, employeeId),
+        eq(vacationRequest.payPeriodId, payPeriodId)
+      )
+    )
+    .orderBy(vacationRequest.requestedAt);
+}
+
+export async function getMileageForPeriod(employeeId: string, payPeriodId: string, facilityId: string) {
+  return db
+    .select()
+    .from(mileage)
+    .where(
+      and(
+        eq(mileage.employeeId, employeeId),
+        eq(mileage.payPeriodId, payPeriodId),
+        eq(mileage.facilityId, facilityId)
+      )
+    )
+    .orderBy(mileage.date);
 }
 
 export async function submitFacilityForReview(employeeIds: string[], payPeriodId: string) {

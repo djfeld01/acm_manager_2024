@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,9 +13,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { saveHoursEntry } from "@/lib/controllers/payrollController/payrollController";
+import { getHoursEntry, saveHoursEntry } from "@/lib/controllers/payrollController/payrollController";
 import { getQueryClient } from "@/app/queryHelpers/getQueryClient";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 const hoursSchema = z.object({
   regularHours: z.string().min(1, "Required"),
@@ -40,6 +41,21 @@ function EmployeeHoursForm({
     resolver: zodResolver(hoursSchema),
     defaultValues: { regularHours: "", overtimeHours: "0", notes: "" },
   });
+
+  const { data: existing } = useQuery({
+    queryKey: ["hoursEntry", payPeriodId, sitelinkId, employeeId],
+    queryFn: () => getHoursEntry(employeeId, payPeriodId, sitelinkId),
+  });
+
+  useEffect(() => {
+    if (existing) {
+      form.reset({
+        regularHours: existing.regularHours ?? "",
+        overtimeHours: existing.overtimeHours ?? "0",
+        notes: existing.notes ?? "",
+      });
+    }
+  }, [existing, form]);
 
   const queryClient = getQueryClient();
 
