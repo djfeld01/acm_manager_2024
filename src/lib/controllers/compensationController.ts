@@ -106,7 +106,6 @@ export async function getEmployeeCompensationHistory(
 export async function addCompensationEntry(data: AddCompensationEntry) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
-  const createdBy = session.user.userDetailId;
 
   const [inserted] = await db
     .insert(employeeCompensation)
@@ -118,7 +117,6 @@ export async function addCompensationEntry(data: AddCompensationEntry) {
       title: data.title ?? null,
       changeReason: data.changeReason,
       notes: data.notes ?? null,
-      createdBy: createdBy ?? null,
     })
     .returning();
 
