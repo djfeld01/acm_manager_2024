@@ -24,6 +24,7 @@
     "postbuild": "echo 'Build completed successfully'"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@auth/core": "^0.37.3",
     "@auth/drizzle-adapter": "^1.4.2",
     "@dnd-kit/core": "^6.3.1",
