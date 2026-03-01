@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAllUserFacilityConnections } from "@/lib/controllers/userController/getUserFacilities";
 import {
   EmployeeDataTable,
@@ -9,6 +10,7 @@ import {
 import { PageAuthWrapper } from "@/lib/auth/PageAuthWrapper";
 import { Role } from "@/db/schema/user";
 import { Users, Building2, MapPin, UserCheck } from "lucide-react";
+import { CompensationTab } from "./_components/CompensationTab";
 
 // Type for the user facility connection data (matching database schema)
 type RawUserFacilityConnection = {
@@ -115,92 +117,105 @@ async function EmployeesPageContent() {
         </p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Users className="h-8 w-8 mx-auto mb-2 text-blue-500" />
-            <div className="text-2xl font-bold">{totalUsers}</div>
-            <div className="text-sm text-muted-foreground">Total Employees</div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="compensation">Compensation</TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Building2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
-            <div className="text-2xl font-bold">{totalFacilities}</div>
-            <div className="text-sm text-muted-foreground">
-              Total Facilities
-            </div>
-          </CardContent>
-        </Card>
+        <TabsContent value="overview" className="space-y-6 mt-6">
+          {/* Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <Users className="h-8 w-8 mx-auto mb-2 text-blue-500" />
+                <div className="text-2xl font-bold">{totalUsers}</div>
+                <div className="text-sm text-muted-foreground">Total Employees</div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="p-4 text-center">
-            <UserCheck className="h-8 w-8 mx-auto mb-2 text-purple-500" />
-            <div className="text-2xl font-bold">{connections.length}</div>
-            <div className="text-sm text-muted-foreground">
-              Total Assignments
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <Building2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                <div className="text-2xl font-bold">{totalFacilities}</div>
+                <div className="text-sm text-muted-foreground">
+                  Total Facilities
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="p-4 text-center">
-            <MapPin className="h-8 w-8 mx-auto mb-2 text-orange-500" />
-            <div className="text-2xl font-bold">
-              {totalUsers > 0
-                ? Math.round((connections.length / totalUsers) * 10) / 10
-                : 0}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Avg Facilities/Employee
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <UserCheck className="h-8 w-8 mx-auto mb-2 text-purple-500" />
+                <div className="text-2xl font-bold">{connections.length}</div>
+                <div className="text-sm text-muted-foreground">
+                  Total Assignments
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Position Distribution */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Position Distribution</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(positionCounts).map(([position, count]) => (
-              <Badge key={position} variant="outline" className="px-3 py-1">
-                {position}: {count}
-              </Badge>
-            ))}
+            <Card>
+              <CardContent className="p-4 text-center">
+                <MapPin className="h-8 w-8 mx-auto mb-2 text-orange-500" />
+                <div className="text-2xl font-bold">
+                  {totalUsers > 0
+                    ? Math.round((connections.length / totalUsers) * 10) / 10
+                    : 0}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Avg Facilities/Employee
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Employee Data Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Employee Details</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Complete list of employees with their facility access and positions
-          </p>
-        </CardHeader>
-        <CardContent>
-          <EmployeeDataTable groupedUsers={groupedUsers} />
-        </CardContent>
-      </Card>
+          {/* Position Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Position Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(positionCounts).map(([position, count]) => (
+                  <Badge key={position} variant="outline" className="px-3 py-1">
+                    {position}: {count}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Raw Connections Table (for detailed view) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All User-Facility Connections</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Detailed view of every user-facility relationship
-          </p>
-        </CardHeader>
-        <CardContent>
-          <ConnectionsDataTable connections={connections} />
-        </CardContent>
-      </Card>
+          {/* Employee Data Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Employee Details</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Complete list of employees with their facility access and positions
+              </p>
+            </CardHeader>
+            <CardContent>
+              <EmployeeDataTable groupedUsers={groupedUsers} />
+            </CardContent>
+          </Card>
+
+          {/* Raw Connections Table (for detailed view) */}
+          <Card>
+            <CardHeader>
+              <CardTitle>All User-Facility Connections</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Detailed view of every user-facility relationship
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ConnectionsDataTable connections={connections} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="compensation" className="mt-6">
+          <CompensationTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
