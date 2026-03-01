@@ -18,6 +18,7 @@ import {
   PlusCircle,
   ClipboardList,
   ClipboardCheck,
+  FileSpreadsheet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -118,6 +119,11 @@ export function SidebarNav({ locations }: SidebarNavProps) {
         { label: "Employees", href: "/employees", icon: Users },
         { label: "Goals", href: "/goals", icon: Target },
         { label: "Facilities", href: "/locationConnections", icon: Building2 },
+        {
+          label: "Management Fees",
+          href: "/reports/management-fees",
+          icon: FileSpreadsheet,
+        },
       ],
     },
   ];
