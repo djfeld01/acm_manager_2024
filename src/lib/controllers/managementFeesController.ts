@@ -2,7 +2,6 @@
 import { db } from "@/db";
 import { storageFacilities, dailyManagementPaymentReceipt } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
 
 export type AvailableMonth = {
   lastDay: string;
@@ -12,8 +11,8 @@ export type FacilityFeeRow = {
   sitelinkId: string;
   facilityName: string;
   facilityAbbreviation: string;
-  total: number | null;
-  salesTax: number | null;
+  total: number;
+  salesTax: number;
 };
 
 export async function getAvailableMonths(): Promise<AvailableMonth[]> {
@@ -33,32 +32,20 @@ export async function getAvailableMonths(): Promise<AvailableMonth[]> {
 export async function getManagementFeesData(
   lastDayOfMonth: string
 ): Promise<FacilityFeeRow[]> {
-  const totalReceipt = alias(dailyManagementPaymentReceipt, "total_receipt");
-  const taxReceipt = alias(dailyManagementPaymentReceipt, "tax_receipt");
-
   const rows = await db
     .select({
       sitelinkId: storageFacilities.sitelinkId,
       facilityName: storageFacilities.facilityName,
       facilityAbbreviation: storageFacilities.facilityAbbreviation,
-      total: totalReceipt.monthlyAmount,
-      salesTax: taxReceipt.monthlyAmount,
+      total: sql<number>`COALESCE(SUM(${dailyManagementPaymentReceipt.monthlyAmount}), 0)`,
+      salesTax: sql<number>`COALESCE(SUM(CASE WHEN ${dailyManagementPaymentReceipt.description} IN ('Tax 1', 'Tax 2') THEN ${dailyManagementPaymentReceipt.monthlyAmount} ELSE 0 END), 0)`,
     })
     .from(storageFacilities)
     .leftJoin(
-      totalReceipt,
+      dailyManagementPaymentReceipt,
       and(
-        eq(totalReceipt.facilityId, storageFacilities.sitelinkId),
-        eq(totalReceipt.date, lastDayOfMonth),
-        eq(totalReceipt.description, "Total")
-      )
-    )
-    .leftJoin(
-      taxReceipt,
-      and(
-        eq(taxReceipt.facilityId, storageFacilities.sitelinkId),
-        eq(taxReceipt.date, lastDayOfMonth),
-        eq(taxReceipt.description, "Sales Tax")
+        eq(dailyManagementPaymentReceipt.facilityId, storageFacilities.sitelinkId),
+        eq(dailyManagementPaymentReceipt.date, lastDayOfMonth)
       )
     )
     .where(
@@ -66,6 +53,11 @@ export async function getManagementFeesData(
         eq(storageFacilities.currentClient, true),
         eq(storageFacilities.isCorporate, false)
       )
+    )
+    .groupBy(
+      storageFacilities.sitelinkId,
+      storageFacilities.facilityName,
+      storageFacilities.facilityAbbreviation
     )
     .orderBy(storageFacilities.facilityName);
 

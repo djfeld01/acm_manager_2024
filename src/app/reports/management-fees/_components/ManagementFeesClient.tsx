@@ -54,7 +54,7 @@ function buildCsv(rows: FacilityFeeRow[], month: string): string {
     r.facilityName,
     r.total?.toFixed(2) ?? "",
     r.salesTax?.toFixed(2) ?? "",
-    (net(r) ?? "").toString(),
+    (net(r) ?? 0).toFixed(2),
   ]);
 
   const totals = rows.reduce(
