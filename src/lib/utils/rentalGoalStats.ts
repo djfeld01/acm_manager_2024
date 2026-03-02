@@ -1,7 +1,10 @@
 export interface PredictionInput {
   wma: number;
   seasonalIdx: number;
+  /** Pass Infinity if unknown */
   vacantUnits: number;
+  /** WMA of historical move-outs — frees up units during the month */
+  predictedMoveOuts: number;
 }
 
 /**
@@ -50,11 +53,22 @@ export function seasonalIndex(historicalByMonth: number[][]): number[] {
 }
 
 /**
- * Predict rentals using WMA × seasonal index, clamped to vacantUnits.
+ * Predict rentals using WMA × seasonal index.
+ * Cap at vacantUnits + predictedMoveOuts: move-outs free up units during
+ * the month, so current vacancy understates available capacity.
+ * If vacantUnits is Infinity (unknown), returns raw prediction unclamped.
  */
-export function predictRentals({ wma, seasonalIdx, vacantUnits }: PredictionInput): number {
+export function predictRentals({
+  wma,
+  seasonalIdx,
+  vacantUnits,
+  predictedMoveOuts,
+}: PredictionInput): number {
   const raw = Math.round(wma * seasonalIdx);
-  return Math.min(raw, vacantUnits);
+  if (isFinite(vacantUnits)) {
+    return Math.min(raw, vacantUnits + predictedMoveOuts);
+  }
+  return raw;
 }
 
 /**

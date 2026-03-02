@@ -16,10 +16,9 @@ import {
   type LineChartData,
 } from "@/components/charts/LineChart";
 
-function getNextMonth(): string {
+function getCurrentMonth(): string {
   const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
 interface Props {
@@ -28,7 +27,7 @@ interface Props {
 
 export function FacilityRentalDetailClient({ sitelinkId }: Props) {
   const searchParams = useSearchParams();
-  const month = searchParams.get("month") ?? getNextMonth();
+  const month = searchParams.get("month") ?? getCurrentMonth();
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -81,7 +80,7 @@ export function FacilityRentalDetailClient({ sitelinkId }: Props) {
   // Build chart data: add prediction point for target month
   const chartData: LineChartData[] = [
     ...(data?.rentalsHistory ?? []).map((r) => {
-      const row: LineChartData = { month: r.month, rentals: r.rentals };
+      const row: LineChartData = { month: r.month, rentals: r.rentals, moveOuts: r.moveOuts };
       if (r.goal != null) row.goal = r.goal;
       return row;
     }),
@@ -177,10 +176,12 @@ export function FacilityRentalDetailClient({ sitelinkId }: Props) {
       <ComparisonLineChart
         data={chartData}
         compareKeys={[
-          { key: "rentals", name: "Rentals" },
+          { key: "rentals", name: "Move-Ins" },
+          { key: "moveOuts", name: "Move-Outs" },
           { key: "goal", name: "Goal" },
           { key: "prediction", name: "Prediction" },
         ]}
+        colors={["#3b82f6", "#f97316", "#22c55e", "#a855f7"]}
         xAxisKey="month"
         title="Rental History & Prediction"
         description="Monthly move-ins vs goal vs statistical prediction"

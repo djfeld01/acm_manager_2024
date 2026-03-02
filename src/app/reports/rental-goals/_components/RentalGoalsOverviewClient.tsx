@@ -22,13 +22,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getRentalOverviewData } from "@/lib/controllers/rentalGoalController";
 
-function getNextMonths(count: number): { value: string; label: string }[] {
+function getSelectableMonths(): { value: string; label: string }[] {
   const now = new Date();
   const months: { value: string; label: string }[] = [];
-  for (let i = 1; i <= count; i++) {
+  // Current month first, then next 3
+  for (let i = 0; i <= 3; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = d.toLocaleString("en-US", { month: "long", year: "numeric" });
+    const label =
+      i === 0
+        ? `${d.toLocaleString("en-US", { month: "long", year: "numeric" })} (current)`
+        : d.toLocaleString("en-US", { month: "long", year: "numeric" });
     months.push({ value, label });
   }
   return months;
@@ -60,7 +64,7 @@ function TrendBadge({ trend }: { trend: "up" | "down" | "stable" }) {
 }
 
 export function RentalGoalsOverviewClient() {
-  const months = getNextMonths(3);
+  const months = getSelectableMonths();
   const [selectedMonth, setSelectedMonth] = useState(months[0].value);
 
   const { data: rows = [], isLoading } = useQuery({

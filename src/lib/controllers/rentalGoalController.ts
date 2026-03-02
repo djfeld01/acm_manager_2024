@@ -6,7 +6,7 @@ import {
   tenantActivities,
   dailyManagementOccupancy,
 } from "@/db/schema";
-import { and, eq, gte, lt, sql, desc } from "drizzle-orm";
+import { and, eq, gte, lt, sql, desc, inArray } from "drizzle-orm";
 import {
   weightedMovingAverage,
   seasonalIndex,
@@ -29,6 +29,7 @@ export interface LocationOverview {
 export interface RentalsHistoryPoint {
   month: string;
   rentals: number;
+  moveOuts: number;
   goal: number | null;
 }
 
@@ -62,14 +63,19 @@ function parseTargetMonth(targetMonth: string): Date {
   return new Date(Date.UTC(year, month - 1, 1));
 }
 
-/** Format a Date as "Mon YYYY" for display */
-function formatMonthLabel(date: Date): string {
-  return date.toLocaleString("en-US", {
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+/** Start of the current month (UTC) — used to exclude in-progress months from history */
+function startOfCurrentMonth(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
+
+/** Upper bound for history queries: earlier of targetDate or current month start,
+ *  so a partially-complete current month never skews the WMA. */
+function historyEnd(targetDate: Date): Date {
+  const current = startOfCurrentMonth();
+  return targetDate < current ? targetDate : current;
+}
+
 
 export async function getRentalOverviewData(
   targetMonth: string
@@ -77,8 +83,11 @@ export async function getRentalOverviewData(
   const targetDate = parseTargetMonth(targetMonth);
   const targetCalendarMonth = targetDate.getUTCMonth(); // 0-based
 
-  // 12 months back from targetMonth
-  const historyStart = new Date(targetDate);
+  // Cap history at start of current month so a partially-complete month isn't included
+  const historyEndDate = historyEnd(targetDate);
+
+  // 12 months back from the history end
+  const historyStart = new Date(historyEndDate);
   historyStart.setUTCFullYear(historyStart.getUTCFullYear() - 1);
 
   // Prior year: same month last year
@@ -101,70 +110,105 @@ export async function getRentalOverviewData(
     )
     .orderBy(storageFacilities.facilityName);
 
-  const results: LocationOverview[] = [];
+  if (facilities.length === 0) return [];
 
-  for (const facility of facilities) {
-    // Get last 12 months of rentals (MoveIn) grouped by month
-    const rentalsRows = await db
-      .select({
-        month: sql<string>`TO_CHAR(DATE_TRUNC('month', ${tenantActivities.date}), 'YYYY-MM')`,
-        rentals: sql<number>`COUNT(*)::int`,
-      })
-      .from(tenantActivities)
-      .where(
-        and(
-          eq(tenantActivities.facilityId, facility.sitelinkId),
-          eq(tenantActivities.activityType, "MoveIn"),
-          gte(tenantActivities.date, historyStart),
-          lt(tenantActivities.date, targetDate)
-        )
+  const facilityIds = facilities.map((f) => f.sitelinkId);
+  const priorYearMonthStr = priorYearDate.toISOString().split("T")[0];
+
+  // --- 3 bulk queries instead of 3N sequential queries ---
+
+  // 1. All move-ins + move-outs for all facilities over the history window
+  const allActivityRows = await db
+    .select({
+      facilityId: tenantActivities.facilityId,
+      month: sql<string>`TO_CHAR(DATE_TRUNC('month', ${tenantActivities.date}), 'YYYY-MM')`,
+      rentals: sql<number>`COUNT(*) FILTER (WHERE ${tenantActivities.activityType} = 'MoveIn')::int`,
+      moveOuts: sql<number>`COUNT(*) FILTER (WHERE ${tenantActivities.activityType} = 'MoveOut')::int`,
+    })
+    .from(tenantActivities)
+    .where(
+      and(
+        inArray(tenantActivities.facilityId, facilityIds),
+        sql`${tenantActivities.activityType} IN ('MoveIn', 'MoveOut')`,
+        gte(tenantActivities.date, historyStart),
+        lt(tenantActivities.date, historyEndDate)
       )
-      .groupBy(sql`DATE_TRUNC('month', ${tenantActivities.date})`)
-      .orderBy(sql`DATE_TRUNC('month', ${tenantActivities.date}) DESC`);
+    )
+    .groupBy(tenantActivities.facilityId, sql`DATE_TRUNC('month', ${tenantActivities.date})`)
+    .orderBy(tenantActivities.facilityId, sql`DATE_TRUNC('month', ${tenantActivities.date}) DESC`);
 
-    // Build sorted list most-recent first
-    const rentalsByMonth = rentalsRows.map((r) => r.rentals);
+  // 2. Latest occupancy per facility via subquery join (DISTINCT ON equivalent)
+  const latestDateSubq = db
+    .select({
+      facilityId: dailyManagementOccupancy.facilityId,
+      maxDate: sql<string>`MAX(${dailyManagementOccupancy.date})`.as("max_date"),
+    })
+    .from(dailyManagementOccupancy)
+    .groupBy(dailyManagementOccupancy.facilityId)
+    .as("latest_occ");
 
-    // Latest occupancy record
-    const [latestOcc] = await db
-      .select({
-        unitOccupancy: dailyManagementOccupancy.unitOccupancy,
-        vacantUnits: dailyManagementOccupancy.vacantUnits,
-      })
-      .from(dailyManagementOccupancy)
-      .where(eq(dailyManagementOccupancy.facilityId, facility.sitelinkId))
-      .orderBy(desc(dailyManagementOccupancy.date))
-      .limit(1);
-
-    // Prior year goal for the target month
-    const priorYearMonthStr = priorYearDate.toISOString().split("T")[0];
-    const [priorGoalRow] = await db
-      .select({ rentalGoal: monthlyGoals.rentalGoal })
-      .from(monthlyGoals)
-      .where(
-        and(
-          eq(monthlyGoals.sitelinkId, facility.sitelinkId),
-          sql`DATE_TRUNC('month', ${monthlyGoals.month}::date) = DATE_TRUNC('month', ${priorYearMonthStr}::date)`
-        )
+  const allOccRows = await db
+    .select({
+      facilityId: dailyManagementOccupancy.facilityId,
+      unitOccupancy: dailyManagementOccupancy.unitOccupancy,
+      vacantUnits: dailyManagementOccupancy.vacantUnits,
+    })
+    .from(dailyManagementOccupancy)
+    .innerJoin(
+      latestDateSubq,
+      and(
+        eq(dailyManagementOccupancy.facilityId, latestDateSubq.facilityId),
+        eq(dailyManagementOccupancy.date, latestDateSubq.maxDate)
       )
-      .limit(1);
+    );
+
+  // 3. Prior-year rental goals for all facilities
+  const allPriorGoals = await db
+    .select({
+      sitelinkId: monthlyGoals.sitelinkId,
+      rentalGoal: monthlyGoals.rentalGoal,
+    })
+    .from(monthlyGoals)
+    .where(
+      and(
+        inArray(monthlyGoals.sitelinkId, facilityIds),
+        sql`DATE_TRUNC('month', ${monthlyGoals.month}::date) = DATE_TRUNC('month', ${priorYearMonthStr}::date)`
+      )
+    );
+
+  // Build lookup maps for O(1) access
+  const activityByFacility = new Map<
+    string,
+    { month: string; rentals: number; moveOuts: number }[]
+  >();
+  for (const row of allActivityRows) {
+    if (!activityByFacility.has(row.facilityId)) {
+      activityByFacility.set(row.facilityId, []);
+    }
+    activityByFacility.get(row.facilityId)!.push(row);
+  }
+
+  const occByFacility = new Map(
+    allOccRows.map((r) => [r.facilityId, r])
+  );
+
+  const priorGoalByFacility = new Map(
+    allPriorGoals.map((r) => [r.sitelinkId, r.rentalGoal])
+  );
+
+  // Compute per-facility predictions in JS (no more DB calls)
+  return facilities.map((facility) => {
+    const rows = activityByFacility.get(facility.sitelinkId) ?? [];
+    // rows are DESC (most-recent first) from the ORDER BY above
+    const rentalsByMonth = rows.map((r) => r.rentals);
+    const moveOutsByMonth = rows.map((r) => r.moveOuts);
 
     const wma = weightedMovingAverage(rentalsByMonth);
-    // Build historicalByMonth for seasonal index from available data
-    // Group the 12 months into their calendar months
-    const byCalendarMonth: number[][] = Array.from({ length: 12 }, () => []);
-    for (const row of rentalsRows) {
-      const m = parseInt(row.month.split("-")[1], 10) - 1;
-      byCalendarMonth[m].push(row.rentals);
-    }
-    const historicalByMonthTransposed: number[][] = byCalendarMonth.map(
-      (vals) => vals
-    );
-    // seasonalIndex expects array of "years x 12" — adapt to flat approach
-    // We pass a single "year" with per-month sums/avgs
+    const moveOutWma = weightedMovingAverage(moveOutsByMonth);
+
     const perCalMonth = Array(12).fill(0);
     const perCalCount = Array(12).fill(0);
-    for (const row of rentalsRows) {
+    for (const row of rows) {
       const m = parseInt(row.month.split("-")[1], 10) - 1;
       perCalMonth[m] += row.rentals;
       perCalCount[m] += 1;
@@ -175,11 +219,14 @@ export async function getRentalOverviewData(
     const idxArr = seasonalIndex([singleYearAvg]);
     const sIdx = idxArr[targetCalendarMonth] ?? 1;
 
-    const vacantUnits = latestOcc?.vacantUnits ?? null;
+    const occ = occByFacility.get(facility.sitelinkId);
+    const vacantUnits = occ?.vacantUnits ?? null;
+
     const statPrediction = predictRentals({
       wma,
       seasonalIdx: sIdx,
       vacantUnits: vacantUnits ?? Infinity,
+      predictedMoveOuts: moveOutWma,
     });
 
     const last3MonthAvg =
@@ -190,20 +237,18 @@ export async function getRentalOverviewData(
           )
         : 0;
 
-    results.push({
+    return {
       sitelinkId: facility.sitelinkId,
       facilityName: facility.facilityName,
       facilityAbbreviation: facility.facilityAbbreviation,
-      occupancyPct: latestOcc?.unitOccupancy ?? null,
-      vacantUnits: vacantUnits,
+      occupancyPct: occ?.unitOccupancy ?? null,
+      vacantUnits,
       last3MonthAvg,
       statPrediction,
-      priorYearGoal: priorGoalRow?.rentalGoal ?? null,
+      priorYearGoal: priorGoalByFacility.get(facility.sitelinkId) ?? null,
       trend: classifyTrend(rentalsByMonth),
-    });
-  }
-
-  return results;
+    };
+  });
 }
 
 export async function getFacilityRentalDetail(
@@ -213,7 +258,10 @@ export async function getFacilityRentalDetail(
   const targetDate = parseTargetMonth(targetMonth);
   const targetCalendarMonth = targetDate.getUTCMonth();
 
-  const historyStart = new Date(targetDate);
+  // Cap history at start of current month so a partially-complete month isn't included
+  const historyEndDate = historyEnd(targetDate);
+
+  const historyStart = new Date(historyEndDate);
   historyStart.setUTCFullYear(historyStart.getUTCFullYear() - 1);
 
   const [facility] = await db
@@ -224,19 +272,20 @@ export async function getFacilityRentalDetail(
     .where(eq(storageFacilities.sitelinkId, sitelinkId))
     .limit(1);
 
-  // 12 months of rentals
-  const rentalsRows = await db
+  // 12 months of move-ins and move-outs
+  const activityRows = await db
     .select({
       month: sql<string>`TO_CHAR(DATE_TRUNC('month', ${tenantActivities.date}), 'YYYY-MM')`,
-      rentals: sql<number>`COUNT(*)::int`,
+      rentals: sql<number>`COUNT(*) FILTER (WHERE ${tenantActivities.activityType} = 'MoveIn')::int`,
+      moveOuts: sql<number>`COUNT(*) FILTER (WHERE ${tenantActivities.activityType} = 'MoveOut')::int`,
     })
     .from(tenantActivities)
     .where(
       and(
         eq(tenantActivities.facilityId, sitelinkId),
-        eq(tenantActivities.activityType, "MoveIn"),
+        sql`${tenantActivities.activityType} IN ('MoveIn', 'MoveOut')`,
         gte(tenantActivities.date, historyStart),
-        lt(tenantActivities.date, targetDate)
+        lt(tenantActivities.date, historyEndDate)
       )
     )
     .groupBy(sql`DATE_TRUNC('month', ${tenantActivities.date})`)
@@ -253,7 +302,7 @@ export async function getFacilityRentalDetail(
       and(
         eq(monthlyGoals.sitelinkId, sitelinkId),
         sql`${monthlyGoals.month}::date >= ${historyStart.toISOString().split("T")[0]}`,
-        sql`${monthlyGoals.month}::date < ${targetDate.toISOString().split("T")[0]}`
+        sql`${monthlyGoals.month}::date < ${historyEndDate.toISOString().split("T")[0]}`
       )
     );
 
@@ -262,9 +311,10 @@ export async function getFacilityRentalDetail(
     goalsByMonth[g.month] = g.rentalGoal;
   }
 
-  const rentalsHistory: RentalsHistoryPoint[] = rentalsRows.map((r) => ({
+  const rentalsHistory: RentalsHistoryPoint[] = activityRows.map((r) => ({
     month: r.month,
     rentals: r.rentals,
+    moveOuts: r.moveOuts,
     goal: goalsByMonth[r.month] ?? null,
   }));
 
@@ -279,7 +329,7 @@ export async function getFacilityRentalDetail(
       and(
         eq(dailyManagementOccupancy.facilityId, sitelinkId),
         sql`${dailyManagementOccupancy.date}::date >= ${historyStart.toISOString().split("T")[0]}`,
-        sql`${dailyManagementOccupancy.date}::date < ${targetDate.toISOString().split("T")[0]}`
+        sql`${dailyManagementOccupancy.date}::date < ${historyEndDate.toISOString().split("T")[0]}`
       )
     )
     .groupBy(sql`DATE_TRUNC('month', ${dailyManagementOccupancy.date}::date)`)
@@ -301,16 +351,16 @@ export async function getFacilityRentalDetail(
     .orderBy(desc(dailyManagementOccupancy.date))
     .limit(1);
 
-  // Stats
-  const rentalsByMonthDesc = [...rentalsRows]
-    .reverse()
-    .map((r) => r.rentals);
+  // Stats (activityRows is ASC; reverse for WMA which expects most-recent first)
+  const rentalsByMonthDesc = [...activityRows].reverse().map((r) => r.rentals);
+  const moveOutsByMonthDesc = [...activityRows].reverse().map((r) => r.moveOuts);
 
   const wma = weightedMovingAverage(rentalsByMonthDesc);
+  const moveOutWma = weightedMovingAverage(moveOutsByMonthDesc);
 
   const perCalMonth = Array(12).fill(0);
   const perCalCount = Array(12).fill(0);
-  for (const row of rentalsRows) {
+  for (const row of activityRows) {
     const m = parseInt(row.month.split("-")[1], 10) - 1;
     perCalMonth[m] += row.rentals;
     perCalCount[m] += 1;
@@ -326,6 +376,7 @@ export async function getFacilityRentalDetail(
     wma,
     seasonalIdx: sIdx,
     vacantUnits: vacantUnits ?? Infinity,
+    predictedMoveOuts: moveOutWma,
   });
 
   return {
@@ -346,7 +397,10 @@ export async function generateAIAnalysis(
 
   const recentHistory = input.rentalsHistory.slice(-6);
   const historyText = recentHistory
-    .map((r) => `${r.month}: ${r.rentals} rentals${r.goal != null ? ` (goal: ${r.goal})` : ""}`)
+    .map(
+      (r) =>
+        `${r.month}: ${r.rentals} move-ins, ${r.moveOuts} move-outs${r.goal != null ? ` (goal: ${r.goal})` : ""}`
+    )
     .join("\n");
 
   const prompt = `You are a storage facility analyst. Analyze the rental performance for ${input.facilityName} and provide a brief, practical recommendation.
