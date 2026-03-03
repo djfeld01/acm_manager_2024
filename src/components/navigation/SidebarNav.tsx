@@ -18,6 +18,7 @@ import {
   PlusCircle,
   FileSpreadsheet,
   TrendingUp,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -125,6 +126,11 @@ export function SidebarNav({ locations }: SidebarNavProps) {
           label: "Rental Goals",
           href: "/reports/rental-goals",
           icon: TrendingUp,
+        },
+        {
+          label: "Competitor Pricing",
+          href: "/competitors",
+          icon: BarChart3,
         },
       ],
     },
