@@ -1,3 +1,4 @@
+import { fetchHtml } from "./fetchHtml";
 import type { ParsedUnit } from "./types";
 
 // Maps Extra Space feature name strings to human-readable unit type labels
@@ -22,19 +23,7 @@ function findKey(obj: unknown, key: string): unknown {
 }
 
 export async function scrapeExtraSpace(url: string): Promise<ParsedUnit[]> {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Accept: "text/html,application/xhtml+xml",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} fetching ${url}`);
-  }
-
-  const html = await response.text();
+  const html = await fetchHtml(url);
 
   // Extract the __NEXT_DATA__ JSON blob
   const match = html.match(
@@ -44,10 +33,10 @@ export async function scrapeExtraSpace(url: string): Promise<ParsedUnit[]> {
 
   const nextData = JSON.parse(match[1]);
 
-  // Primary path: props.pageProps.unitClasses.data.unitClasses
+  // Correct path: props.pageProps.pageData.data.unitClasses.data.unitClasses
   const pageProps = nextData?.props?.pageProps;
   const unitClasses: unknown[] =
-    pageProps?.unitClasses?.data?.unitClasses ??
+    pageProps?.pageData?.data?.unitClasses?.data?.unitClasses ??
     // Fallback: search the whole tree for a "unitClasses" array
     (findKey(nextData, "unitClasses") as unknown[]) ??
     [];

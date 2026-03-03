@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { fetchHtml } from "./fetchHtml";
 import type { ParsedUnit } from "./types";
 
 // data-gtmdata JSON blob shape from Public Storage's HTML
@@ -13,20 +14,21 @@ interface GtmData {
 // Regex to extract width x depth from dimension strings like "10'x10'" or "10'x10'x8'"
 const DIM_RE = /(\d+(?:\.\d+)?)['"]?\s*x\s*(\d+(?:\.\d+)?)/i;
 
+// Public Storage uses Salesforce Commerce Cloud (Demandware). The facility page
+// itself returns a <wainclude> stub; the unit data lives in a separate
+// Stores-Details endpoint. We extract the facility ID (pid) from the URL,
+// then fetch the Stores-Details page which contains the rendered unit HTML.
+function buildStoresDetailsUrl(facilityUrl: string): string {
+  // URL pattern: /self-storage-{state}-{city}/{id}.html
+  const pidMatch = facilityUrl.match(/\/(\d+)\.html/);
+  if (!pidMatch) return facilityUrl; // fall back to original URL
+  const pid = encodeURIComponent(`${pidMatch[1]}.html`);
+  return `https://www.publicstorage.com/on/demandware.store/Sites-publicstorage-Site/default/Stores-Details?pid=${pid}&showUnits=&isMobile=false&isAuthenticated=false&ABPageEnabled=false`;
+}
+
 export async function scrapePublicStorage(url: string): Promise<ParsedUnit[]> {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Accept: "text/html,application/xhtml+xml",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} fetching ${url}`);
-  }
-
-  const html = await response.text();
+  const targetUrl = buildStoresDetailsUrl(url);
+  const html = await fetchHtml(targetUrl);
   const $ = cheerio.load(html);
 
   const units: ParsedUnit[] = [];
