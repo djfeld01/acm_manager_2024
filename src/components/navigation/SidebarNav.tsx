@@ -17,6 +17,7 @@ import {
   DollarSign,
   PlusCircle,
   FileSpreadsheet,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -119,6 +120,11 @@ export function SidebarNav({ locations }: SidebarNavProps) {
           label: "Management Fees",
           href: "/reports/management-fees",
           icon: FileSpreadsheet,
+        },
+        {
+          label: "Rental Goals",
+          href: "/reports/rental-goals",
+          icon: TrendingUp,
         },
       ],
     },
