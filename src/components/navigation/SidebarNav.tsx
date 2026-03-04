@@ -129,8 +129,11 @@ export function SidebarNav({ locations }: SidebarNavProps) {
         },
         {
           label: "Competitor Pricing",
-          href: "/competitors",
           icon: BarChart3,
+          children: [
+            { label: "Manage", href: "/competitors" },
+            { label: "Price Compare", href: "/competitors/compare" },
+          ],
         },
       ],
     },

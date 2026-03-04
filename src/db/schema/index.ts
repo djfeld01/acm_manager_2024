@@ -165,6 +165,11 @@ export {
 } from "@/db/schema/payrollPeriodStatus";
 
 export {
+  default as facilityUnitRates,
+  facilityUnitRatesRelations,
+} from "@/db/schema/facilityUnitRates";
+
+export {
   default as competitors,
   competitorsRelations,
 } from "@/db/schema/competitors";
