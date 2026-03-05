@@ -44,10 +44,14 @@ export type UploadResult = {
  * (tries exact match, then zero-padded to 4 chars).
  */
 export async function importRateCard(tsvText: string): Promise<UploadResult> {
-  const lines = tsvText.trim().split("\n");
+  // Strip BOM and normalize Windows line endings
+  const normalized = tsvText.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = normalized.trim().split("\n");
   if (lines.length < 2) throw new Error("File appears empty");
 
-  const headers = lines[0].split("\t").map((h) => h.trim());
+  // Auto-detect delimiter: prefer tab, fall back to comma
+  const delimiter = lines[0].includes("\t") ? "\t" : ",";
+  const headers = lines[0].split(delimiter).map((h) => h.trim());
 
   const idx = (name: string) => {
     const i = headers.indexOf(name);
@@ -76,7 +80,7 @@ export async function importRateCard(tsvText: string): Promise<UploadResult> {
 
   // Parse data rows
   const rows: RateCardRow[] = lines.slice(1).map((line) => {
-    const cells = line.split("\t");
+    const cells = line.split(delimiter);
     return {
       siteId: cells[col.siteId]?.trim() ?? "",
       unitType: cells[col.type]?.trim() ?? "",
