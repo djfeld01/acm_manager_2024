@@ -84,6 +84,11 @@ interface ReconciliationRecord {
   notes: string | null;
 }
 
+interface SundryRow {
+  description: string;
+  monthlyAmount: number;
+}
+
 export interface ReconciliationWorkspaceProps {
   facilityId: string;
   facilityName: string;
@@ -94,6 +99,7 @@ export interface ReconciliationWorkspaceProps {
   bankTransactions: BankTransaction[];
   dailyPayments: DailyPayment[];
   matches: Match[];
+  sundries: SundryRow[];
   userId: string;
   userRole: string;
 }
@@ -246,11 +252,12 @@ export function ReconciliationWorkspace({
   bankTransactions,
   dailyPayments,
   matches,
+  sundries,
   userRole,
 }: ReconciliationWorkspaceProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [tab, setTab] = useState<"cash" | "credit">("cash");
+  const [tab, setTab] = useState<"cash" | "credit" | "sundries">("cash");
 
   // Multi-select: sets of selected IDs
   const [selectedSitelinkIds, setSelectedSitelinkIds] = useState<Set<number>>(new Set());
@@ -888,49 +895,61 @@ export function ReconciliationWorkspace({
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="sundries">
+            Sundries
+            {sundries.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                {sundries.length}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
-        <div className="mt-4 border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/60 border-b">
-                <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
-                <th className="text-right p-3 font-medium text-muted-foreground">SiteLink</th>
-                <th className="text-right p-3 font-medium text-muted-foreground">Bank</th>
-                <th className="text-right p-3 font-medium text-muted-foreground hidden sm:table-cell">
-                  Diff
-                </th>
-                <th className="text-center p-3 font-medium text-muted-foreground">Status</th>
-                {isEditable && (
-                  <th className="w-8 p-3" />
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {currentRows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                    No transactions for this period.
-                  </td>
+        {tab === "sundries" ? (
+          <SundriesTable sundries={sundries} />
+        ) : (
+          <div className="mt-4 border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/60 border-b">
+                  <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
+                  <th className="text-right p-3 font-medium text-muted-foreground">SiteLink</th>
+                  <th className="text-right p-3 font-medium text-muted-foreground">Bank</th>
+                  <th className="text-right p-3 font-medium text-muted-foreground hidden sm:table-cell">
+                    Diff
+                  </th>
+                  <th className="text-center p-3 font-medium text-muted-foreground">Status</th>
+                  {isEditable && (
+                    <th className="w-8 p-3" />
+                  )}
                 </tr>
-              ) : (
-                currentRows.map((row, i) => (
-                  <MatchRow
-                    key={i}
-                    row={row}
-                    isEditable={isEditable}
-                    selectedSitelinkIds={selectedSitelinkIds}
-                    selectedBankIds={selectedBankIds}
-                    onToggleSitelink={toggleSitelink}
-                    onToggleBank={toggleBank}
-                    onUnmatch={handleUnmatch}
-                    isPending={isPending}
-                  />
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y">
+                {currentRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                      No transactions for this period.
+                    </td>
+                  </tr>
+                ) : (
+                  currentRows.map((row, i) => (
+                    <MatchRow
+                      key={i}
+                      row={row}
+                      isEditable={isEditable}
+                      selectedSitelinkIds={selectedSitelinkIds}
+                      selectedBankIds={selectedBankIds}
+                      onToggleSitelink={toggleSitelink}
+                      onToggleBank={toggleBank}
+                      onUnmatch={handleUnmatch}
+                      isPending={isPending}
+                    />
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Tabs>
 
       {/* Helper text */}
@@ -977,6 +996,49 @@ function SummaryCard({
           {fmt$(diff)} vs SiteLink
         </div>
       )}
+    </div>
+  );
+}
+
+function SundriesTable({ sundries }: { sundries: { description: string; monthlyAmount: number }[] }) {
+  const fmt$ = (n: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+  const total = sundries.reduce((s, r) => s + r.monthlyAmount, 0);
+
+  return (
+    <div className="mt-4 border rounded-lg overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-muted/60 border-b">
+            <th className="text-left p-3 font-medium text-muted-foreground">Description</th>
+            <th className="text-right p-3 font-medium text-muted-foreground">Monthly Amount</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {sundries.length === 0 ? (
+            <tr>
+              <td colSpan={2} className="py-10 text-center text-sm text-muted-foreground">
+                No sundry income found for the last day of this month.
+              </td>
+            </tr>
+          ) : (
+            sundries.map((row, i) => (
+              <tr key={i} className="hover:bg-muted/20">
+                <td className="p-3">{row.description}</td>
+                <td className="p-3 text-right">{fmt$(row.monthlyAmount)}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+        {sundries.length > 0 && (
+          <tfoot>
+            <tr className="bg-muted/40 border-t font-semibold">
+              <td className="p-3">Total</td>
+              <td className="p-3 text-right">{fmt$(total)}</td>
+            </tr>
+          </tfoot>
+        )}
+      </table>
     </div>
   );
 }
