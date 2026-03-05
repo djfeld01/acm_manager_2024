@@ -9,7 +9,7 @@ import {
   dailyPayments,
   transactionsToDailyPayments,
 } from "@/db/schema";
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { eq, and, sql, inArray, ne } from "drizzle-orm";
 import { ReconciliationWorkspace } from "@/components/reconciliation/ReconciliationWorkspace";
 import { MonthNav } from "@/components/reconciliation/MonthNav";
 
@@ -18,17 +18,24 @@ interface PageProps {
   searchParams: Promise<{ month?: string; year?: string }>;
 }
 
-export default async function FacilityReconciliationPage({ params, searchParams }: PageProps) {
+export default async function FacilityReconciliationPage({
+  params,
+  searchParams,
+}: PageProps) {
   const session = await auth();
   if (!session?.user) redirect("/api/auth/signin");
 
   const userRole = session.user.role || "";
-  if (!["ADMIN", "OWNER", "SUPERVISOR", "MANAGER"].includes(userRole)) redirect("/unauthorized");
+  if (!["ADMIN", "OWNER", "SUPERVISOR", "MANAGER"].includes(userRole))
+    redirect("/unauthorized");
 
   const { facilityId } = await params;
   const sp = await searchParams;
   const now = new Date();
-  const month = Math.min(12, Math.max(1, parseInt(sp.month || String(now.getMonth() + 1))));
+  const month = Math.min(
+    12,
+    Math.max(1, parseInt(sp.month || String(now.getMonth() + 1))),
+  );
   const year = parseInt(sp.year || String(now.getFullYear()));
 
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -49,8 +56,16 @@ export default async function FacilityReconciliationPage({ params, searchParams 
       depositType: bankAccount.depositType,
     })
     .from(storageFacilities)
-    .innerJoin(bankAccount, eq(storageFacilities.sitelinkId, bankAccount.sitelinkId))
-    .where(eq(storageFacilities.sitelinkId, facilityId));
+    .innerJoin(
+      bankAccount,
+      eq(storageFacilities.sitelinkId, bankAccount.sitelinkId),
+    )
+    .where(
+      and(
+        eq(storageFacilities.sitelinkId, facilityId),
+        eq(storageFacilities.currentClient, true),
+      ),
+    );
 
   if (facilityRows.length === 0) redirect("/reconciliation");
 
@@ -72,7 +87,8 @@ export default async function FacilityReconciliationPage({ params, searchParams 
       totalActualCashCheck: monthlyReconciliation.totalActualCashCheck,
       totalActualCreditCard: monthlyReconciliation.totalActualCreditCard,
       totalTransactionsMatched: monthlyReconciliation.totalTransactionsMatched,
-      totalTransactionsUnmatched: monthlyReconciliation.totalTransactionsUnmatched,
+      totalTransactionsUnmatched:
+        monthlyReconciliation.totalTransactionsUnmatched,
       totalDiscrepancies: monthlyReconciliation.totalDiscrepancies,
       notes: monthlyReconciliation.notes,
     })
@@ -148,7 +164,9 @@ export default async function FacilityReconciliationPage({ params, searchParams 
             matchType: transactionsToDailyPayments.matchType,
           })
           .from(transactionsToDailyPayments)
-          .where(inArray(transactionsToDailyPayments.bankTransactionId, bankTxnIds))
+          .where(
+            inArray(transactionsToDailyPayments.bankTransactionId, bankTxnIds),
+          )
       : [];
 
   const monthLabel = new Date(year, month - 1).toLocaleDateString("en-US", {
@@ -188,10 +206,18 @@ export default async function FacilityReconciliationPage({ params, searchParams 
     ? {
         reconciliationId: recRow.reconciliationId,
         status: recRow.status,
-        totalExpectedCashCheck: parseFloat(recRow.totalExpectedCashCheck?.toString() ?? "0"),
-        totalExpectedCreditCard: parseFloat(recRow.totalExpectedCreditCard?.toString() ?? "0"),
-        totalActualCashCheck: parseFloat(recRow.totalActualCashCheck?.toString() ?? "0"),
-        totalActualCreditCard: parseFloat(recRow.totalActualCreditCard?.toString() ?? "0"),
+        totalExpectedCashCheck: parseFloat(
+          recRow.totalExpectedCashCheck?.toString() ?? "0",
+        ),
+        totalExpectedCreditCard: parseFloat(
+          recRow.totalExpectedCreditCard?.toString() ?? "0",
+        ),
+        totalActualCashCheck: parseFloat(
+          recRow.totalActualCashCheck?.toString() ?? "0",
+        ),
+        totalActualCreditCard: parseFloat(
+          recRow.totalActualCreditCard?.toString() ?? "0",
+        ),
         totalTransactionsMatched: recRow.totalTransactionsMatched ?? 0,
         totalTransactionsUnmatched: recRow.totalTransactionsUnmatched ?? 0,
         totalDiscrepancies: recRow.totalDiscrepancies ?? 0,
@@ -208,7 +234,8 @@ export default async function FacilityReconciliationPage({ params, searchParams 
             <h1 className="text-2xl font-bold">{facilityName}</h1>
             <p className="text-primary-foreground/80 mt-0.5">
               Bank Reconciliation · {monthLabel}
-              {bankAccounts.length > 0 && ` · ${bankAccounts.map((a) => a.bankName).join(", ")}`}
+              {bankAccounts.length > 0 &&
+                ` · ${bankAccounts.map((a) => a.bankName).join(", ")}`}
             </p>
           </div>
           <MonthNav month={month} year={year} />

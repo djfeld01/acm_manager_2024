@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import Sidebar from "@/components/navigation/Sidebar";
 import PageHeader from "@/components/navigation/PageHeader";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "sonner";
 import { Analytics } from "@vercel/analytics/react";
 import Providers from "./providers";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -64,6 +65,7 @@ export default async function RootLayout({
             </main>
           )}
           <Toaster />
+          <SonnerToaster richColors position="bottom-right" />
           <Analytics />
           <ReactQueryDevtools initialIsOpen={false} />
         </Providers>

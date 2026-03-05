@@ -163,3 +163,24 @@ export {
   default as payrollPeriodStatus,
   payrollPeriodStatusEnum,
 } from "@/db/schema/payrollPeriodStatus";
+
+export {
+  default as facilityUnitRates,
+  facilityUnitRatesRelations,
+} from "@/db/schema/facilityUnitRates";
+
+export {
+  default as competitors,
+  competitorsRelations,
+} from "@/db/schema/competitors";
+
+export {
+  default as facilityCompetitors,
+  facilityCompetitorsRelations,
+} from "@/db/schema/facilityCompetitors";
+
+export {
+  default as competitorPrices,
+  competitorPricesRelations,
+  unitAvailabilityEnum,
+} from "@/db/schema/competitorPrices";

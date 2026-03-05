@@ -288,6 +288,20 @@
       "when": 1772137350767,
       "tag": "0040_secret_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1772560240597,
+      "tag": "0041_tidy_proemial_gods",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1772582638189,
+      "tag": "0042_pale_warstar",
+      "breakpoints": true
     }
   ]
 }
