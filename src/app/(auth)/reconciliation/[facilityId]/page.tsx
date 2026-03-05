@@ -8,6 +8,7 @@ import {
   bankTransaction,
   dailyPayments,
   transactionsToDailyPayments,
+  dailyManagementPaymentReceipt,
 } from "@/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { ReconciliationWorkspace } from "@/components/reconciliation/ReconciliationWorkspace";
@@ -151,6 +152,27 @@ export default async function FacilityReconciliationPage({ params, searchParams 
           .where(inArray(transactionsToDailyPayments.bankTransactionId, bankTxnIds))
       : [];
 
+  // Sundries: daily_management_payment_receipt rows on the last day of the month
+  const sundriesRows = await db
+    .select({
+      description: dailyManagementPaymentReceipt.description,
+      monthlyAmount: dailyManagementPaymentReceipt.monthlyAmount,
+      sortId: dailyManagementPaymentReceipt.sortId,
+    })
+    .from(dailyManagementPaymentReceipt)
+    .where(
+      and(
+        eq(dailyManagementPaymentReceipt.facilityId, facilityId),
+        eq(dailyManagementPaymentReceipt.date, monthEndDate),
+      ),
+    )
+    .orderBy(dailyManagementPaymentReceipt.sortId);
+
+  const serializedSundries = sundriesRows.map((r) => ({
+    description: r.description,
+    monthlyAmount: parseFloat(r.monthlyAmount?.toString() ?? "0"),
+  }));
+
   const monthLabel = new Date(year, month - 1).toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
@@ -225,6 +247,7 @@ export default async function FacilityReconciliationPage({ params, searchParams 
         bankTransactions={serializedBankTxns}
         dailyPayments={serializedPayments}
         matches={serializedMatches}
+        sundries={serializedSundries}
         userId={session.user.id}
         userRole={userRole}
       />
