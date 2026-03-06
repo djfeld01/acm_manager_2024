@@ -182,6 +182,7 @@ export default async function FacilityReconciliationPage({
       and(
         eq(dailyManagementPaymentReceipt.facilityId, facilityId),
         eq(dailyManagementPaymentReceipt.date, monthEndDate),
+        sql`${dailyManagementPaymentReceipt.monthlyAmount} != 0`,
       ),
     )
     .orderBy(dailyManagementPaymentReceipt.sortId);
