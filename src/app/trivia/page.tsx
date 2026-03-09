@@ -5,6 +5,7 @@ import {
   dailyPayments,
   userDetails,
   bonus,
+  inquiry,
 } from "@/db/schema";
 import { eq, sql, desc, and, ne } from "drizzle-orm";
 import { TriviaClient } from "./_components/TriviaClient";
@@ -15,6 +16,12 @@ export type TriviaQuestion = {
   answer: string; // always a number (count, $amount, years, etc.)
   detail?: string; // host context: who/what/where the answer refers to
 };
+
+function ordinal(n: number) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return s[(v - 20) % 10] ?? s[v] ?? s[0];
+}
 
 const fmt$ = (n: number) =>
   new Intl.NumberFormat("en-US", {
@@ -253,6 +260,30 @@ export default async function TriviaPage() {
     question: "How many active employees does the company currently have?",
     answer: String(activeEmployeeCount[0]?.count ?? 0),
   });
+
+  // Q11: Which day of the month gets the most rentals? (by lease_date)
+  const rentalsByDayOfMonth = await db
+    .select({
+      day: sql<number>`EXTRACT(DAY FROM ${inquiry.leaseDate})`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(inquiry)
+    .where(sql`${inquiry.leaseDate} IS NOT NULL`)
+    .groupBy(sql`EXTRACT(DAY FROM ${inquiry.leaseDate})`)
+    .orderBy(desc(sql`COUNT(*)`))
+    .limit(5);
+
+  if (rentalsByDayOfMonth[0]) {
+    const top5 = rentalsByDayOfMonth
+      .map((r, i) => `#${i + 1}: ${r.day}${ordinal(r.day)} (${r.count})`)
+      .join(" · ");
+    questions.push({
+      id: "rentals-by-day-of-month",
+      question: "What day of the month do we rent the most storage units?",
+      answer: String(rentalsByDayOfMonth[0].day),
+      detail: top5,
+    });
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
