@@ -12,19 +12,29 @@ import { TriviaClient } from "./_components/TriviaClient";
 export type TriviaQuestion = {
   id: string;
   question: string;
-  answer: string;
-  detail?: string;
+  answer: string; // always a number (count, $amount, years, etc.)
+  detail?: string; // host context: who/what/where the answer refers to
 };
+
+const fmt$ = (n: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
+
+const totalPayments = sql<number>`
+  ${dailyPayments.cash} + ${dailyPayments.check} + ${dailyPayments.visa} +
+  ${dailyPayments.mastercard} + ${dailyPayments.americanExpress} +
+  ${dailyPayments.discover} + ${dailyPayments.ach} +
+  ${dailyPayments.dinersClub} + ${dailyPayments.debit}`;
 
 export default async function TriviaPage() {
   const questions: TriviaQuestion[] = [];
 
-  // Q1: Longest-tenured active employee
+  // Q1: How many years has our longest-tenured active employee worked here?
   const longestEmployee = await db
-    .select({
-      fullName: userDetails.fullName,
-      hireDate: userDetails.hireDate,
-    })
+    .select({ fullName: userDetails.fullName, hireDate: userDetails.hireDate })
     .from(userDetails)
     .where(
       and(
@@ -41,45 +51,36 @@ export default async function TriviaPage() {
       (Date.now() - hireDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25),
     );
     questions.push({
-      id: "longest-employee",
-      question: "Which active employee has worked for the company the longest?",
-      answer: longestEmployee[0].fullName ?? "Unknown",
-      detail: `${years} years · hired ${hireDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}${longestEmployee[1] ? ` · Runner-up: ${longestEmployee[1].fullName}` : ""}`,
+      id: "longest-employee-years",
+      question:
+        "How many years has our longest-tenured active employee worked here?",
+      answer: String(years),
+      detail: `${longestEmployee[0].fullName} · hired ${hireDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}${longestEmployee[1] ? ` · Runner-up: ${longestEmployee[1].fullName}` : ""}`,
     });
   }
 
-  // Q2: All-time best collection month
+  // Q2: How much did we collect in our best single month ever?
   const bestMonth = await db
     .select({
       month: sql<string>`DATE_TRUNC('month', ${dailyPayments.date})`,
-      total: sql<number>`SUM(${dailyPayments.cash} + ${dailyPayments.check} + ${dailyPayments.visa} + ${dailyPayments.mastercard} + ${dailyPayments.americanExpress} + ${dailyPayments.discover} + ${dailyPayments.ach} + ${dailyPayments.dinersClub} + ${dailyPayments.debit})`,
+      total: sql<number>`SUM(${totalPayments})`,
     })
     .from(dailyPayments)
     .groupBy(sql`DATE_TRUNC('month', ${dailyPayments.date})`)
-    .orderBy(
-      desc(
-        sql`SUM(${dailyPayments.cash} + ${dailyPayments.check} + ${dailyPayments.visa} + ${dailyPayments.mastercard} + ${dailyPayments.americanExpress} + ${dailyPayments.discover} + ${dailyPayments.ach} + ${dailyPayments.dinersClub} + ${dailyPayments.debit})`,
-      ),
-    )
+    .orderBy(desc(sql`SUM(${totalPayments})`))
     .limit(1);
 
   if (bestMonth[0]) {
     const d = new Date(bestMonth[0].month);
-    const fmt$ = (n: number) =>
-      new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-      }).format(n);
     questions.push({
       id: "best-collection-month",
-      question: "What is the highest-grossing month in company history?",
-      answer: d.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-      detail: fmt$(bestMonth[0].total),
+      question: "How much did we collect across all stores in our best month ever?",
+      answer: fmt$(bestMonth[0].total),
+      detail: d.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
     });
   }
 
-  // Q3: Employee with the most move-ins ever
+  // Q3: How many move-ins has our top-performing employee processed?
   const topMoveInEmployee = await db
     .select({
       fullName: userDetails.fullName,
@@ -95,13 +96,13 @@ export default async function TriviaPage() {
   if (topMoveInEmployee[0]) {
     questions.push({
       id: "most-move-ins-employee",
-      question: "Which employee has processed the most move-ins?",
-      answer: topMoveInEmployee[0].fullName ?? "Unknown",
-      detail: `${topMoveInEmployee[0].count} move-ins${topMoveInEmployee[1] ? ` · Runner-up: ${topMoveInEmployee[1].fullName} (${topMoveInEmployee[1].count})` : ""}`,
+      question: "How many move-ins has our top-performing employee ever processed?",
+      answer: String(topMoveInEmployee[0].count),
+      detail: `${topMoveInEmployee[0].fullName}${topMoveInEmployee[1] ? ` · Runner-up: ${topMoveInEmployee[1].fullName} (${topMoveInEmployee[1].count})` : ""}`,
     });
   }
 
-  // Q4: Facility with most total move-ins
+  // Q4: How many move-ins has our busiest facility had all time?
   const topMoveInFacility = await db
     .select({
       facilityName: storageFacilities.facilityName,
@@ -125,13 +126,13 @@ export default async function TriviaPage() {
   if (topMoveInFacility[0]) {
     questions.push({
       id: "most-move-ins-facility",
-      question: "Which facility has had the most move-ins of all time?",
-      answer: topMoveInFacility[0].facilityName,
-      detail: `${topMoveInFacility[0].count} move-ins${topMoveInFacility[1] ? ` · Runner-up: ${topMoveInFacility[1].facilityName} (${topMoveInFacility[1].count})` : ""}`,
+      question: "How many move-ins has our busiest facility had all time?",
+      answer: String(topMoveInFacility[0].count),
+      detail: `${topMoveInFacility[0].facilityName}${topMoveInFacility[1] ? ` · Runner-up: ${topMoveInFacility[1].facilityName} (${topMoveInFacility[1].count})` : ""}`,
     });
   }
 
-  // Q5: Most common lead source for move-ins
+  // Q5: How many of our all-time move-ins came from our #1 lead source?
   const topLeadSource = await db
     .select({
       leadSource: tenantActivities.leadSource,
@@ -151,26 +152,22 @@ export default async function TriviaPage() {
 
   if (topLeadSource[0]) {
     questions.push({
-      id: "top-lead-source",
-      question: "What is our #1 source for new customers?",
-      answer: topLeadSource[0].leadSource ?? "Unknown",
-      detail: `${topLeadSource[0].count} move-ins${topLeadSource[1] ? ` · #2: ${topLeadSource[1].leadSource} (${topLeadSource[1].count})` : ""}`,
+      id: "top-lead-source-count",
+      question: "How many of our all-time move-ins came from our #1 lead source?",
+      answer: String(topLeadSource[0].count),
+      detail: `Lead source: ${topLeadSource[0].leadSource}${topLeadSource[1] ? ` · #2: ${topLeadSource[1].leadSource} (${topLeadSource[1].count})` : ""}`,
     });
   }
 
-  // Q6: Highest single-day collection ever
+  // Q6: What is the most ever collected in a single day?
   const bestDay = await db
     .select({
       date: dailyPayments.date,
       facilityId: dailyPayments.facilityId,
-      total: sql<number>`${dailyPayments.cash} + ${dailyPayments.check} + ${dailyPayments.visa} + ${dailyPayments.mastercard} + ${dailyPayments.americanExpress} + ${dailyPayments.discover} + ${dailyPayments.ach} + ${dailyPayments.dinersClub} + ${dailyPayments.debit}`,
+      total: sql<number>`${totalPayments}`,
     })
     .from(dailyPayments)
-    .orderBy(
-      desc(
-        sql`${dailyPayments.cash} + ${dailyPayments.check} + ${dailyPayments.visa} + ${dailyPayments.mastercard} + ${dailyPayments.americanExpress} + ${dailyPayments.discover} + ${dailyPayments.ach} + ${dailyPayments.dinersClub} + ${dailyPayments.debit}`,
-      ),
-    )
+    .orderBy(desc(sql`${totalPayments}`))
     .limit(1);
 
   if (bestDay[0]) {
@@ -180,22 +177,16 @@ export default async function TriviaPage() {
       .where(eq(storageFacilities.sitelinkId, bestDay[0].facilityId))
       .limit(1);
 
-    const fmt$ = (n: number) =>
-      new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-      }).format(n);
     const d = new Date(bestDay[0].date!);
     questions.push({
       id: "best-single-day",
-      question: "What is the highest amount ever collected in a single day?",
+      question: "What is the most we have ever collected in a single day at one store?",
       answer: fmt$(bestDay[0].total),
-      detail: `${d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} · ${facilityRow[0]?.facilityName ?? "Unknown facility"}`,
+      detail: `${d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} · ${facilityRow[0]?.facilityName ?? ""}`,
     });
   }
 
-  // Q7: Total number of move-ins ever
+  // Q7: Total move-ins ever
   const totalMoveIns = await db
     .select({ count: sql<number>`COUNT(*)` })
     .from(tenantActivities)
@@ -203,11 +194,11 @@ export default async function TriviaPage() {
 
   questions.push({
     id: "total-move-ins",
-    question: "How many total move-ins has the company ever processed?",
-    answer: totalMoveIns[0]?.count.toLocaleString() ?? "0",
+    question: "How many total move-ins has the company processed across all stores?",
+    answer: Number(totalMoveIns[0]?.count ?? 0).toLocaleString(),
   });
 
-  // Q8: Most bonuses earned by a single employee
+  // Q8: How much has our top bonus earner made in total bonuses?
   const topBonusEmployee = await db
     .select({
       fullName: userDetails.fullName,
@@ -221,21 +212,15 @@ export default async function TriviaPage() {
     .limit(2);
 
   if (topBonusEmployee[0]) {
-    const fmt$ = (n: number) =>
-      new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-      }).format(n);
     questions.push({
-      id: "top-bonus-earner",
-      question: "Which employee has earned the most in bonuses?",
-      answer: topBonusEmployee[0].fullName ?? "Unknown",
-      detail: `${fmt$(topBonusEmployee[0].totalBonus)} across ${topBonusEmployee[0].count} bonuses${topBonusEmployee[1] ? ` · Runner-up: ${topBonusEmployee[1].fullName} (${fmt$(topBonusEmployee[1].totalBonus)})` : ""}`,
+      id: "top-bonus-total",
+      question: "How much has our top bonus earner made in total bonuses?",
+      answer: fmt$(topBonusEmployee[0].totalBonus),
+      detail: `${topBonusEmployee[0].fullName} · ${topBonusEmployee[0].count} bonuses${topBonusEmployee[1] ? ` · Runner-up: ${topBonusEmployee[1].fullName} (${fmt$(topBonusEmployee[1].totalBonus)})` : ""}`,
     });
   }
 
-  // Q9: Day of week with most move-ins
+  // Q9: How many move-ins have happened on our busiest day of the week?
   const moveInsByDay = await db
     .select({
       dayOfWeek: sql<number>`EXTRACT(DOW FROM ${tenantActivities.date})`,
@@ -248,20 +233,12 @@ export default async function TriviaPage() {
     .limit(1);
 
   if (moveInsByDay[0]) {
-    const days = [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-    ];
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     questions.push({
-      id: "move-in-day-of-week",
-      question: "What day of the week do we get the most move-ins?",
-      answer: days[moveInsByDay[0].dayOfWeek],
-      detail: `${moveInsByDay[0].count} move-ins`,
+      id: "move-in-day-of-week-count",
+      question: "How many of our all-time move-ins happened on our busiest day of the week?",
+      answer: String(moveInsByDay[0].count),
+      detail: `${days[moveInsByDay[0].dayOfWeek]}s`,
     });
   }
 
@@ -274,7 +251,7 @@ export default async function TriviaPage() {
   questions.push({
     id: "active-employees",
     question: "How many active employees does the company currently have?",
-    answer: activeEmployeeCount[0]?.count.toString() ?? "0",
+    answer: String(activeEmployeeCount[0]?.count ?? 0),
   });
 
   return (
@@ -282,7 +259,7 @@ export default async function TriviaPage() {
       <div className="bg-primary text-primary-foreground rounded-lg p-5">
         <h1 className="text-2xl font-bold">Staff Trivia</h1>
         <p className="text-primary-foreground/80 mt-0.5">
-          Pin the questions you want to use · export pinned to CSV when ready
+          All answers are numbers · pin questions you want to use · export to CSV when ready
         </p>
       </div>
       <TriviaClient questions={questions} />
