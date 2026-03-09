@@ -24,7 +24,7 @@ export default async function PageHeader() {
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-border bg-background px-4">
       {/* Mobile hamburger — only visible on small screens */}
-      <MobileSidebar locations={locations} />
+      <MobileSidebar locations={locations} userRole={session?.user?.role ?? ""} />
 
       {/* Spacer — breadcrumb can be added here later */}
       <div className="flex-1" />

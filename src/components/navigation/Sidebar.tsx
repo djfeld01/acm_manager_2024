@@ -32,7 +32,7 @@ export default async function Sidebar() {
       </div>
 
       {/* Navigation — client component handles active state */}
-      <SidebarNav locations={locations} />
+      <SidebarNav locations={locations} userRole={session.user.role ?? ""} />
 
       {/* User footer */}
       <div className="mt-auto border-t border-border px-4 py-3 shrink-0">

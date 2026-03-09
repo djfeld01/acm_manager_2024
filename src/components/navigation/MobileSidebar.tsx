@@ -16,9 +16,10 @@ interface Facility {
 
 interface MobileSidebarProps {
   locations: Facility[];
+  userRole: string;
 }
 
-export function MobileSidebar({ locations }: MobileSidebarProps) {
+export function MobileSidebar({ locations, userRole }: MobileSidebarProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -46,7 +47,7 @@ export function MobileSidebar({ locations }: MobileSidebarProps) {
             <span className="sr-only">ACM Dashboard</span>
           </Link>
         </div>
-        <SidebarNav locations={locations} />
+        <SidebarNav locations={locations} userRole={userRole} />
       </SheetContent>
     </Sheet>
   );

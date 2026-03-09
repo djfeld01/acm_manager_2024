@@ -32,6 +32,7 @@ interface Facility {
 
 interface SidebarNavProps {
   locations: Facility[];
+  userRole: string;
 }
 
 interface NavSection {
@@ -46,7 +47,7 @@ interface NavItem {
   children?: { label: string; href: string }[];
 }
 
-export function SidebarNav({ locations }: SidebarNavProps) {
+export function SidebarNav({ locations, userRole }: SidebarNavProps) {
   const pathname = usePathname();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Overview: true,
@@ -128,7 +129,7 @@ export function SidebarNav({ locations }: SidebarNavProps) {
           href: "/reports/rental-goals",
           icon: TrendingUp,
         },
-        { label: "Trivia", href: "/trivia", icon: Trophy },
+        ...(userRole === "OWNER" ? [{ label: "Trivia", href: "/trivia", icon: Trophy }] : []),
         {
           label: "Competitor Pricing",
           icon: BarChart3,
