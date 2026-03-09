@@ -271,7 +271,15 @@ export default async function TriviaPage() {
       count: sql<number>`COUNT(*)`,
     })
     .from(inquiry)
-    .where(sql`${inquiry.leaseDate} IS NOT NULL`)
+    .innerJoin(storageFacilities, eq(inquiry.sitelinkId, storageFacilities.sitelinkId))
+    .where(
+      and(
+        sql`${inquiry.leaseDate} IS NOT NULL`,
+        sql`EXTRACT(YEAR FROM ${inquiry.leaseDate}) BETWEEN 2019 AND 2025`,
+        eq(storageFacilities.currentClient, true),
+        eq(storageFacilities.isCorporate, false),
+      ),
+    )
     .groupBy(sql`EXTRACT(MONTH FROM ${inquiry.leaseDate})`)
     .orderBy(desc(sql`COUNT(*)`))
     .limit(4);
@@ -284,7 +292,7 @@ export default async function TriviaPage() {
       id: "rentals-by-month",
       question: "What number month (1–12) do we rent the most storage units? (January = 1, December = 12)",
       answer: String(rentalsByMonth[0].month),
-      detail: top4,
+      detail: `2019–2025, current locations only · ${top4}`,
     });
   }
 
