@@ -40,11 +40,12 @@ export function TriviaClient({ questions }: { questions: TriviaQuestion[] }) {
   function exportCsv() {
     const pinnedQuestions = questions.filter((q) => pinned.has(q.id));
     const rows = [
-      ["#", "Question", "Answer", "Detail"],
-      ...pinnedQuestions.map((q, i) => [
-        String(i + 1),
+      ["text", "subText", "correctAnswer", "answerFormat", "followUpNotes"],
+      ...pinnedQuestions.map((q) => [
         q.question,
+        q.subText ?? "",
         q.answer,
+        q.answerFormat ?? "number",
         q.detail ?? "",
       ]),
     ];
