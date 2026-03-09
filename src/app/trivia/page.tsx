@@ -1,3 +1,5 @@
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import {
   storageFacilities,
@@ -39,6 +41,10 @@ const totalPayments = sql<number>`
   ${dailyPayments.dinersClub} + ${dailyPayments.debit}`;
 
 export default async function TriviaPage() {
+  const session = await auth();
+  if (!session?.user) redirect("/api/auth/signin");
+  if (session.user.role !== "OWNER") redirect("/");
+
   const questions: TriviaQuestion[] = [];
 
   // Q1: How many years has our longest-tenured active employee worked here?
