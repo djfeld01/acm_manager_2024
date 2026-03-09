@@ -352,7 +352,31 @@ export default async function TriviaPage() {
     });
   }
 
-  // Q14: Which day of the month gets the most rentals? (by lease_date)
+  // Q14: Which day of the month has the fewest move-ins?
+  const fewestMoveInDay = await db
+    .select({
+      day: sql<number>`EXTRACT(DAY FROM ${tenantActivities.date})`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(tenantActivities)
+    .where(eq(tenantActivities.activityType, "MoveIn"))
+    .groupBy(sql`EXTRACT(DAY FROM ${tenantActivities.date})`)
+    .orderBy(sql`COUNT(*)`)
+    .limit(5);
+
+  if (fewestMoveInDay[0]) {
+    const top5 = fewestMoveInDay
+      .map((r, i) => `#${i + 1}: ${r.day}${ordinal(r.day)} (${Number(r.count).toLocaleString()})`)
+      .join(" · ");
+    questions.push({
+      id: "fewest-move-ins-day",
+      question: "What day of the month has the fewest move-ins?",
+      answer: String(fewestMoveInDay[0].day),
+      detail: top5,
+    });
+  }
+
+  // Q15: Which day of the month gets the most rentals? (by lease_date)
   const rentalsByDayOfMonth = await db
     .select({
       day: sql<number>`EXTRACT(DAY FROM ${inquiry.leaseDate})`,
