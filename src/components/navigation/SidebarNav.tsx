@@ -19,6 +19,7 @@ import {
   FileSpreadsheet,
   TrendingUp,
   BarChart3,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -127,6 +128,7 @@ export function SidebarNav({ locations }: SidebarNavProps) {
           href: "/reports/rental-goals",
           icon: TrendingUp,
         },
+        { label: "Trivia", href: "/trivia", icon: Trophy },
         {
           label: "Competitor Pricing",
           icon: BarChart3,
