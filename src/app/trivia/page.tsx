@@ -328,7 +328,31 @@ export default async function TriviaPage() {
     });
   }
 
-  // Q13: Which day of the month gets the most rentals? (by lease_date)
+  // Q13: Which day of the month gets the most inquiries? (by date_placed)
+  const inquiriesByDayOfMonth = await db
+    .select({
+      day: sql<number>`EXTRACT(DAY FROM ${inquiry.datePlaced})`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(inquiry)
+    .where(sql`${inquiry.datePlaced} IS NOT NULL`)
+    .groupBy(sql`EXTRACT(DAY FROM ${inquiry.datePlaced})`)
+    .orderBy(desc(sql`COUNT(*)`))
+    .limit(5);
+
+  if (inquiriesByDayOfMonth[0]) {
+    const top5 = inquiriesByDayOfMonth
+      .map((r, i) => `#${i + 1}: ${r.day}${ordinal(r.day)} (${Number(r.count).toLocaleString()})`)
+      .join(" · ");
+    questions.push({
+      id: "inquiries-by-day-of-month",
+      question: "What day of the month do we receive the most storage inquiries?",
+      answer: String(inquiriesByDayOfMonth[0].day),
+      detail: top5,
+    });
+  }
+
+  // Q14: Which day of the month gets the most rentals? (by lease_date)
   const rentalsByDayOfMonth = await db
     .select({
       day: sql<number>`EXTRACT(DAY FROM ${inquiry.leaseDate})`,
