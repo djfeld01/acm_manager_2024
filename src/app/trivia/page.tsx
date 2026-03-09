@@ -288,7 +288,47 @@ export default async function TriviaPage() {
     });
   }
 
-  // Q12: Which day of the month gets the most rentals? (by lease_date)
+  // Q12: In 2025, most single-day rentals at a single store
+  const bestSingleDay2025 = await db
+    .select({
+      date: sql<string>`DATE(${inquiry.leaseDate})`,
+      facilityId: inquiry.sitelinkId,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(inquiry)
+    .innerJoin(storageFacilities, eq(inquiry.sitelinkId, storageFacilities.sitelinkId))
+    .where(
+      and(
+        sql`EXTRACT(YEAR FROM ${inquiry.leaseDate}) = 2025`,
+        sql`${inquiry.leaseDate} IS NOT NULL`,
+        eq(storageFacilities.isCorporate, false),
+      ),
+    )
+    .groupBy(sql`DATE(${inquiry.leaseDate})`, inquiry.sitelinkId)
+    .orderBy(desc(sql`COUNT(*)`))
+    .limit(3);
+
+  if (bestSingleDay2025[0]) {
+    const facilityRow = await db
+      .select({ facilityName: storageFacilities.facilityName })
+      .from(storageFacilities)
+      .where(eq(storageFacilities.sitelinkId, bestSingleDay2025[0].facilityId!))
+      .limit(1);
+
+    const d = new Date(bestSingleDay2025[0].date);
+    const dateStr = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    const runners = bestSingleDay2025.slice(1)
+      .map((r) => `${r.count}`)
+      .join(", ");
+    questions.push({
+      id: "best-single-day-2025",
+      question: "In 2025, what is the most rentals processed in a single day at a single store?",
+      answer: String(bestSingleDay2025[0].count),
+      detail: `${dateStr} · ${facilityRow[0]?.facilityName ?? ""}${runners ? ` · Runner-up(s): ${runners}` : ""}`,
+    });
+  }
+
+  // Q13: Which day of the month gets the most rentals? (by lease_date)
   const rentalsByDayOfMonth = await db
     .select({
       day: sql<number>`EXTRACT(DAY FROM ${inquiry.leaseDate})`,
