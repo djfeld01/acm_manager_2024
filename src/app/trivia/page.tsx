@@ -261,7 +261,34 @@ export default async function TriviaPage() {
     answer: String(activeEmployeeCount[0]?.count ?? 0),
   });
 
-  // Q11: Which day of the month gets the most rentals? (by lease_date)
+  // Q11: Which month of the year gets the most rentals? (by lease_date)
+  const monthNames = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
+
+  const rentalsByMonth = await db
+    .select({
+      month: sql<number>`EXTRACT(MONTH FROM ${inquiry.leaseDate})`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(inquiry)
+    .where(sql`${inquiry.leaseDate} IS NOT NULL`)
+    .groupBy(sql`EXTRACT(MONTH FROM ${inquiry.leaseDate})`)
+    .orderBy(desc(sql`COUNT(*)`))
+    .limit(4);
+
+  if (rentalsByMonth[0]) {
+    const top4 = rentalsByMonth
+      .map((r, i) => `#${i + 1}: ${monthNames[r.month - 1]} (${Number(r.count).toLocaleString()})`)
+      .join(" · ");
+    questions.push({
+      id: "rentals-by-month",
+      question: "What number month (1–12) do we rent the most storage units? (January = 1, December = 12)",
+      answer: String(rentalsByMonth[0].month),
+      detail: top4,
+    });
+  }
+
+  // Q12: Which day of the month gets the most rentals? (by lease_date)
   const rentalsByDayOfMonth = await db
     .select({
       day: sql<number>`EXTRACT(DAY FROM ${inquiry.leaseDate})`,
