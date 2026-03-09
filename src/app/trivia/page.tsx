@@ -5,6 +5,7 @@ import {
   dailyPayments,
   userDetails,
   bonus,
+  inquiry,
 } from "@/db/schema";
 import { eq, sql, desc, and, ne } from "drizzle-orm";
 import { TriviaClient } from "./_components/TriviaClient";
@@ -15,6 +16,12 @@ export type TriviaQuestion = {
   answer: string; // always a number (count, $amount, years, etc.)
   detail?: string; // host context: who/what/where the answer refers to
 };
+
+function ordinal(n: number) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return s[(v - 20) % 10] ?? s[v] ?? s[0];
+}
 
 const fmt$ = (n: number) =>
   new Intl.NumberFormat("en-US", {
@@ -253,6 +260,121 @@ export default async function TriviaPage() {
     question: "How many active employees does the company currently have?",
     answer: String(activeEmployeeCount[0]?.count ?? 0),
   });
+
+  // Q11: Which month of the year gets the most rentals? (by lease_date)
+  const monthNames = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
+
+  const rentalsByMonth = await db
+    .select({
+      month: sql<number>`EXTRACT(MONTH FROM ${inquiry.leaseDate})`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(inquiry)
+    .where(sql`${inquiry.leaseDate} IS NOT NULL`)
+    .groupBy(sql`EXTRACT(MONTH FROM ${inquiry.leaseDate})`)
+    .orderBy(desc(sql`COUNT(*)`))
+    .limit(4);
+
+  if (rentalsByMonth[0]) {
+    const top4 = rentalsByMonth
+      .map((r, i) => `#${i + 1}: ${monthNames[r.month - 1]} (${Number(r.count).toLocaleString()})`)
+      .join(" · ");
+    questions.push({
+      id: "rentals-by-month",
+      question: "What number month (1–12) do we rent the most storage units? (January = 1, December = 12)",
+      answer: String(rentalsByMonth[0].month),
+      detail: top4,
+    });
+  }
+
+  // Q12: In 2025, most single-day rentals at a single store
+  const bestSingleDay2025 = await db
+    .select({
+      date: sql<string>`DATE(${inquiry.leaseDate})`,
+      facilityId: inquiry.sitelinkId,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(inquiry)
+    .innerJoin(storageFacilities, eq(inquiry.sitelinkId, storageFacilities.sitelinkId))
+    .where(
+      and(
+        sql`EXTRACT(YEAR FROM ${inquiry.leaseDate}) = 2025`,
+        sql`${inquiry.leaseDate} IS NOT NULL`,
+        eq(storageFacilities.isCorporate, false),
+      ),
+    )
+    .groupBy(sql`DATE(${inquiry.leaseDate})`, inquiry.sitelinkId)
+    .orderBy(desc(sql`COUNT(*)`))
+    .limit(3);
+
+  if (bestSingleDay2025[0]) {
+    const facilityRow = await db
+      .select({ facilityName: storageFacilities.facilityName })
+      .from(storageFacilities)
+      .where(eq(storageFacilities.sitelinkId, bestSingleDay2025[0].facilityId!))
+      .limit(1);
+
+    const d = new Date(bestSingleDay2025[0].date);
+    const dateStr = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    const runners = bestSingleDay2025.slice(1)
+      .map((r) => `${r.count}`)
+      .join(", ");
+    questions.push({
+      id: "best-single-day-2025",
+      question: "In 2025, what is the most rentals processed in a single day at a single store?",
+      answer: String(bestSingleDay2025[0].count),
+      detail: `${dateStr} · ${facilityRow[0]?.facilityName ?? ""}${runners ? ` · Runner-up(s): ${runners}` : ""}`,
+    });
+  }
+
+  // Q13: Which day of the month gets the most inquiries? (by date_placed)
+  const inquiriesByDayOfMonth = await db
+    .select({
+      day: sql<number>`EXTRACT(DAY FROM ${inquiry.datePlaced})`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(inquiry)
+    .where(sql`${inquiry.datePlaced} IS NOT NULL`)
+    .groupBy(sql`EXTRACT(DAY FROM ${inquiry.datePlaced})`)
+    .orderBy(desc(sql`COUNT(*)`))
+    .limit(5);
+
+  if (inquiriesByDayOfMonth[0]) {
+    const top5 = inquiriesByDayOfMonth
+      .map((r, i) => `#${i + 1}: ${r.day}${ordinal(r.day)} (${Number(r.count).toLocaleString()})`)
+      .join(" · ");
+    questions.push({
+      id: "inquiries-by-day-of-month",
+      question: "What day of the month do we receive the most storage inquiries?",
+      answer: String(inquiriesByDayOfMonth[0].day),
+      detail: top5,
+    });
+  }
+
+  // Q14: Which day of the month gets the most rentals? (by lease_date)
+  const rentalsByDayOfMonth = await db
+    .select({
+      day: sql<number>`EXTRACT(DAY FROM ${inquiry.leaseDate})`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(inquiry)
+    .where(sql`${inquiry.leaseDate} IS NOT NULL`)
+    .groupBy(sql`EXTRACT(DAY FROM ${inquiry.leaseDate})`)
+    .orderBy(desc(sql`COUNT(*)`))
+    .limit(5);
+
+  if (rentalsByDayOfMonth[0]) {
+    const top5 = rentalsByDayOfMonth
+      .map((r, i) => `#${i + 1}: ${r.day}${ordinal(r.day)} (${r.count})`)
+      .join(" · ");
+    questions.push({
+      id: "rentals-by-day-of-month",
+      question: "What day of the month do we rent the most storage units?",
+      answer: String(rentalsByDayOfMonth[0].day),
+      detail: top5,
+    });
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
