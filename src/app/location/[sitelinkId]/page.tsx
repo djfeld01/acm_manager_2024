@@ -208,7 +208,7 @@ export default async function LocationDetailPage({
       fullMonthTotal: isCurrentMonth ? null : (fullMonthMap.get(monthStr) ?? null),
       isCurrentMonth,
     };
-  });
+  }).reverse();
 
   // Unit count deltas (integer: how many more/fewer units occupied vs. N days ago)
   const unitCountDelta7 =
