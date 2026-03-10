@@ -44,7 +44,7 @@ export function TriviaClient({ questions }: { questions: TriviaQuestion[] }) {
       ...pinnedQuestions.map((q) => [
         q.question,
         q.subText ?? "",
-        q.answer,
+        q.answer.replace(/[^0-9.]/g, ""),
         q.answerFormat ?? "number",
         q.detail ?? "",
       ]),
