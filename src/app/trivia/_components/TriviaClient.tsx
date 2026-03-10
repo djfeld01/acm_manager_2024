@@ -45,7 +45,7 @@ export function TriviaClient({ questions }: { questions: TriviaQuestion[] }) {
         q.question,
         q.subText ?? "",
         q.answer.replace(/[^0-9.]/g, ""),
-        q.answerFormat ?? "number",
+        q.answerFormat ?? "plain",
         q.detail ?? "",
       ]),
     ];

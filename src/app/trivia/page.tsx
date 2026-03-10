@@ -69,7 +69,7 @@ export default async function TriviaPage() {
       id: "longest-employee-years",
       question: "How many years has our longest-tenured active employee worked here?",
       answer: String(years),
-      answerFormat: "number",
+      answerFormat: "plain",
       detail: `${longestEmployee[0].fullName} · hired ${hireDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}${longestEmployee[1] ? ` · Runner-up: ${longestEmployee[1].fullName}` : ""}`,
     });
   }
@@ -91,7 +91,7 @@ export default async function TriviaPage() {
       id: "best-collection-month",
       question: "How much did we collect across all stores in our best month ever?",
       answer: fmt$(bestMonth[0].total),
-      answerFormat: "dollar",
+      answerFormat: "currency",
       detail: d.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
     });
   }
@@ -114,7 +114,7 @@ export default async function TriviaPage() {
       id: "most-move-ins-employee",
       question: "How many move-ins has our top-performing employee ever processed?",
       answer: String(topMoveInEmployee[0].count),
-      answerFormat: "number",
+      answerFormat: "plain",
       detail: `${topMoveInEmployee[0].fullName}${topMoveInEmployee[1] ? ` · Runner-up: ${topMoveInEmployee[1].fullName} (${topMoveInEmployee[1].count})` : ""}`,
     });
   }
@@ -145,7 +145,7 @@ export default async function TriviaPage() {
       id: "most-move-ins-facility",
       question: "How many move-ins has our busiest facility had all time?",
       answer: String(topMoveInFacility[0].count),
-      answerFormat: "number",
+      answerFormat: "plain",
       detail: `${topMoveInFacility[0].facilityName}${topMoveInFacility[1] ? ` · Runner-up: ${topMoveInFacility[1].facilityName} (${topMoveInFacility[1].count})` : ""}`,
     });
   }
@@ -173,7 +173,7 @@ export default async function TriviaPage() {
       id: "top-lead-source-count",
       question: "How many of our all-time move-ins came from our #1 lead source?",
       answer: String(topLeadSource[0].count),
-      answerFormat: "number",
+      answerFormat: "plain",
       detail: `Lead source: ${topLeadSource[0].leadSource}${topLeadSource[1] ? ` · #2: ${topLeadSource[1].leadSource} (${topLeadSource[1].count})` : ""}`,
     });
   }
@@ -201,7 +201,7 @@ export default async function TriviaPage() {
       id: "best-single-day",
       question: "What is the most we have ever collected in a single day at one store?",
       answer: fmt$(bestDay[0].total),
-      answerFormat: "dollar",
+      answerFormat: "currency",
       detail: `${d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} · ${facilityRow[0]?.facilityName ?? ""}`,
     });
   }
@@ -216,7 +216,7 @@ export default async function TriviaPage() {
     id: "total-move-ins",
     question: "How many total move-ins has the company processed across all stores?",
     answer: Number(totalMoveIns[0]?.count ?? 0).toLocaleString(),
-    answerFormat: "number",
+    answerFormat: "plain",
   });
 
   // Q8: How much has our top bonus earner made in total bonuses?
@@ -237,7 +237,7 @@ export default async function TriviaPage() {
       id: "top-bonus-total",
       question: "How much has our top bonus earner made in total bonuses?",
       answer: fmt$(topBonusEmployee[0].totalBonus),
-      answerFormat: "dollar",
+      answerFormat: "currency",
       detail: `${topBonusEmployee[0].fullName} · ${topBonusEmployee[0].count} bonuses${topBonusEmployee[1] ? ` · Runner-up: ${topBonusEmployee[1].fullName} (${fmt$(topBonusEmployee[1].totalBonus)})` : ""}`,
     });
   }
@@ -260,7 +260,7 @@ export default async function TriviaPage() {
       id: "move-in-day-of-week-count",
       question: "How many of our all-time move-ins happened on our busiest day of the week?",
       answer: String(moveInsByDay[0].count),
-      answerFormat: "number",
+      answerFormat: "plain",
       detail: `${days[moveInsByDay[0].dayOfWeek]}s`,
     });
   }
@@ -275,7 +275,7 @@ export default async function TriviaPage() {
     id: "active-employees",
     question: "How many active employees does the company currently have?",
     answer: String(activeEmployeeCount[0]?.count ?? 0),
-    answerFormat: "number",
+    answerFormat: "plain",
   });
 
   // Q11: Which month of the year gets the most rentals? (by lease_date)
@@ -309,7 +309,7 @@ export default async function TriviaPage() {
       id: "rentals-by-month",
       question: "What number month (1–12) do we rent the most storage units? (January = 1, December = 12)",
       answer: String(rentalsByMonth[0].month),
-      answerFormat: "number",
+      answerFormat: "plain",
       detail: `2019–2025, current locations only · ${top4}`,
     });
   }
@@ -350,7 +350,7 @@ export default async function TriviaPage() {
       id: "best-single-day-2025",
       question: "In 2025, what is the most rentals processed in a single day at a single store?",
       answer: String(bestSingleDay2025[0].count),
-      answerFormat: "number",
+      answerFormat: "plain",
       detail: `${dateStr} · ${facilityRow[0]?.facilityName ?? ""}${runners ? ` · Runner-up(s): ${runners}` : ""}`,
     });
   }
@@ -375,7 +375,7 @@ export default async function TriviaPage() {
       id: "inquiries-by-day-of-month",
       question: "What day of the month do we receive the most storage inquiries?",
       answer: String(inquiriesByDayOfMonth[0].day),
-      answerFormat: "number",
+      answerFormat: "plain",
       detail: top5,
     });
   }
@@ -400,7 +400,7 @@ export default async function TriviaPage() {
       id: "fewest-move-ins-day",
       question: "What day of the month has the fewest move-ins?",
       answer: String(fewestMoveInDay[0].day),
-      answerFormat: "number",
+      answerFormat: "plain",
       detail: top5,
     });
   }
@@ -425,7 +425,7 @@ export default async function TriviaPage() {
       id: "rentals-by-day-of-month",
       question: "What day of the month do we rent the most storage units?",
       answer: String(rentalsByDayOfMonth[0].day),
-      answerFormat: "number",
+      answerFormat: "plain",
       detail: top5,
     });
   }
