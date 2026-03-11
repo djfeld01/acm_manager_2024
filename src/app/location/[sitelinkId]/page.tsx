@@ -5,6 +5,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { LocationRentalsBanner } from "@/components/LocationRentalsBanner";
+import { MtdChartsSection } from "./_components/MtdChartsSection";
+import { Suspense } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -150,7 +153,11 @@ export default async function LocationDetailPage({
   const totalDelinquentUnits = receivableData.reduce((sum, r) => sum + (r.delinquentUnits ?? 0), 0);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <>
+      <Suspense fallback={<div className="h-[41px] border-b border-border bg-background" />}>
+        <LocationRentalsBanner currentSitelinkId={sitelinkId} />
+      </Suspense>
+      <div className="flex flex-col gap-6 p-6">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="bg-primary text-primary-foreground rounded-lg p-5">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
@@ -281,6 +288,16 @@ export default async function LocationDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* ── MTD Charts ────────────────────────────────────────────────────── */}
+      <Suspense fallback={
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="h-[420px] rounded-lg bg-muted/40 animate-pulse" />
+          <div className="h-[420px] rounded-lg bg-muted/40 animate-pulse" />
+        </div>
+      }>
+        <MtdChartsSection sitelinkId={sitelinkId} />
+      </Suspense>
 
       {/* ── Activity + Goals ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -508,5 +525,6 @@ export default async function LocationDetailPage({
         </Card>
       </div>
     </div>
+    </>
   );
 }

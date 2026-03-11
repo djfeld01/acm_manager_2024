@@ -3,6 +3,7 @@ import {
   pgTable,
   integer,
   varchar,
+  text,
   index,
   boolean,
   real,
@@ -18,6 +19,8 @@ import {
   dailyManagementReceivable,
   bankAccount,
   dailyManagementSundries,
+  userDetails,
+  ownershipGroup,
 } from "@/db/schema";
 import dailyManagementPaymentReceipt from "./dailyManagementPaymentReceipt";
 
@@ -44,6 +47,10 @@ const storageFacilities = pgTable(
     insuranceCommissionRate: real("insurance_commission_rate")
       .default(1.5)
       .notNull(),
+    areaManagerId: text("area_manager_id").references(() => userDetails.id),
+    ownershipGroupId: text("ownership_group_id").references(
+      () => ownershipGroup.id
+    ),
   },
   (table) => ({
     nameIndex: index().on(table.facilityName),
@@ -52,7 +59,15 @@ const storageFacilities = pgTable(
 
 export const storageFacilitiesRelations = relations(
   storageFacilities,
-  ({ many }) => ({
+  ({ many, one }) => ({
+    areaManager: one(userDetails, {
+      fields: [storageFacilities.areaManagerId],
+      references: [userDetails.id],
+    }),
+    ownershipGroup: one(ownershipGroup, {
+      fields: [storageFacilities.ownershipGroupId],
+      references: [ownershipGroup.id],
+    }),
     usersToFacilities: many(usersToFacilities),
     dailyPayments: many(dailyPayments),
     tenantActivities: many(tenantActivities),
