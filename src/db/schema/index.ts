@@ -184,3 +184,18 @@ export {
   competitorPricesRelations,
   unitAvailabilityEnum,
 } from "@/db/schema/competitorPrices";
+
+export {
+  default as ownershipGroup,
+  ownershipGroupRelations,
+} from "@/db/schema/ownershipGroup";
+
+export {
+  default as owner,
+  ownerRelations,
+} from "@/db/schema/owner";
+
+export {
+  default as ownershipGroupToOwners,
+  ownershipGroupToOwnersRelations,
+} from "@/db/schema/ownershipGroupToOwners";

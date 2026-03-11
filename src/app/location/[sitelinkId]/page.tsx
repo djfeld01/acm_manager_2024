@@ -1,14 +1,13 @@
 import { getLocationDetailData } from "@/lib/controllers/facilityController";
-import { db } from "@/db";
-import { dailyManagementPaymentReceipt } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { MtdCollectionsChart, type MonthCollectionData } from "./_components/MtdCollectionsChart";
+import { LocationRentalsBanner } from "@/components/LocationRentalsBanner";
+import { MtdChartsSection } from "./_components/MtdChartsSection";
+import { Suspense } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -137,79 +136,6 @@ export default async function LocationDetailPage({
 
   const lastLogon = latestLogons[0];
 
-  // ── MTD Collections Chart data ────────────────────────────────────────────
-  const today = new Date();
-  const dayOfMonth = today.getDate();
-  // Start of 12 months ago (so we get current month + 12 prior = 13 total)
-  const thirteenMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 12, 1);
-  const thirteenMonthsAgoStr = thirteenMonthsAgo.toISOString().split("T")[0];
-
-  // MTD as of day X for each of the 13 months:
-  // For each month, find the max date where day-of-month <= dayOfMonth,
-  // then sum monthlyAmount for that date.
-  const mtdRows = await db.execute(sql`
-    SELECT
-      DATE_TRUNC('month', date)::date AS month,
-      SUM(monthly_amount) AS mtd_amount
-    FROM daily_management_payment_receipt
-    WHERE facility_id = ${sitelinkId}
-      AND date IN (
-        SELECT MAX(date)
-        FROM daily_management_payment_receipt
-        WHERE facility_id = ${sitelinkId}
-          AND EXTRACT(DAY FROM date) <= ${dayOfMonth}
-          AND date >= ${thirteenMonthsAgoStr}::date
-        GROUP BY DATE_TRUNC('month', date)
-      )
-    GROUP BY DATE_TRUNC('month', date)
-    ORDER BY month
-  `);
-
-  // Full month totals for completed months (last day of each past month):
-  const fullMonthRows = await db.execute(sql`
-    SELECT
-      DATE_TRUNC('month', date)::date AS month,
-      SUM(monthly_amount) AS full_amount
-    FROM daily_management_payment_receipt
-    WHERE facility_id = ${sitelinkId}
-      AND date IN (
-        SELECT MAX(date)
-        FROM daily_management_payment_receipt
-        WHERE facility_id = ${sitelinkId}
-          AND date >= ${thirteenMonthsAgoStr}::date
-          AND date < DATE_TRUNC('month', NOW())::date
-        GROUP BY DATE_TRUNC('month', date)
-      )
-    GROUP BY DATE_TRUNC('month', date)
-    ORDER BY month
-  `);
-
-  // Build a map of full-month totals keyed by month string
-  const fullMonthMap = new Map<string, number>();
-  for (const row of fullMonthRows) {
-    const monthStr = String(row.month).slice(0, 7); // "YYYY-MM"
-    fullMonthMap.set(monthStr, parseFloat(String(row.full_amount ?? "0")));
-  }
-
-  const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-
-  const chartData: MonthCollectionData[] = (mtdRows as Record<string, unknown>[]).map((row) => {
-    const monthDate = new Date(String(row.month));
-    const monthStr = `${monthDate.getUTCFullYear()}-${String(monthDate.getUTCMonth() + 1).padStart(2, "0")}`;
-    const isCurrentMonth = monthStr === currentMonthStr;
-    const label = monthDate.toLocaleDateString("en-US", {
-      month: "short",
-      year: "2-digit",
-      timeZone: "UTC",
-    });
-    return {
-      monthLabel: label,
-      mtdAmount: parseFloat(String(row.mtd_amount ?? "0")),
-      fullMonthTotal: isCurrentMonth ? null : (fullMonthMap.get(monthStr) ?? null),
-      isCurrentMonth,
-    };
-  }).reverse();
-
   // Unit count deltas (integer: how many more/fewer units occupied vs. N days ago)
   const unitCountDelta7 =
     latestOccupancy?.occupiedUnits != null && sevenDayOccupancy?.occupiedUnits != null
@@ -227,7 +153,11 @@ export default async function LocationDetailPage({
   const totalDelinquentUnits = receivableData.reduce((sum, r) => sum + (r.delinquentUnits ?? 0), 0);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <>
+      <Suspense fallback={<div className="h-[41px] border-b border-border bg-background" />}>
+        <LocationRentalsBanner currentSitelinkId={sitelinkId} />
+      </Suspense>
+      <div className="flex flex-col gap-6 p-6">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="bg-primary text-primary-foreground rounded-lg p-5">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
@@ -359,6 +289,16 @@ export default async function LocationDetailPage({
         </Card>
       </div>
 
+      {/* ── MTD Charts ────────────────────────────────────────────────────── */}
+      <Suspense fallback={
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="h-[420px] rounded-lg bg-muted/40 animate-pulse" />
+          <div className="h-[420px] rounded-lg bg-muted/40 animate-pulse" />
+        </div>
+      }>
+        <MtdChartsSection sitelinkId={sitelinkId} />
+      </Suspense>
+
       {/* ── Activity + Goals ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Activity Table — 2/3 width */}
@@ -476,21 +416,6 @@ export default async function LocationDetailPage({
         </Card>
       </div>
 
-      {/* ── MTD Collections Chart ─────────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="pb-2 bg-muted/60 rounded-t-lg">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            MTD Collections — Current Month vs. Prior 12 Months
-            <span className="ml-2 text-xs font-normal">
-              (line = thru day {dayOfMonth} · bars = full month)
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <MtdCollectionsChart data={chartData} dayOfMonth={dayOfMonth} />
-        </CardContent>
-      </Card>
-
       {/* ── Receivables + Logons ───────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Receivables Aging */}
@@ -600,5 +525,6 @@ export default async function LocationDetailPage({
         </Card>
       </div>
     </div>
+    </>
   );
 }
