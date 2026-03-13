@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/card";
 import { LocationRentalsBanner } from "@/components/LocationRentalsBanner";
 import { MtdChartsSection } from "./_components/MtdChartsSection";
+import { InquirySection } from "./_components/InquirySection";
 import { Suspense } from "react";
 import {
   TrendingUp,
@@ -524,6 +525,13 @@ export default async function LocationDetailPage({
           </CardContent>
         </Card>
       </div>
+      {/* ── Recent Inquiries ───────────────────────────────────────────────── */}
+      <Suspense fallback={
+        <div className="h-48 rounded-lg bg-muted/40 animate-pulse" />
+      }>
+        <InquirySection sitelinkId={sitelinkId} />
+      </Suspense>
+
     </div>
     </>
   );
