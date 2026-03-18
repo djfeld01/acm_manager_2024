@@ -12,7 +12,7 @@ export async function MtdChartsSection({ sitelinkId }: { sitelinkId: string }) {
   const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
   // Run all chart queries in parallel
-  const [collectionsRows, activityRows, occupancyRows, goalRows] = await Promise.all([
+  const [collectionsRows, activityRows, occupancyRows, goalRows, receivableRows] = await Promise.all([
     db.execute(sql`
       SELECT date, SUM(monthly_amount) AS monthly_amount
       FROM daily_management_payment_receipt
@@ -30,7 +30,7 @@ export async function MtdChartsSection({ sitelinkId }: { sitelinkId: string }) {
       ORDER BY date ASC
     `),
     db.execute(sql`
-      SELECT date, unit_occupancy
+      SELECT date, unit_occupancy, rent_actual, rent_potential
       FROM daily_management_occupancy
       WHERE facility_id = ${sitelinkId}
         AND date >= ${thirteenMonthsAgoStr}::date
@@ -41,6 +41,14 @@ export async function MtdChartsSection({ sitelinkId }: { sitelinkId: string }) {
       FROM monthly_goal
       WHERE sitelink_id = ${sitelinkId}
         AND month >= ${thirteenMonthsAgoStr}::date
+    `),
+    db.execute(sql`
+      SELECT date, SUM(delinquent_total) AS delinquent_total
+      FROM daily_management_receivable
+      WHERE facility_id = ${sitelinkId}
+        AND date >= ${thirteenMonthsAgoStr}::date
+      GROUP BY date
+      ORDER BY date ASC
     `),
   ]);
 
@@ -64,21 +72,25 @@ export async function MtdChartsSection({ sitelinkId }: { sitelinkId: string }) {
     return map;
   }
 
-  const collStats = buildCollectionsStats();
+  const collStats  = buildCollectionsStats();
+  const occStats   = buildOccupancyStats();
+  const delinqStats = buildReceivableStats();
 
   const collectionsDataUnsorted: MonthCollectionData[] = Array.from({ length: 13 }, (_, i) => {
     const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
     const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const isCurrentMonth = i === 0;
-    const month = d.toLocaleDateString("en-US", { month: "short" });
-    const year = String(d.getFullYear()).slice(-2);
-    const label = `${month} '${year}`;
+    const label = `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
     const stat = collStats.get(monthStr);
+    const occ  = occStats.get(monthStr);
     return {
       monthLabel: label,
       mtdAmount: stat?.mtd ?? null,
       fullMonthTotal: isCurrentMonth ? null : (stat?.full ?? null),
       projectedTotal: null,
+      rentActual:    occ?.rentActual    ?? null,
+      rentPotential: occ?.rentPotential ?? null,
+      delinquentMtd: delinqStats.get(monthStr) ?? null,
       isCurrentMonth,
     };
   });
@@ -116,25 +128,46 @@ export async function MtdChartsSection({ sitelinkId }: { sitelinkId: string }) {
     return map;
   }
 
-  function buildOccupancyStats(): Map<string, MonthStat<number>> {
-    const map = new Map<string, MonthStat<number>>();
+  function buildOccupancyStats(): Map<string, { occ: MonthStat<number>; rentActual: number | null; rentPotential: number | null }> {
+    const map = new Map<string, { occ: MonthStat<number>; rentActual: number | null; rentPotential: number | null }>();
     for (const row of occupancyRows as Record<string, unknown>[]) {
       const d = new Date(String(row.date));
       const monthStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
       const day = d.getUTCDate();
-      const val = parseFloat(String(row.unit_occupancy ?? "0")) * 100;
-      const prev = map.get(monthStr) ?? { mtd: null, full: null };
+      const occVal       = parseFloat(String(row.unit_occupancy ?? "0")) * 100;
+      const rentActual   = row.rent_actual   != null ? parseFloat(String(row.rent_actual))   : null;
+      const rentPotential = row.rent_potential != null ? parseFloat(String(row.rent_potential)) : null;
+      const prev = map.get(monthStr) ?? { occ: { mtd: null, full: null }, rentActual: null, rentPotential: null };
       map.set(monthStr, {
-        mtd: day <= dayOfMonth ? val : prev.mtd,
-        full: val,
+        occ: {
+          mtd: day <= dayOfMonth ? occVal : prev.occ.mtd,
+          full: occVal,
+        },
+        // Always overwrite with latest (end-of-month) value
+        rentActual:    rentActual    ?? prev.rentActual,
+        rentPotential: rentPotential ?? prev.rentPotential,
       });
+    }
+    return map;
+  }
+
+  // Delinquent total as of day X of each month (sum across all buckets already done in SQL)
+  function buildReceivableStats(): Map<string, number | null> {
+    const map = new Map<string, number | null>();
+    for (const row of receivableRows as Record<string, unknown>[]) {
+      const d = new Date(String(row.date));
+      const monthStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      const day = d.getUTCDate();
+      if (day <= dayOfMonth) {
+        const val = parseFloat(String(row.delinquent_total ?? "0"));
+        map.set(monthStr, val);
+      }
     }
     return map;
   }
 
   const moveInStats  = buildActivityStats("Move-Ins");
   const moveOutStats = buildActivityStats("Move-Outs");
-  const occStats     = buildOccupancyStats();
 
   // Build rental goal map: monthStr -> rentalGoal
   const goalMap = new Map<string, number>();
@@ -148,9 +181,7 @@ export async function MtdChartsSection({ sitelinkId }: { sitelinkId: string }) {
     const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
     const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const isCurrentMonth = i === 0;
-    const month = d.toLocaleDateString("en-US", { month: "short" });
-    const year = String(d.getFullYear()).slice(-2);
-    const label = `${month} '${year}`;
+    const label = `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
     const mi  = moveInStats.get(monthStr);
     const mo  = moveOutStats.get(monthStr);
     const occ = occStats.get(monthStr);
@@ -162,8 +193,8 @@ export async function MtdChartsSection({ sitelinkId }: { sitelinkId: string }) {
       moveOutMtd:   mo?.mtd  ?? null,
       moveOutFull:  isCurrentMonth ? null : (mo?.full  ?? null),
       moveOutProjected: null,
-      occupancyMtd: occ?.mtd ?? null,
-      occupancyEnd: isCurrentMonth ? null : (occ?.full ?? null),
+      occupancyMtd: occ?.occ.mtd ?? null,
+      occupancyEnd: isCurrentMonth ? null : (occ?.occ.full ?? null),
       rentalGoal:   goalMap.get(monthStr) ?? null,
       isCurrentMonth,
       _miMtd: mi?.mtd ?? null,

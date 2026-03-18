@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { unstable_cache } from "next/cache";
+import { BannerScroller } from "./BannerScroller";
 
 const getTodayRentals = unstable_cache(
   async () => {
@@ -57,7 +58,7 @@ export async function LocationRentalsBanner({
 
   return (
     <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border px-4 py-2">
-      <div className="flex gap-2 overflow-x-auto no-scrollbar">
+      <BannerScroller>
         {(rows as Record<string, unknown>[]).flatMap((loc, i, arr) => {
           const id = String(loc.sitelink_id);
           const count = rentalMap[id] ?? 0;
@@ -104,7 +105,7 @@ export async function LocationRentalsBanner({
           }
           return [card];
         })}
-      </div>
+      </BannerScroller>
     </div>
   );
 }
