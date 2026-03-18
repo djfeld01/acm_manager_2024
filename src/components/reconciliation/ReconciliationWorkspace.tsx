@@ -17,6 +17,7 @@ import {
   SendHorizontal,
   RotateCcw,
   CheckCheck,
+  Pencil,
 } from "lucide-react";
 import {
   autoMatchAction,
@@ -1074,6 +1075,16 @@ function SundriesTable({ sundries }: { sundries: { description: string; monthlyA
   );
 }
 
+function txnTypeLabel(type: string) {
+  switch (type) {
+    case "cash": return "Cash / Check";
+    case "creditCard": return "Credit Card";
+    case "truck": return "Truck";
+    case "other": return "Other";
+    default: return type;
+  }
+}
+
 function MatchRow({
   row,
   isEditable,
@@ -1186,36 +1197,41 @@ function MatchRow({
       <td className="p-3 text-right text-muted-foreground/30">—</td>
       <td className="p-3 text-right font-medium">{fmt$(row.bankAmount)}</td>
       <td className="p-3 text-right hidden sm:table-cell text-muted-foreground/30">—</td>
-      <td className="p-3 text-center">
+      <td className="p-3">
         {isEditable && isEditingType ? (
-          <select
-            autoFocus
-            defaultValue={row.transactionType}
-            onBlur={() => setIsEditingType(false)}
-            onChange={(e) => {
-              onRecategorize(row.bankTransactionId, e.target.value);
-              setIsEditingType(false);
-            }}
-            onClick={(e) => e.stopPropagation()}
-            className="text-xs rounded border border-input bg-background px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            <option value="cash">Cash</option>
-            <option value="creditCard">Credit Card</option>
-            <option value="truck">Truck</option>
-            <option value="other">Other</option>
-          </select>
+          <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <select
+              autoFocus
+              defaultValue={row.transactionType}
+              onBlur={() => setIsEditingType(false)}
+              onChange={(e) => {
+                onRecategorize(row.bankTransactionId, e.target.value);
+                setIsEditingType(false);
+              }}
+              className="text-xs rounded border border-input bg-background px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="cash">Cash / Check</option>
+              <option value="creditCard">Credit Card</option>
+              <option value="truck">Truck</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
         ) : (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isEditable) setIsEditingType(true);
-            }}
-            title={isEditable ? "Click to change category" : undefined}
-            className={`inline-flex items-center gap-1 text-xs text-yellow-700 dark:text-yellow-400 ${isEditable ? "hover:underline cursor-pointer" : ""}`}
-          >
-            <AlertTriangle className="h-3.5 w-3.5" />
-            Bank only
-          </button>
+          <div className="flex items-center justify-center gap-2">
+            <span className="inline-flex items-center gap-1 text-xs text-yellow-700 dark:text-yellow-400">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {txnTypeLabel(row.transactionType)}
+            </span>
+            {isEditable && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setIsEditingType(true); }}
+                title="Change deposit type"
+                className="text-muted-foreground/50 hover:text-foreground transition-colors"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            )}
+          </div>
         )}
       </td>
       {isEditable && <td className="p-3" />}
