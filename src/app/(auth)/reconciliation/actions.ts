@@ -701,3 +701,18 @@ export async function rejectDiscrepancyAction(
     })
     .where(eq(reconciliationDiscrepancies.discrepancyId, discrepancyId));
 }
+
+// ─── Recategorize bank transaction ────────────────────────────────────────
+
+export async function recategorizeTransactionAction(
+  bankTransactionId: number,
+  newType: "cash" | "creditCard" | "truck" | "other",
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  await db
+    .update(bankTransaction)
+    .set({ transactionType: newType })
+    .where(eq(bankTransaction.bankTransactionId, bankTransactionId));
+}

@@ -28,6 +28,7 @@ import {
   requestChangesAction,
   approveDiscrepancyAction,
   rejectDiscrepancyAction,
+  recategorizeTransactionAction,
   type DiscrepancyType,
 } from "@/app/(auth)/reconciliation/actions";
 
@@ -131,6 +132,8 @@ type BankOnlyRow = {
   date: string;
   bankAmount: number;
   bankTransactionId: number;
+  transactionType: string;
+  bankAccountId: number;
   isNextMonth?: boolean;
 };
 
@@ -210,7 +213,7 @@ function buildRows(
     });
   }
 
-  // Unmatched bank transactions for this tab's type
+  // Unmatched bank transactions for this tab's type (truck is excluded since txnType is cash/creditCard)
   for (const t of bankTxns) {
     if (matchedBankIds.has(t.bankTransactionId)) continue;
     if (t.transactionType !== txnType) continue;
@@ -219,6 +222,8 @@ function buildRows(
       date: t.transactionDate,
       bankAmount: t.transactionAmount,
       bankTransactionId: t.bankTransactionId,
+      transactionType: t.transactionType,
+      bankAccountId: t.bankAccountId,
       isNextMonth: t.isNextMonth,
     });
   }
@@ -257,7 +262,7 @@ export function ReconciliationWorkspace({
 }: ReconciliationWorkspaceProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [tab, setTab] = useState<"cash" | "credit" | "sundries">("cash");
+  const [tab, setTab] = useState<"cash" | "credit" | "truck" | "sundries">("cash");
 
   // Multi-select: sets of selected IDs
   const [selectedSitelinkIds, setSelectedSitelinkIds] = useState<Set<number>>(new Set());
@@ -278,7 +283,8 @@ export function ReconciliationWorkspace({
 
   const cashRows = buildRows(dailyPayments, bankTransactions, matches, "cash");
   const creditRows = buildRows(dailyPayments, bankTransactions, matches, "credit");
-  const currentRows = tab === "cash" ? cashRows : creditRows;
+  const truckRows = bankTransactions.filter((t) => t.transactionType === "truck");
+  const currentRows = tab === "cash" ? cashRows : tab === "credit" ? creditRows : [];
 
   // Running totals for selection
   const selectedSitelinkTotal = Array.from(selectedSitelinkIds).reduce((sum, id) => {
@@ -462,6 +468,20 @@ export function ReconciliationWorkspace({
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Match failed");
+      }
+    });
+  };
+
+  const handleRecategorize = (bankTransactionId: number, newType: string) => {
+    startTransition(async () => {
+      try {
+        await recategorizeTransactionAction(
+          bankTransactionId,
+          newType as "cash" | "creditCard" | "truck" | "other",
+        );
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Recategorize failed");
       }
     });
   };
@@ -874,7 +894,7 @@ export function ReconciliationWorkspace({
       <Tabs
         value={tab}
         onValueChange={(v) => {
-          setTab(v as "cash" | "credit");
+          setTab(v as "cash" | "credit" | "truck" | "sundries");
           clearSelection();
         }}
       >
@@ -895,6 +915,14 @@ export function ReconciliationWorkspace({
               </span>
             )}
           </TabsTrigger>
+          {truckRows.length > 0 && (
+            <TabsTrigger value="truck">
+              Truck
+              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                {truckRows.length}
+              </span>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="sundries">
             Sundries
             {sundries.length > 0 && (
@@ -907,6 +935,8 @@ export function ReconciliationWorkspace({
 
         {tab === "sundries" ? (
           <SundriesTable sundries={sundries} />
+        ) : tab === "truck" ? (
+          <TruckTable rows={truckRows} bankAccounts={bankAccounts} />
         ) : (
           <div className="mt-4 border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
@@ -942,6 +972,7 @@ export function ReconciliationWorkspace({
                       onToggleSitelink={toggleSitelink}
                       onToggleBank={toggleBank}
                       onUnmatch={handleUnmatch}
+                      onRecategorize={handleRecategorize}
                       isPending={isPending}
                     />
                   ))
@@ -1051,6 +1082,7 @@ function MatchRow({
   onToggleSitelink,
   onToggleBank,
   onUnmatch,
+  onRecategorize,
   isPending,
 }: {
   row: TableRow;
@@ -1060,8 +1092,10 @@ function MatchRow({
   onToggleSitelink: (id: number) => void;
   onToggleBank: (id: number) => void;
   onUnmatch: (bankId: number, paymentId: number) => void;
+  onRecategorize: (bankTransactionId: number, newType: string) => void;
   isPending: boolean;
 }) {
+  const [isEditingType, setIsEditingType] = useState(false);
   const fmt$ = (n: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
@@ -1138,8 +1172,8 @@ function MatchRow({
     <tr
       className={`transition-colors ${
         isSelected ? "bg-primary/10" : "hover:bg-muted/30"
-      } ${isEditable ? "cursor-pointer" : ""}`}
-      onClick={() => isEditable && onToggleBank(row.bankTransactionId)}
+      } ${isEditable && !isEditingType ? "cursor-pointer" : ""}`}
+      onClick={() => !isEditingType && isEditable && onToggleBank(row.bankTransactionId)}
     >
       <td className="p-3 text-muted-foreground">
         {fmtDate(row.date)}
@@ -1153,12 +1187,91 @@ function MatchRow({
       <td className="p-3 text-right font-medium">{fmt$(row.bankAmount)}</td>
       <td className="p-3 text-right hidden sm:table-cell text-muted-foreground/30">—</td>
       <td className="p-3 text-center">
-        <span className="inline-flex items-center gap-1 text-xs text-yellow-700 dark:text-yellow-400">
-          <AlertTriangle className="h-3.5 w-3.5" />
-          Bank only
-        </span>
+        {isEditable && isEditingType ? (
+          <select
+            autoFocus
+            defaultValue={row.transactionType}
+            onBlur={() => setIsEditingType(false)}
+            onChange={(e) => {
+              onRecategorize(row.bankTransactionId, e.target.value);
+              setIsEditingType(false);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs rounded border border-input bg-background px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="cash">Cash</option>
+            <option value="creditCard">Credit Card</option>
+            <option value="truck">Truck</option>
+            <option value="other">Other</option>
+          </select>
+        ) : (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isEditable) setIsEditingType(true);
+            }}
+            title={isEditable ? "Click to change category" : undefined}
+            className={`inline-flex items-center gap-1 text-xs text-yellow-700 dark:text-yellow-400 ${isEditable ? "hover:underline cursor-pointer" : ""}`}
+          >
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Bank only
+          </button>
+        )}
       </td>
       {isEditable && <td className="p-3" />}
     </tr>
+  );
+}
+
+function TruckTable({
+  rows,
+  bankAccounts,
+}: {
+  rows: BankTransaction[];
+  bankAccounts: BankAccount[];
+}) {
+  const fmt$ = (n: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+  const total = rows.reduce((s, t) => s + t.transactionAmount, 0);
+
+  return (
+    <div className="mt-4 border rounded-lg overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-muted/60 border-b">
+            <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
+            <th className="text-left p-3 font-medium text-muted-foreground">Account</th>
+            <th className="text-right p-3 font-medium text-muted-foreground">Amount</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={3} className="py-10 text-center text-sm text-muted-foreground">
+                No truck account transactions for this period.
+              </td>
+            </tr>
+          ) : (
+            rows.map((t, i) => (
+              <tr key={i} className="hover:bg-muted/20">
+                <td className="p-3 text-muted-foreground">{fmtDate(t.transactionDate)}</td>
+                <td className="p-3 text-muted-foreground">
+                  {bankAccounts.find((a) => a.bankAccountId === t.bankAccountId)?.bankName ?? "—"}
+                </td>
+                <td className="p-3 text-right font-medium">{fmt$(t.transactionAmount)}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+        {rows.length > 0 && (
+          <tfoot>
+            <tr className="bg-muted/40 border-t font-semibold">
+              <td colSpan={2} className="p-3">Total</td>
+              <td className="p-3 text-right">{fmt$(total)}</td>
+            </tr>
+          </tfoot>
+        )}
+      </table>
+    </div>
   );
 }
