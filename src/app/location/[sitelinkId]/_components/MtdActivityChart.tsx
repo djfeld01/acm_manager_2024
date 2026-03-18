@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useChartDirection } from "@/lib/hooks/useChartDirection";
+import { useChartExport } from "@/lib/hooks/useChartExport";
+import { Download } from "lucide-react";
 import {
   ComposedChart,
   Bar,
@@ -132,6 +134,7 @@ export function MtdActivityChart({
 }) {
   const [mode, setMode] = useState<Mode>("moveins");
   const { newestFirst, toggle } = useChartDirection();
+  const { containerRef, exportPng } = useChartExport("activity-chart");
 
   const orderedData = newestFirst ? data : [...data].reverse();
 
@@ -180,14 +183,24 @@ export function MtdActivityChart({
             </button>
           ))}
         </div>
-        <button
-          onClick={toggle}
-          className="px-2.5 py-1 rounded text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
-        >
-          {newestFirst ? "Newest → Oldest" : "Oldest → Newest"}
-        </button>
+        <div className="flex gap-1">
+          <button
+            onClick={toggle}
+            className="px-2.5 py-1 rounded text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+          >
+            {newestFirst ? "Newest → Oldest" : "Oldest → Newest"}
+          </button>
+          <button
+            onClick={exportPng}
+            title="Export as PNG"
+            className="px-2 py-1 rounded text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
+      <div ref={containerRef}>
       <ResponsiveContainer width="100%" height={300}>
         <ComposedChart data={displayData} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -239,6 +252,7 @@ export function MtdActivityChart({
           )}
         </ComposedChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }
