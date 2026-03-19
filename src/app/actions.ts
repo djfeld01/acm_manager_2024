@@ -74,18 +74,24 @@ export async function addBankTransactions(data: ParsedBankFile[]) {
             eq(bankAccount.bankAccountNumber, file.accountNumber),
             eq(bankAccount.bankRoutingNumber, file.routingNumber)
           ),
-        columns: { bankAccountId: true },
+        columns: { bankAccountId: true, depositType: true },
       });
       if (!bankAccount?.bankAccountId) {
         return "ERROR: Bank Account not found";
       }
       const transactions = file.deposits.map((deposit) => {
+        // If the bank account has a specific deposit type, use it for all its transactions.
+        // Fall back to memo-based detection only for "all" or "cash" accounts.
+        const transactionType =
+          bankAccount.depositType && bankAccount.depositType !== "all"
+            ? bankAccount.depositType
+            : deposit.transactionType;
         return {
           bankAccountId: bankAccount?.bankAccountId,
           downloadedId: deposit.transactionId,
           transactionAmount: deposit.transactionAmount.toString(),
           transactionDate: deposit.transactionDate.toISOString(),
-          transactionType: deposit.transactionType,
+          transactionType,
         };
       });
 
