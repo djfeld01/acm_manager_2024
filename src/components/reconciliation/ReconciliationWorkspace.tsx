@@ -263,7 +263,7 @@ export function ReconciliationWorkspace({
 }: ReconciliationWorkspaceProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [tab, setTab] = useState<"cash" | "credit" | "truck" | "sundries">("cash");
+  const [tab, setTab] = useState<"cash" | "credit" | "truck" | "other" | "sundries">("cash");
 
   // Multi-select: sets of selected IDs
   const [selectedSitelinkIds, setSelectedSitelinkIds] = useState<Set<number>>(new Set());
@@ -285,6 +285,7 @@ export function ReconciliationWorkspace({
   const cashRows = buildRows(dailyPayments, bankTransactions, matches, "cash");
   const creditRows = buildRows(dailyPayments, bankTransactions, matches, "credit");
   const truckRows = bankTransactions.filter((t) => t.transactionType === "truck");
+  const otherRows = bankTransactions.filter((t) => t.transactionType === "other");
   const currentRows = tab === "cash" ? cashRows : tab === "credit" ? creditRows : [];
 
   // Running totals for selection
@@ -895,7 +896,7 @@ export function ReconciliationWorkspace({
       <Tabs
         value={tab}
         onValueChange={(v) => {
-          setTab(v as "cash" | "credit" | "truck" | "sundries");
+          setTab(v as "cash" | "credit" | "truck" | "other" | "sundries");
           clearSelection();
         }}
       >
@@ -924,6 +925,14 @@ export function ReconciliationWorkspace({
               </span>
             </TabsTrigger>
           )}
+          {otherRows.length > 0 && (
+            <TabsTrigger value="other">
+              Other
+              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                {otherRows.length}
+              </span>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="sundries">
             Sundries
             {sundries.length > 0 && (
@@ -938,6 +947,8 @@ export function ReconciliationWorkspace({
           <SundriesTable sundries={sundries} />
         ) : tab === "truck" ? (
           <TruckTable rows={truckRows} bankAccounts={bankAccounts} />
+        ) : tab === "other" ? (
+          <TruckTable rows={otherRows} bankAccounts={bankAccounts} />
         ) : (
           <div className="mt-4 border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
