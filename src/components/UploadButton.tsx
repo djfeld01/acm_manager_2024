@@ -7,6 +7,7 @@ import { ArrowBigUp, CheckCircle2, AlertCircle, FileX } from "lucide-react";
 import React from "react";
 
 type FileResult = {
+  fileName: string;
   accountNumber: string; // last 4 digits
   parsed: number;        // deposits found in file
   inserted: number | null;
@@ -28,6 +29,7 @@ function UploadButton() {
     }
 
     try {
+      const fileNames = Array.from(files).map((f) => f.name);
       const parsed: ParsedBankFile[] = await parseBankDownloads(files);
       const rawResults = await addBankTransactions(parsed);
 
@@ -36,6 +38,7 @@ function UploadButton() {
         const last4 = file.accountNumber.slice(-4);
         if (typeof raw === "string") {
           return {
+            fileName: fileNames[i] ?? "unknown",
             accountNumber: last4,
             parsed: file.deposits.length,
             inserted: null,
@@ -43,6 +46,7 @@ function UploadButton() {
           };
         }
         return {
+          fileName: fileNames[i] ?? "unknown",
           accountNumber: last4,
           parsed: file.deposits.length,
           inserted: raw.length,
@@ -55,6 +59,7 @@ function UploadButton() {
       console.error("Error uploading files:", error);
       setResults([
         {
+          fileName: "unknown",
           accountNumber: "—",
           parsed: 0,
           inserted: null,
@@ -120,10 +125,11 @@ function UploadButton() {
 
       {/* Per-file breakdown */}
       {results && results.length > 0 && (
-        <div className="border rounded-lg overflow-hidden text-sm max-w-lg">
+        <div className="border rounded-lg overflow-hidden text-sm max-w-2xl">
           <table className="w-full">
             <thead>
               <tr className="bg-muted/60 border-b">
+                <th className="text-left p-2.5 font-medium text-muted-foreground">File</th>
                 <th className="text-left p-2.5 font-medium text-muted-foreground">Account (last 4)</th>
                 <th className="text-right p-2.5 font-medium text-muted-foreground">In File</th>
                 <th className="text-right p-2.5 font-medium text-muted-foreground">New</th>
@@ -133,18 +139,13 @@ function UploadButton() {
             <tbody className="divide-y">
               {results.map((r, i) => (
                 <tr key={i} className={r.error ? "bg-destructive/5" : ""}>
-                  <td className="p-2.5 font-mono">
-                    {r.error ? (
-                      <span className="inline-flex items-center gap-1 text-destructive">
-                        <FileX className="h-3.5 w-3.5" />
-                        ···{r.accountNumber}
-                      </span>
-                    ) : (
-                      `···${r.accountNumber}`
-                    )}
+                  <td className="p-2.5 text-xs text-muted-foreground max-w-[180px] truncate" title={r.fileName}>
+                    {r.error && <FileX className="h-3.5 w-3.5 inline mr-1 text-destructive" />}
+                    {r.fileName}
                   </td>
+                  <td className="p-2.5 font-mono">···{r.accountNumber}</td>
                   {r.error ? (
-                    <td colSpan={3} className="p-2.5 text-destructive text-xs">
+                    <td colSpan={3} className="p-2.5 text-destructive text-xs" title={r.error}>
                       {r.error}
                     </td>
                   ) : (

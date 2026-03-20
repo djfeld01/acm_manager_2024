@@ -20,6 +20,7 @@ import {
   TrendingUp,
   BarChart3,
   Trophy,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -116,6 +117,7 @@ export function SidebarNav({ locations, userRole }: SidebarNavProps) {
     {
       label: "Management",
       items: [
+        { label: "Bank Upload", href: "/bank", icon: Upload },
         { label: "Employees", href: "/employees", icon: Users },
         { label: "Goals", href: "/goals", icon: Target },
         { label: "Facilities", href: "/locationConnections", icon: Building2 },
