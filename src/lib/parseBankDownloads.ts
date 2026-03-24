@@ -14,8 +14,8 @@ interface OFXStatementResponse {
     ACCTID: string;
     BANKID: string;
   };
-  BANKTRANLIST: {
-    STMTTRN: OFXTransaction[];
+  BANKTRANLIST?: {
+    STMTTRN?: OFXTransaction | OFXTransaction[];
   };
   LEDGERBAL?: {
     BALAMT?: string;
@@ -23,12 +23,16 @@ interface OFXStatementResponse {
   };
 }
 
+interface OFXStatementTrnRs {
+  STMTRS?: OFXStatementResponse;
+}
+
 interface ParsedOFXData {
   OFX?: {
     BANKMSGSRSV1?: {
-      STMTTRNRS?: {
-        STMTRS?: OFXStatementResponse;
-      };
+      // Some banks (e.g. Huntington) include multiple accounts in one file,
+      // which xml2js parses as an array rather than a single object.
+      STMTTRNRS?: OFXStatementTrnRs | OFXStatementTrnRs[];
     };
   };
 }
@@ -52,92 +56,86 @@ export interface ParsedBankFile {
   routingNumber: string;
 }
 
-// given a date Find if it was today, or yesterday, otherwise day of the week.
+function parseStatementResponse(statementResponse: OFXStatementResponse): ParsedBankFile {
+  const availableBalance = parseFloat(
+    statementResponse.LEDGERBAL?.BALAMT || "0"
+  );
+  const DTASOF = statementResponse.LEDGERBAL?.DTASOF;
+  const balanceDate: Date =
+    DTASOF && DTASOF.length >= 8
+      ? new Date(
+          parseInt(DTASOF.slice(0, 4), 10),
+          parseInt(DTASOF.slice(4, 6), 10) - 1,
+          parseInt(DTASOF.slice(6, 8), 10)
+        )
+      : new Date();
+
+  const accountNumber = statementResponse.BANKACCTFROM.ACCTID;
+  const routingNumber = statementResponse.BANKACCTFROM.BANKID;
+
+  const rawTransactions = statementResponse.BANKTRANLIST?.STMTTRN;
+  const normalizedTransactions: OFXTransaction[] = rawTransactions
+    ? Array.isArray(rawTransactions)
+      ? rawTransactions
+      : [rawTransactions]
+    : [];
+
+  const deposits: ParsedDeposit[] = normalizedTransactions.reduce(
+    (act: ParsedDeposit[], transaction: OFXTransaction) => {
+      const { TRNAMT, MEMO, NAME, FITID, DTPOSTED } = transaction;
+
+      if (!DTPOSTED || DTPOSTED.length < 8) return act;
+
+      const transactionYear = parseInt(DTPOSTED.slice(0, 4), 10);
+      const transactionMonth = parseInt(DTPOSTED.slice(4, 6), 10) - 1;
+      const transactionDay = parseInt(DTPOSTED.slice(6, 8), 10);
+      const transactionId = `${FITID}`;
+      const transactionDate = new Date(transactionYear, transactionMonth, transactionDay);
+      const transactionAmount = parseFloat(TRNAMT);
+
+      if (transactionAmount <= 0) return act;
+
+      const transactionType: "creditCard" | "cash" =
+        MEMO?.toLowerCase().includes("merchpayout") ||
+        NAME?.toLowerCase().includes("merchpayout")
+          ? "creditCard"
+          : "cash";
+
+      return [
+        ...act,
+        { accountNumber, routingNumber, transactionId, transactionType, transactionAmount, transactionDate },
+      ];
+    },
+    []
+  );
+
+  return { availableBalance, balanceDate, deposits, accountNumber, routingNumber };
+}
+
 export async function parseBankDownloads(
   files: FileList
 ): Promise<ParsedBankFile[]> {
   const filesArray = Array.from(files);
 
-  const result = await Promise.all(
-    filesArray.map(async (file): Promise<ParsedBankFile> => {
+  const results = await Promise.all(
+    filesArray.map(async (file): Promise<ParsedBankFile[]> => {
       const data = await file.text();
       const parsedData: ParsedOFXData = await parseOFX(data);
 
-      // Ensure parsedData.OFX exists before accessing its properties
-      if (!parsedData.OFX?.BANKMSGSRSV1?.STMTTRNRS?.STMTRS) {
+      if (!parsedData.OFX?.BANKMSGSRSV1?.STMTTRNRS) {
         throw new Error("Invalid OFX format: Missing required fields.");
       }
 
-      const statementResponse = parsedData.OFX.BANKMSGSRSV1.STMTTRNRS.STMTRS;
-      const availableBalance = parseFloat(
-        statementResponse.LEDGERBAL?.BALAMT || "0"
-      );
-      const DTASOF = statementResponse?.LEDGERBAL?.DTASOF;
-      const balanceDate: Date =
-        DTASOF && DTASOF.length >= 8
-          ? new Date(
-              parseInt(DTASOF.slice(0, 4), 10), // Year
-              parseInt(DTASOF.slice(4, 6), 10) - 1, // Month (0-indexed)
-              parseInt(DTASOF.slice(6, 8), 10) // Day
-            )
-          : new Date();
+      // Normalize to array — some banks include multiple accounts per file
+      const stmttrnrs = parsedData.OFX.BANKMSGSRSV1.STMTTRNRS;
+      const stmttrnrsArray = Array.isArray(stmttrnrs) ? stmttrnrs : [stmttrnrs];
 
-      const accountNumber = statementResponse.BANKACCTFROM.ACCTID;
-      const routingNumber = statementResponse.BANKACCTFROM.BANKID;
-      const transactions = statementResponse.BANKTRANLIST.STMTTRN || [];
-      const normalizedTransactions = transactions
-        ? Array.isArray(transactions)
-          ? transactions
-          : [transactions]
-        : [];
-      const deposits: ParsedDeposit[] = normalizedTransactions.reduce(
-        (act: ParsedDeposit[], transaction: OFXTransaction) => {
-          const { TRNAMT, MEMO, NAME, FITID, DTPOSTED } = transaction;
-
-          if (!DTPOSTED || DTPOSTED.length < 8) return act; // Ensure valid date format
-
-          const transactionYear = parseInt(DTPOSTED.slice(0, 4), 10);
-          const transactionMonth = parseInt(DTPOSTED.slice(4, 6), 10) - 1; // Month is 0-indexed
-          const transactionDay = parseInt(DTPOSTED.slice(6, 8), 10);
-          const transactionId = `${FITID}`;
-          const transactionDate = new Date(
-            transactionYear,
-            transactionMonth,
-            transactionDay
-          );
-          const transactionAmount = parseFloat(TRNAMT);
-
-          if (transactionAmount <= 0) return act;
-
-          let transactionType: "creditCard" | "cash" =
-            MEMO?.toLowerCase().includes("merchpayout") ||
-            NAME?.toLowerCase().includes("merchpayout")
-              ? "creditCard"
-              : "cash";
-
-          return [
-            ...act,
-            {
-              accountNumber,
-              routingNumber,
-              transactionId,
-              transactionType,
-              transactionAmount,
-              transactionDate,
-            },
-          ];
-        },
-        []
-      );
-
-      return {
-        availableBalance,
-        balanceDate,
-        deposits,
-        accountNumber,
-        routingNumber,
-      };
+      return stmttrnrsArray
+        .map((item) => item.STMTRS)
+        .filter((sr): sr is OFXStatementResponse => sr != null)
+        .map(parseStatementResponse);
     })
   );
-  return result;
+
+  return results.flat();
 }
