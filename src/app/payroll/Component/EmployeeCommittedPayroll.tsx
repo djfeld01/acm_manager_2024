@@ -5,10 +5,15 @@ import {
   UserWithActivities,
   Vacations,
 } from "./EmployeeComissionComponent";
-import { CircleMinus } from "lucide-react";
+import { CircleMinus, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   HoverCard,
   HoverCardContent,
@@ -47,6 +52,9 @@ function EmployeeCommittedPayroll({
   payPeriodId,
 }: EmployeeCommittedPayrollProps) {
   const queryClient = useQueryClient();
+  const [commissionOpen, setCommissionOpen] = useState(false);
+  const [selectedActivities, setSelectedActivities] = useState<number[]>([]);
+
   const { data: holiday, isRefetching: holidayIsRefetching } = useQuery(
     committedHolidayHoursOptions(sitelinkId, employeeId, payPeriodId)
   );
@@ -109,6 +117,22 @@ function EmployeeCommittedPayroll({
       }, 0)
     : 0;
 
+  function toggleAll(checked: boolean) {
+    if (checked) {
+      setSelectedActivities(committedActivities.map((a) => a.activityId));
+    } else {
+      setSelectedActivities([]);
+    }
+  }
+
+  function toggleActivity(activityId: number) {
+    setSelectedActivities((prev) =>
+      prev.includes(activityId)
+        ? prev.filter((id) => id !== activityId)
+        : [...prev, activityId]
+    );
+  }
+
   async function updateMileage(id: string) {
     const deletedMileage = await deleteMileage(id);
     queryClient.invalidateQueries({
@@ -116,8 +140,9 @@ function EmployeeCommittedPayroll({
     });
   }
 
-  async function updateActivities(selectedActivities: number[]) {
-    await uncommitActivityFromPayroll(selectedActivities);
+  async function updateActivities(selectedIds: number[]) {
+    await uncommitActivityFromPayroll(selectedIds);
+    setSelectedActivities([]);
     queryClient.invalidateQueries({
       queryKey: ["payrollPageData", sitelinkId],
     });
@@ -161,245 +186,306 @@ function EmployeeCommittedPayroll({
   }
 
   return (
-    // <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-    <div className="bg-gray-200 rounded-3xl">
-      <CardHeader className="p-1">Committed For This Payroll</CardHeader>
-      <CardContent className="flex">
-        {committedActivities.length > 0 ? (
-          <HoverCard>
-            <HoverCardTrigger asChild>
-              <div className="cursor-pointer flex-1">
-                <div className="font-semibold">Commission</div>
-                <div> ${(committedCommission || 0).toFixed(2)}</div>
-              </div>
-            </HoverCardTrigger>
-
-            <HoverCardContent>
-              <div>Committed Units</div>
-              {committedActivities.map((activity) => (
-                <div key={activity.activityId} className="grid grid-cols-5 ">
-                  <Button
-                    onClick={() => updateActivities([activity.activityId])}
-                    variant="ghost"
-                    size="sm"
-                    className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
-                  >
-                    <CircleMinus className="h-4 w-4" />
-                    <span className="sr-only">Toggle</span>
-                  </Button>
-                  <div className="col-span-2">{activity.unitName}</div>
-                  <div className="col-span-2">
-                    {new Date(activity.date).toLocaleDateString(undefined, {
-                      month: "2-digit",
-                      day: "2-digit",
-                    })}
-                  </div>
-                </div>
-              ))}
-            </HoverCardContent>
-          </HoverCard>
-        ) : (
+    <div className="space-y-1">
+      {/* Summary row */}
+      <div className="bg-gray-200 rounded-3xl">
+        <CardHeader className="p-1">Committed For This Payroll</CardHeader>
+        <CardContent className="flex">
+          {/* Commission — static display; detail handled by Collapsible below */}
           <div className="flex-1">
             <div className="font-semibold">Commission</div>
-            <div>$0.00</div>
+            <div>${(committedCommission || 0).toFixed(2)}</div>
           </div>
-        )}
-        {vacation ? (
-          <HoverCard>
-            <HoverCardTrigger asChild>
-              <div className="cursor-pointer flex-1">
-                <div className="font-semibold">Vacation</div>
-                <div> {vacationHours || 0} hours</div>
-              </div>
-            </HoverCardTrigger>
-            <HoverCardContent>
-              {vacation.map((vacation) => (
-                <div key={vacation.vacationId} className="grid grid-cols-5 ">
-                  <Button
-                    onClick={() => updateVacation(vacation.vacationId)}
-                    variant="ghost"
-                    size="sm"
-                    className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
-                  >
-                    <CircleMinus className="h-4 w-4" />
-                    <span className="sr-only">Toggle</span>
-                  </Button>
-                  <div className="col-span-2">
-                    {new Date(vacation.date).toLocaleDateString(undefined, {
-                      month: "2-digit",
-                      day: "2-digit",
-                    })}
-                  </div>
+
+          {vacation ? (
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <div className="cursor-pointer flex-1">
+                  <div className="font-semibold">Vacation</div>
+                  <div> {vacationHours || 0} hours</div>
                 </div>
-              ))}
-            </HoverCardContent>
-          </HoverCard>
-        ) : (
-          <div className="flex-1">
-            <div className="font-semibold">Vacation</div>
-            <div> 0 hours</div>
-          </div>
-        )}
-        {mileage ? (
-          <HoverCard>
-            <HoverCardTrigger asChild>
-              <div className="cursor-pointer flex-1">
-                <div className="font-semibold">Mileage</div>
-                <div> ${mileagePaid.toFixed(2)}</div>
-              </div>
-            </HoverCardTrigger>
-            <HoverCardContent>
-              {mileage.map((mileEntry) => (
-                <div key={mileEntry.mileageId} className="grid grid-cols-7 ">
-                  <Button
-                    onClick={() => updateMileage(mileEntry.mileageId)}
-                    variant="ghost"
-                    size="sm"
-                    className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
-                  >
-                    <CircleMinus className="h-4 w-4" />
-                    <span className="sr-only">Toggle</span>
-                  </Button>
-                  <div className="col-span-2">{mileEntry.mileage}</div>
-                  <div className="col-span-2">
-                    {new Date(mileEntry.date).toLocaleDateString(undefined, {
-                      month: "2-digit",
-                      day: "2-digit",
-                    })}
-                  </div>
-                  <div className="col-span-2">{mileEntry.mileageNote}</div>
-                </div>
-              ))}
-            </HoverCardContent>
-          </HoverCard>
-        ) : (
-          <div className="flex-1">
-            <div className="font-semibold">Mileage</div>
-            <div>$0.00</div>
-          </div>
-        )}
-        {holiday && holiday.length > 0 ? (
-          <HoverCard>
-            <HoverCardTrigger asChild>
-              <div className="cursor-pointer flex-1">
-                <div className="font-semibold">Holiday</div>
-                <div> {holidayHours} hours</div>
-              </div>
-            </HoverCardTrigger>
-            <HoverCardContent>
-              {holiday.map((holidayEntry) => (
-                <div key={holidayEntry.holidayId} className="grid grid-cols-7 ">
-                  <Button
-                    onClick={() => updateHoliday(holidayEntry.holidayId)}
-                    variant="ghost"
-                    size="sm"
-                    className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
-                  >
-                    <CircleMinus className="h-4 w-4" />
-                    <span className="sr-only">Toggle</span>
-                  </Button>
-                  <div className="col-span-2">{holidayEntry.holidayHours}</div>
-                  <div className="col-span-2">
-                    {new Date(holidayEntry.date).toLocaleDateString(undefined, {
-                      month: "2-digit",
-                      day: "2-digit",
-                    })}
-                  </div>
-                  <div className="col-span-2">
-                    {holidayEntry.holidayHoursType}
-                  </div>
-                </div>
-              ))}
-            </HoverCardContent>
-          </HoverCard>
-        ) : (
-          <></>
-        )}
-        {bonus && bonus.length > 0 ? (
-          <HoverCard>
-            <HoverCardTrigger asChild>
-              <div className="cursor-pointer flex-1">
-                <div className="font-semibold">Bonus</div>
-                <div> ${bonusAmount.toFixed(2)}</div>
-              </div>
-            </HoverCardTrigger>
-            <HoverCardContent>
-              {bonus.map((bonusEntry) => (
-                <div key={bonusEntry.bonusId} className="grid grid-cols-7 ">
-                  <Button
-                    onClick={() => updateBonus(bonusEntry.bonusId)}
-                    variant="ghost"
-                    size="sm"
-                    className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
-                  >
-                    <CircleMinus className="h-4 w-4" />
-                    <span className="sr-only">Toggle</span>
-                  </Button>
-                  <div className="col-span-2">
-                    ${bonusEntry.bonusAmount.toFixed(2)}
-                  </div>
-                  <div className="col-span-2">
-                    {new Date(bonusEntry.date).toLocaleDateString(undefined, {
-                      month: "2-digit",
-                      day: "2-digit",
-                    })}
-                  </div>
-                  <div className="col-span-2">{bonusEntry.bonusType}</div>
-                </div>
-              ))}
-            </HoverCardContent>
-          </HoverCard>
-        ) : (
-          <></>
-        )}
-        {christmasBonus && christmasBonus.length > 0 ? (
-          <HoverCard>
-            <HoverCardTrigger asChild>
-              <div className="cursor-pointer flex-1">
-                <div className="font-semibold">Christmas Bonus</div>
-                <div> ${christmasBonusAmount.toFixed(2)}</div>
-              </div>
-            </HoverCardTrigger>
-            <HoverCardContent>
-              {christmasBonus.map((christmasBonusEntry) => (
-                <div
-                  key={christmasBonusEntry.bonusId}
-                  className="grid grid-cols-7 "
-                >
-                  <Button
-                    onClick={() => updateBonus(christmasBonusEntry.bonusId)}
-                    variant="ghost"
-                    size="sm"
-                    className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
-                  >
-                    <CircleMinus className="h-4 w-4" />
-                    <span className="sr-only">Toggle</span>
-                  </Button>
-                  <div className="col-span-2">
-                    {christmasBonusEntry.bonusAmount}
-                  </div>
-                  <div className="col-span-2">
-                    {new Date(christmasBonusEntry.date).toLocaleDateString(
-                      undefined,
-                      {
+              </HoverCardTrigger>
+              <HoverCardContent>
+                {vacation.map((vacation) => (
+                  <div key={vacation.vacationId} className="grid grid-cols-5 ">
+                    <Button
+                      onClick={() => updateVacation(vacation.vacationId)}
+                      variant="ghost"
+                      size="sm"
+                      className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
+                    >
+                      <CircleMinus className="h-4 w-4" />
+                      <span className="sr-only">Toggle</span>
+                    </Button>
+                    <div className="col-span-2">
+                      {new Date(vacation.date).toLocaleDateString(undefined, {
                         month: "2-digit",
                         day: "2-digit",
-                      }
-                    )}
+                      })}
+                    </div>
                   </div>
-                  <div className="col-span-2">
-                    {christmasBonusEntry.bonusType}
-                  </div>
+                ))}
+              </HoverCardContent>
+            </HoverCard>
+          ) : (
+            <div className="flex-1">
+              <div className="font-semibold">Vacation</div>
+              <div> 0 hours</div>
+            </div>
+          )}
+          {mileage ? (
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <div className="cursor-pointer flex-1">
+                  <div className="font-semibold">Mileage</div>
+                  <div> ${mileagePaid.toFixed(2)}</div>
                 </div>
-              ))}
-            </HoverCardContent>
-          </HoverCard>
-        ) : (
-          <></>
-        )}
-      </CardContent>
+              </HoverCardTrigger>
+              <HoverCardContent>
+                {mileage.map((mileEntry) => (
+                  <div key={mileEntry.mileageId} className="grid grid-cols-7 ">
+                    <Button
+                      onClick={() => updateMileage(mileEntry.mileageId)}
+                      variant="ghost"
+                      size="sm"
+                      className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
+                    >
+                      <CircleMinus className="h-4 w-4" />
+                      <span className="sr-only">Toggle</span>
+                    </Button>
+                    <div className="col-span-2">{mileEntry.mileage}</div>
+                    <div className="col-span-2">
+                      {new Date(mileEntry.date).toLocaleDateString(undefined, {
+                        month: "2-digit",
+                        day: "2-digit",
+                      })}
+                    </div>
+                    <div className="col-span-2">{mileEntry.mileageNote}</div>
+                  </div>
+                ))}
+              </HoverCardContent>
+            </HoverCard>
+          ) : (
+            <div className="flex-1">
+              <div className="font-semibold">Mileage</div>
+              <div>$0.00</div>
+            </div>
+          )}
+          {holiday && holiday.length > 0 ? (
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <div className="cursor-pointer flex-1">
+                  <div className="font-semibold">Holiday</div>
+                  <div> {holidayHours} hours</div>
+                </div>
+              </HoverCardTrigger>
+              <HoverCardContent>
+                {holiday.map((holidayEntry) => (
+                  <div
+                    key={holidayEntry.holidayId}
+                    className="grid grid-cols-7 "
+                  >
+                    <Button
+                      onClick={() => updateHoliday(holidayEntry.holidayId)}
+                      variant="ghost"
+                      size="sm"
+                      className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
+                    >
+                      <CircleMinus className="h-4 w-4" />
+                      <span className="sr-only">Toggle</span>
+                    </Button>
+                    <div className="col-span-2">
+                      {holidayEntry.holidayHours}
+                    </div>
+                    <div className="col-span-2">
+                      {new Date(holidayEntry.date).toLocaleDateString(
+                        undefined,
+                        {
+                          month: "2-digit",
+                          day: "2-digit",
+                        }
+                      )}
+                    </div>
+                    <div className="col-span-2">
+                      {holidayEntry.holidayHoursType}
+                    </div>
+                  </div>
+                ))}
+              </HoverCardContent>
+            </HoverCard>
+          ) : (
+            <></>
+          )}
+          {bonus && bonus.length > 0 ? (
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <div className="cursor-pointer flex-1">
+                  <div className="font-semibold">Bonus</div>
+                  <div> ${bonusAmount.toFixed(2)}</div>
+                </div>
+              </HoverCardTrigger>
+              <HoverCardContent>
+                {bonus.map((bonusEntry) => (
+                  <div key={bonusEntry.bonusId} className="grid grid-cols-7 ">
+                    <Button
+                      onClick={() => updateBonus(bonusEntry.bonusId)}
+                      variant="ghost"
+                      size="sm"
+                      className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
+                    >
+                      <CircleMinus className="h-4 w-4" />
+                      <span className="sr-only">Toggle</span>
+                    </Button>
+                    <div className="col-span-2">
+                      ${bonusEntry.bonusAmount.toFixed(2)}
+                    </div>
+                    <div className="col-span-2">
+                      {new Date(bonusEntry.date).toLocaleDateString(undefined, {
+                        month: "2-digit",
+                        day: "2-digit",
+                      })}
+                    </div>
+                    <div className="col-span-2">{bonusEntry.bonusType}</div>
+                  </div>
+                ))}
+              </HoverCardContent>
+            </HoverCard>
+          ) : (
+            <></>
+          )}
+          {christmasBonus && christmasBonus.length > 0 ? (
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <div className="cursor-pointer flex-1">
+                  <div className="font-semibold">Christmas Bonus</div>
+                  <div> ${christmasBonusAmount.toFixed(2)}</div>
+                </div>
+              </HoverCardTrigger>
+              <HoverCardContent>
+                {christmasBonus.map((christmasBonusEntry) => (
+                  <div
+                    key={christmasBonusEntry.bonusId}
+                    className="grid grid-cols-7 "
+                  >
+                    <Button
+                      onClick={() => updateBonus(christmasBonusEntry.bonusId)}
+                      variant="ghost"
+                      size="sm"
+                      className="w-6 h-6 p-0 flex items-center justify-center col-span-1"
+                    >
+                      <CircleMinus className="h-4 w-4" />
+                      <span className="sr-only">Toggle</span>
+                    </Button>
+                    <div className="col-span-2">
+                      {christmasBonusEntry.bonusAmount}
+                    </div>
+                    <div className="col-span-2">
+                      {new Date(christmasBonusEntry.date).toLocaleDateString(
+                        undefined,
+                        {
+                          month: "2-digit",
+                          day: "2-digit",
+                        }
+                      )}
+                    </div>
+                    <div className="col-span-2">
+                      {christmasBonusEntry.bonusType}
+                    </div>
+                  </div>
+                ))}
+              </HoverCardContent>
+            </HoverCard>
+          ) : (
+            <></>
+          )}
+        </CardContent>
+      </div>
+
+      {/* Committed commissions detail — only shown when there are committed activities */}
+      {committedActivities.length > 0 && (
+        <Collapsible open={commissionOpen} onOpenChange={setCommissionOpen}>
+          <div className="col-span-7 text-sm font-medium text-muted-foreground px-1">
+            Committed Commissions
+          </div>
+          <div className="grid grid-cols-7 bg-slate-300 rounded-xl">
+            <div className="col-span-2 justify-start">
+              Rentals: {commmittedRentals}
+            </div>
+            <div className="col-span-2 justify-center">
+              Insurance: {committedInsurance}
+            </div>
+            <div className="col-span-2 justify-end">
+              Commission: ${committedCommission.toFixed(2)}
+            </div>
+            <div className="flex justify-end">
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-6 h-6 p-0 flex items-center justify-center"
+                >
+                  <ChevronsUpDown className="h-4 w-4" />
+                  <span className="sr-only">Toggle</span>
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </div>
+
+          <CollapsibleContent className="w-auto bg-slate-300 rounded-xl m-2">
+            <div className="grid grid-cols-9 items-center">
+              <div className="col-span-1 flex justify-end">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4"
+                  onChange={(e) => toggleAll(e.target.checked)}
+                />
+              </div>
+              <div className="font-bold col-span-2">Unit</div>
+              <div className="font-bold col-span-2">Date</div>
+              <div className="font-bold col-span-2">Tenant</div>
+              <div className="col-span-2"></div>
+            </div>
+            {committedActivities.map((activity) => (
+              <div
+                key={activity.activityId}
+                className="grid grid-cols-9 items-center"
+              >
+                <div className="col-span-1 flex justify-end">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4"
+                    checked={selectedActivities.includes(activity.activityId)}
+                    onChange={() => toggleActivity(activity.activityId)}
+                  />
+                </div>
+                <div className="col-span-2">{activity.unitName}</div>
+                <div className="col-span-2">
+                  {new Date(activity.date).toLocaleDateString(undefined, {
+                    month: "2-digit",
+                    day: "2-digit",
+                  })}
+                </div>
+                <div className="col-span-2">{activity.tenantName}</div>
+                <div className="col-span-2"></div>
+              </div>
+            ))}
+            <div className="grid grid-cols-8 items-center">
+              <div className="col-span-8 flex justify-end">
+                <Button
+                  onClick={() => updateActivities(selectedActivities)}
+                  variant="outline"
+                  size="sm"
+                  className="m-1"
+                  disabled={selectedActivities.length === 0}
+                >
+                  Remove from Payroll
+                </Button>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </div>
-    // </Collapsible>
   );
 }
 
