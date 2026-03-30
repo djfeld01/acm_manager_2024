@@ -404,7 +404,10 @@ function EmployeeCommittedPayroll({
       {/* Committed commissions detail — only shown when there are committed activities */}
       {committedActivities.length > 0 && (
         <Collapsible open={commissionOpen} onOpenChange={setCommissionOpen}>
-          <div className="grid grid-cols-7 bg-gray-200 rounded-xl">
+          <div className="col-span-7 text-sm font-medium text-muted-foreground px-1">
+            Committed Commissions
+          </div>
+          <div className="grid grid-cols-7 bg-slate-300 rounded-xl">
             <div className="col-span-2 justify-start">
               Rentals: {commmittedRentals}
             </div>
@@ -428,7 +431,7 @@ function EmployeeCommittedPayroll({
             </div>
           </div>
 
-          <CollapsibleContent className="w-auto bg-gray-200 rounded-xl m-2">
+          <CollapsibleContent className="w-auto bg-slate-300 rounded-xl m-2">
             <div className="grid grid-cols-9 items-center">
               <div className="col-span-1 flex justify-end">
                 <input
