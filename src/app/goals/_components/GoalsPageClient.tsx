@@ -349,13 +349,26 @@ export function GoalsPageClient({ facilities }: GoalsPageClientProps) {
               abbreviation,rentalGoal,retailGoal,collectionsGoal
             </code>
           </div>
-          <Input
-            type="file"
-            accept=".csv"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="max-w-sm"
-          />
+          <div className="flex items-center gap-3">
+            <input
+              type="file"
+              accept=".csv"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              id="csv-file-input"
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              type="button"
+            >
+              Choose CSV File
+            </Button>
+            {csvFileName && (
+              <span className="text-sm text-muted-foreground">{csvFileName}</span>
+            )}
+          </div>
           {csvError && (
             <pre className="text-sm text-destructive whitespace-pre-wrap">{csvError}</pre>
           )}
