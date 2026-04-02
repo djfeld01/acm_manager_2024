@@ -60,6 +60,7 @@ export function GoalsPageClient({ facilities }: GoalsPageClientProps) {
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [csvFileName, setCsvFileName] = useState<string | null>(null);
+  const [skippedUpdates, setSkippedUpdates] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Manual form state
@@ -177,6 +178,7 @@ export function GoalsPageClient({ facilities }: GoalsPageClientProps) {
     }
     if (rows.length > 0) {
       setCsvRows(rows);
+      setSkippedUpdates(new Set()); // default all update rows to checked
     }
   }
 
@@ -189,15 +191,26 @@ export function GoalsPageClient({ facilities }: GoalsPageClientProps) {
     reader.readAsText(file);
   }
 
+  function toggleSkipped(sitelinkId: string) {
+    setSkippedUpdates((prev) => {
+      const next = new Set(prev);
+      if (next.has(sitelinkId)) next.delete(sitelinkId);
+      else next.add(sitelinkId);
+      return next;
+    });
+  }
+
   function handleCsvUpload() {
     const monthStr = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}`;
-    const goals = csvRows.map((row) => ({
-      sitelinkId: row.sitelinkId,
-      month: monthStr,
-      rentalGoal: row.rentalGoal,
-      retailGoal: row.retailGoal,
-      collectionsGoal: row.collectionsGoal,
-    }));
+    const goals = csvRows
+      .filter((row) => !row.isUpdate || !skippedUpdates.has(row.sitelinkId))
+      .map((row) => ({
+        sitelinkId: row.sitelinkId,
+        month: monthStr,
+        rentalGoal: row.rentalGoal,
+        retailGoal: row.retailGoal,
+        collectionsGoal: row.collectionsGoal,
+      }));
 
     startTransition(async () => {
       const result = await upsertGoals(goals);
@@ -383,6 +396,7 @@ export function GoalsPageClient({ facilities }: GoalsPageClientProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8"></TableHead>
                     <TableHead>Facility</TableHead>
                     <TableHead className="text-right">Rental</TableHead>
                     <TableHead className="text-right">Retail ($)</TableHead>
@@ -391,36 +405,56 @@ export function GoalsPageClient({ facilities }: GoalsPageClientProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {csvRows.map((row) => (
-                    <TableRow
-                      key={row.sitelinkId}
-                      className={row.isUpdate ? "bg-amber-50" : "bg-green-50"}
-                    >
-                      <TableCell>
-                        <span className="font-medium">{row.facilityAbbreviation}</span>{" "}
-                        <span className="text-muted-foreground text-sm">{row.facilityName}</span>
-                      </TableCell>
-                      <TableCell className="text-right">{row.rentalGoal}</TableCell>
-                      <TableCell className="text-right">${row.retailGoal.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">${row.collectionsGoal.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            row.isUpdate
-                              ? "border-amber-500 text-amber-600"
-                              : "border-green-500 text-green-600"
-                          }
-                        >
-                          {row.isUpdate ? "Update" : "New"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {csvRows.map((row) => {
+                    const checked = !skippedUpdates.has(row.sitelinkId);
+                    const dimmed = row.isUpdate && !checked;
+                    return (
+                      <TableRow
+                        key={row.sitelinkId}
+                        className={
+                          dimmed
+                            ? "bg-muted/40 opacity-50"
+                            : row.isUpdate
+                            ? "bg-amber-50"
+                            : "bg-green-50"
+                        }
+                      >
+                        <TableCell>
+                          {row.isUpdate && (
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4"
+                              checked={checked}
+                              onChange={() => toggleSkipped(row.sitelinkId)}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium">{row.facilityAbbreviation}</span>{" "}
+                          <span className="text-muted-foreground text-sm">{row.facilityName}</span>
+                        </TableCell>
+                        <TableCell className="text-right">{row.rentalGoal}</TableCell>
+                        <TableCell className="text-right">${row.retailGoal.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">${row.collectionsGoal.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={
+                              row.isUpdate
+                                ? "border-amber-500 text-amber-600"
+                                : "border-green-500 text-green-600"
+                            }
+                          >
+                            {row.isUpdate ? "Update" : "New"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
               <Button onClick={handleCsvUpload} disabled={isPending}>
-                {hasConflicts ? "Confirm Upload (overwrites existing)" : "Upload"}
+                {hasConflicts ? "Confirm Upload" : "Upload"}
               </Button>
             </div>
           )}
