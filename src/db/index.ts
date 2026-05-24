@@ -12,7 +12,7 @@ declare global {
 }
 
 const client =
-  globalThis.__pgClient ?? postgres(process.env.DATABASE_URL!, { max: 1 });
+  globalThis.__pgClient ?? postgres(process.env.DATABASE_URL!, { max: 1, prepare: false });
 
 if (process.env.NODE_ENV !== "production") {
   globalThis.__pgClient = client;
