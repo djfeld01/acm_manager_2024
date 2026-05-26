@@ -1,6 +1,9 @@
 import { getDashboardData } from "@/lib/controllers/manSumController";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { unstable_cache } from "next/cache";
+
+export const maxDuration = 30;
 
 export async function GET() {
   try {
@@ -10,19 +13,20 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user's facility access
     const userFacilities = session.user.facilities || [];
     const isAdmin = session.user.role === "ADMIN";
-
-    // Admins see all facilities, others only see their assigned facilities
     const facilityIds = isAdmin
       ? undefined
       : userFacilities.map((f) => f.sitelinkId);
 
-    const { response, lastUpdated } = await getDashboardData(
-      undefined,
-      facilityIds
+    const cacheKey = isAdmin ? "all" : (facilityIds ?? []).join(",");
+    const getCached = unstable_cache(
+      () => getDashboardData(undefined, facilityIds),
+      [`dashboard-${cacheKey}`],
+      { revalidate: 1800 }
     );
+
+    const { response, lastUpdated } = await getCached();
     return NextResponse.json({ response, lastUpdated });
   } catch (error) {
     console.error("Dashboard API error:", error);
