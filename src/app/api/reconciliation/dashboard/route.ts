@@ -36,7 +36,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all facilities with their bank accounts (grouped by facility)
+    const startDate = `${year}-${month.toString().padStart(2, "0")}-01`;
+    const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+
+    // Single query: all facilities + bank accounts
     const facilitiesWithBankAccounts = await db
       .select({
         facilityId: storageFacilities.sitelinkId,
@@ -49,17 +52,12 @@ export async function GET(request: NextRequest) {
         eq(storageFacilities.sitelinkId, bankAccount.sitelinkId)
       );
 
-    // Group by facility to handle multiple bank accounts per facility
+    // Group by facility in JS
     const facilitiesMap = new Map<
       string,
-      {
-        facilityId: string;
-        facilityName: string;
-        bankAccountIds: number[];
-      }
+      { facilityId: string; facilityName: string; bankAccountIds: number[] }
     >();
-
-    facilitiesWithBankAccounts.forEach((item) => {
+    for (const item of facilitiesWithBankAccounts) {
       if (!facilitiesMap.has(item.facilityId)) {
         facilitiesMap.set(item.facilityId, {
           facilityId: item.facilityId,
@@ -67,185 +65,203 @@ export async function GET(request: NextRequest) {
           bankAccountIds: [],
         });
       }
-      facilitiesMap
-        .get(item.facilityId)!
-        .bankAccountIds.push(item.bankAccountId);
-    });
-
+      facilitiesMap.get(item.facilityId)!.bankAccountIds.push(item.bankAccountId);
+    }
     const facilities = Array.from(facilitiesMap.values());
+    const allFacilityIds = facilities.map((f) => f.facilityId);
+    const allBankAccountIds = facilitiesWithBankAccounts.map((r) => r.bankAccountId);
 
-    // Get reconciliation status for each facility (aggregating across all bank accounts)
-    const facilitiesWithStatus = await Promise.all(
-      facilities.map(async (facility) => {
-        // Check if reconciliation exists for this facility/month/year (across all bank accounts)
-        const reconciliations = await db
-          .select({
-            reconciliationId: monthlyReconciliation.reconciliationId,
-            status: monthlyReconciliation.status,
-            createdAt: monthlyReconciliation.createdAt,
-            totalExpectedCashCheck:
-              monthlyReconciliation.totalExpectedCashCheck,
-            totalActualCashCheck: monthlyReconciliation.totalActualCashCheck,
-            totalExpectedCreditCard:
-              monthlyReconciliation.totalExpectedCreditCard,
-            totalActualCreditCard: monthlyReconciliation.totalActualCreditCard,
-            totalTransactionsMatched:
-              monthlyReconciliation.totalTransactionsMatched,
-            totalTransactionsUnmatched:
-              monthlyReconciliation.totalTransactionsUnmatched,
-            totalDiscrepancies: monthlyReconciliation.totalDiscrepancies,
-            bankAccountId: monthlyReconciliation.bankAccountId,
-          })
-          .from(monthlyReconciliation)
-          .where(
-            and(
-              eq(monthlyReconciliation.facilityId, facility.facilityId),
-              eq(monthlyReconciliation.reconciliationMonth, month),
-              eq(monthlyReconciliation.reconciliationYear, year)
-            )
-          );
-
-        if (reconciliations.length === 0) {
-          // No reconciliation started yet - get basic stats across all bank accounts
-          const startDate = `${year}-${month.toString().padStart(2, "0")}-01`;
-          const endDate = new Date(year, month, 0).toISOString().split("T")[0];
-
-          // Count bank transactions for this period across all bank accounts for this facility
-          const bankTransactionCounts = await Promise.all(
-            facility.bankAccountIds.map(async (bankAccountId) => {
-              const result = await db
-                .select({ count: count() })
-                .from(bankTransaction)
-                .where(
-                  and(
-                    eq(bankTransaction.bankAccountId, bankAccountId),
-                    sql`${bankTransaction.transactionDate} >= ${startDate}`,
-                    sql`${bankTransaction.transactionDate} <= ${endDate}`
-                  )
-                );
-              return result[0]?.count || 0;
-            })
-          );
-
-          const totalTransactions = bankTransactionCounts.reduce(
-            (sum, count) => sum + count,
-            0
-          );
-
-          // Calculate total amount from daily payments
-          const dailyPaymentTotals = await db
+    // Single query: all reconciliations for this month across all facilities
+    const allReconciliations =
+      allFacilityIds.length > 0
+        ? await db
             .select({
+              reconciliationId: monthlyReconciliation.reconciliationId,
+              facilityId: monthlyReconciliation.facilityId,
+              status: monthlyReconciliation.status,
+              createdAt: monthlyReconciliation.createdAt,
+              totalExpectedCashCheck: monthlyReconciliation.totalExpectedCashCheck,
+              totalActualCashCheck: monthlyReconciliation.totalActualCashCheck,
+              totalExpectedCreditCard: monthlyReconciliation.totalExpectedCreditCard,
+              totalActualCreditCard: monthlyReconciliation.totalActualCreditCard,
+              totalTransactionsMatched: monthlyReconciliation.totalTransactionsMatched,
+              totalTransactionsUnmatched: monthlyReconciliation.totalTransactionsUnmatched,
+              totalDiscrepancies: monthlyReconciliation.totalDiscrepancies,
+              bankAccountId: monthlyReconciliation.bankAccountId,
+            })
+            .from(monthlyReconciliation)
+            .where(
+              and(
+                sql`${monthlyReconciliation.facilityId} = ANY(ARRAY[${sql.join(allFacilityIds.map((id) => sql`${id}`), sql`, `)}])`,
+                eq(monthlyReconciliation.reconciliationMonth, month),
+                eq(monthlyReconciliation.reconciliationYear, year)
+              )
+            )
+        : [];
+
+    // Single query: bank transaction counts grouped by bank account
+    const bankTxnCountRows =
+      allBankAccountIds.length > 0
+        ? await db
+            .select({
+              bankAccountId: bankTransaction.bankAccountId,
+              txnCount: count(),
+            })
+            .from(bankTransaction)
+            .where(
+              and(
+                sql`${bankTransaction.bankAccountId} = ANY(ARRAY[${sql.join(allBankAccountIds.map((id) => sql`${id}`), sql`, `)}])`,
+                sql`${bankTransaction.transactionDate} >= ${startDate}`,
+                sql`${bankTransaction.transactionDate} <= ${endDate}`
+              )
+            )
+            .groupBy(bankTransaction.bankAccountId)
+        : [];
+
+    // Single query: daily payment totals grouped by facility
+    const dailyPaymentTotalRows =
+      allFacilityIds.length > 0
+        ? await db
+            .select({
+              facilityId: dailyPayments.facilityId,
               totalCash: sql<number>`COALESCE(SUM(COALESCE(${dailyPayments.cash}, 0) + COALESCE(${dailyPayments.check}, 0)), 0)`,
               totalCreditCard: sql<number>`COALESCE(SUM(
-                COALESCE(${dailyPayments.visa}, 0) + 
-                COALESCE(${dailyPayments.mastercard}, 0) + 
-                COALESCE(${dailyPayments.americanExpress}, 0) + 
-                COALESCE(${dailyPayments.discover}, 0) + 
-                COALESCE(${dailyPayments.ach}, 0) + 
-                COALESCE(${dailyPayments.dinersClub}, 0) + 
+                COALESCE(${dailyPayments.visa}, 0) +
+                COALESCE(${dailyPayments.mastercard}, 0) +
+                COALESCE(${dailyPayments.americanExpress}, 0) +
+                COALESCE(${dailyPayments.discover}, 0) +
+                COALESCE(${dailyPayments.ach}, 0) +
+                COALESCE(${dailyPayments.dinersClub}, 0) +
                 COALESCE(${dailyPayments.debit}, 0)
               ), 0)`,
             })
             .from(dailyPayments)
             .where(
               and(
-                eq(dailyPayments.facilityId, facility.facilityId),
+                sql`${dailyPayments.facilityId} = ANY(ARRAY[${sql.join(allFacilityIds.map((id) => sql`${id}`), sql`, `)}])`,
                 sql`${dailyPayments.date} >= ${startDate}`,
                 sql`${dailyPayments.date} <= ${endDate}`
               )
-            );
+            )
+            .groupBy(dailyPayments.facilityId)
+        : [];
 
-          const totalAmount =
-            dailyPaymentTotals.length > 0
-              ? Number(dailyPaymentTotals[0].totalCash) +
-                Number(dailyPaymentTotals[0].totalCreditCard)
-              : 0;
+    // Index lookup maps built from the batched results
+    const reconsByFacility = new Map<string, typeof allReconciliations>();
+    for (const rec of allReconciliations) {
+      if (!reconsByFacility.has(rec.facilityId!)) {
+        reconsByFacility.set(rec.facilityId!, []);
+      }
+      reconsByFacility.get(rec.facilityId!)!.push(rec);
+    }
 
-          return {
-            facilityId: facility.facilityId,
-            facilityName: facility.facilityName,
-            bankAccountIds: facility.bankAccountIds,
-            status: "not_started" as const,
-            totalTransactions,
-            matchedTransactions: 0,
-            discrepancies: 0,
-            totalAmount,
-            lastUpdated: null,
-            assignedTo: null,
-          };
-        }
+    const bankTxnCountByAccountId = new Map<number, number>();
+    for (const row of bankTxnCountRows) {
+      bankTxnCountByAccountId.set(row.bankAccountId!, Number(row.txnCount));
+    }
 
-        // Aggregate data across all reconciliations for this facility
-        const aggregatedData = reconciliations.reduce(
-          (acc, rec) => {
-            const expectedCashCheck = Number(rec.totalExpectedCashCheck) || 0;
-            const actualCashCheck = Number(rec.totalActualCashCheck) || 0;
-            const expectedCreditCard = Number(rec.totalExpectedCreditCard) || 0;
-            const actualCreditCard = Number(rec.totalActualCreditCard) || 0;
+    const dailyPaymentTotalByFacility = new Map<
+      string,
+      { totalCash: number; totalCreditCard: number }
+    >();
+    for (const row of dailyPaymentTotalRows) {
+      dailyPaymentTotalByFacility.set(row.facilityId!, {
+        totalCash: Number(row.totalCash),
+        totalCreditCard: Number(row.totalCreditCard),
+      });
+    }
 
-            return {
-              totalExpected:
-                acc.totalExpected + expectedCashCheck + expectedCreditCard,
-              totalActual: acc.totalActual + actualCashCheck + actualCreditCard,
-              totalTransactionsMatched:
-                acc.totalTransactionsMatched +
-                (rec.totalTransactionsMatched || 0),
-              totalTransactionsUnmatched:
-                acc.totalTransactionsUnmatched +
-                (rec.totalTransactionsUnmatched || 0),
-              totalDiscrepancies:
-                acc.totalDiscrepancies + (rec.totalDiscrepancies || 0),
-              latestCreatedAt:
-                !acc.latestCreatedAt ||
-                (rec.createdAt && rec.createdAt > acc.latestCreatedAt)
-                  ? rec.createdAt
-                  : acc.latestCreatedAt,
-            };
-          },
-          {
-            totalExpected: 0,
-            totalActual: 0,
-            totalTransactionsMatched: 0,
-            totalTransactionsUnmatched: 0,
-            totalDiscrepancies: 0,
-            latestCreatedAt: null as Date | null,
-          }
+    const statusPriority = {
+      not_started: 0,
+      in_progress: 1,
+      pending_review: 2,
+      completed: 3,
+    };
+
+    // Assemble per-facility results purely from in-memory maps (no more DB calls)
+    const facilitiesWithStatus = facilities.map((facility) => {
+      const reconciliations = reconsByFacility.get(facility.facilityId) ?? [];
+
+      if (reconciliations.length === 0) {
+        const totalTransactions = facility.bankAccountIds.reduce(
+          (sum, id) => sum + (bankTxnCountByAccountId.get(id) ?? 0),
+          0
         );
-
-        // Determine overall status - if any reconciliation is not completed, show the most progressed status
-        const statusPriority = {
-          not_started: 0,
-          in_progress: 1,
-          pending_review: 2,
-          completed: 3,
-        };
-
-        const overallStatus = reconciliations.reduce((currentStatus, rec) => {
-          return statusPriority[rec.status as keyof typeof statusPriority] >
-            statusPriority[currentStatus as keyof typeof statusPriority]
-            ? rec.status
-            : currentStatus;
-        }, "not_started");
+        const totals = dailyPaymentTotalByFacility.get(facility.facilityId);
+        const totalAmount = totals
+          ? totals.totalCash + totals.totalCreditCard
+          : 0;
 
         return {
           facilityId: facility.facilityId,
           facilityName: facility.facilityName,
           bankAccountIds: facility.bankAccountIds,
-          status: overallStatus,
-          totalTransactions:
-            aggregatedData.totalTransactionsMatched +
-            aggregatedData.totalTransactionsUnmatched,
-          matchedTransactions: aggregatedData.totalTransactionsMatched,
-          discrepancies: aggregatedData.totalDiscrepancies,
-          totalAmount: Math.max(
-            aggregatedData.totalExpected,
-            aggregatedData.totalActual
-          ),
-          lastUpdated: aggregatedData.latestCreatedAt?.toISOString() || null,
-          assignedTo: "Office Manager", // TODO: Get from user assignment
+          status: "not_started" as const,
+          totalTransactions,
+          matchedTransactions: 0,
+          discrepancies: 0,
+          totalAmount,
+          lastUpdated: null,
+          assignedTo: null,
         };
-      })
-    );
+      }
+
+      const aggregatedData = reconciliations.reduce(
+        (acc, rec) => {
+          const expectedCashCheck = Number(rec.totalExpectedCashCheck) || 0;
+          const actualCashCheck = Number(rec.totalActualCashCheck) || 0;
+          const expectedCreditCard = Number(rec.totalExpectedCreditCard) || 0;
+          const actualCreditCard = Number(rec.totalActualCreditCard) || 0;
+          return {
+            totalExpected: acc.totalExpected + expectedCashCheck + expectedCreditCard,
+            totalActual: acc.totalActual + actualCashCheck + actualCreditCard,
+            totalTransactionsMatched:
+              acc.totalTransactionsMatched + (rec.totalTransactionsMatched || 0),
+            totalTransactionsUnmatched:
+              acc.totalTransactionsUnmatched + (rec.totalTransactionsUnmatched || 0),
+            totalDiscrepancies: acc.totalDiscrepancies + (rec.totalDiscrepancies || 0),
+            latestCreatedAt:
+              !acc.latestCreatedAt ||
+              (rec.createdAt && rec.createdAt > acc.latestCreatedAt)
+                ? rec.createdAt
+                : acc.latestCreatedAt,
+          };
+        },
+        {
+          totalExpected: 0,
+          totalActual: 0,
+          totalTransactionsMatched: 0,
+          totalTransactionsUnmatched: 0,
+          totalDiscrepancies: 0,
+          latestCreatedAt: null as Date | null,
+        }
+      );
+
+      const overallStatus = reconciliations.reduce((currentStatus, rec) => {
+        return statusPriority[rec.status as keyof typeof statusPriority] >
+          statusPriority[currentStatus as keyof typeof statusPriority]
+          ? rec.status
+          : currentStatus;
+      }, "not_started");
+
+      return {
+        facilityId: facility.facilityId,
+        facilityName: facility.facilityName,
+        bankAccountIds: facility.bankAccountIds,
+        status: overallStatus,
+        totalTransactions:
+          aggregatedData.totalTransactionsMatched +
+          aggregatedData.totalTransactionsUnmatched,
+        matchedTransactions: aggregatedData.totalTransactionsMatched,
+        discrepancies: aggregatedData.totalDiscrepancies,
+        totalAmount: Math.max(
+          aggregatedData.totalExpected,
+          aggregatedData.totalActual
+        ),
+        lastUpdated: aggregatedData.latestCreatedAt?.toISOString() || null,
+        assignedTo: "Office Manager",
+      };
+    });
 
     // Calculate overall stats
     const stats = {
