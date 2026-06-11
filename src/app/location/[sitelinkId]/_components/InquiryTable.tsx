@@ -32,11 +32,14 @@ function fmt$(n: number | null) {
 
 function fmtDate(s: string | null) {
   if (!s) return "—";
+  // Parse YYYY-MM-DD as local time. new Date("YYYY-MM-DD") treats it as UTC
+  // midnight, which rolls back one day in negative-offset timezones (ET, CT…).
+  const [y, m, d] = s.split("T")[0].split("-").map(Number);
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(new Date(s));
+  }).format(new Date(y, m - 1, d));
 }
 
 const COLUMNS: { key: SortKey; label: string; align?: "right" }[] = [
