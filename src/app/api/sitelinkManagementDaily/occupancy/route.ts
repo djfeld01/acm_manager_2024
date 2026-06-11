@@ -6,6 +6,7 @@ import {
   dailyManagementReceivable,
   dailyManagementSundries,
 } from "@/db/schema";
+import { refreshMonthlyOccupancySnapshot } from "@/lib/controllers/dailyOccupancyController/getMonthlyOccupancy";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { interval } from "drizzle-orm/pg-core";
 import { NextRequest, NextResponse } from "next/server";
@@ -290,6 +291,11 @@ export async function POST(req: NextRequest) {
         // ... other fields
       },
     });
+
+  // Refresh the materialized view after every write so /api/occupancyByMonth
+  // stays current. CONCURRENTLY means the view remains readable during refresh.
+  await refreshMonthlyOccupancySnapshot();
+
   return NextResponse.json({ body });
 }
 
