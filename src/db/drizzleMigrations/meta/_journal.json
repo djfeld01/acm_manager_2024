@@ -309,6 +309,13 @@
       "when": 1773195801999,
       "tag": "0043_aspiring_shadowcat",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1781194389147,
+      "tag": "0044_white_lake",
+      "breakpoints": true
     }
   ]
 }
