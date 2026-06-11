@@ -19,6 +19,7 @@ import { relations } from "drizzle-orm";
 export const connectionTypes = pgEnum("connection_types", [
   "cash",
   "creditCard",
+  "ach",
 ]);
 
 // Enum for match types

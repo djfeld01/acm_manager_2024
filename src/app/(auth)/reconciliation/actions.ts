@@ -11,7 +11,7 @@ import {
 } from "@/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 
-type ConnectionType = "cash" | "creditCard";
+type ConnectionType = "cash" | "creditCard" | "ach";
 
 function daysBetween(a: string, b: string): number {
   return (
@@ -20,12 +20,11 @@ function daysBetween(a: string, b: string): number {
   );
 }
 
-function ccAmt(p: {
+function cardsAmt(p: {
   visa: number;
   mastercard: number;
   americanExpress: number;
   discover: number;
-  ach: number;
   dinersClub: number;
   debit: number;
 }) {
@@ -34,10 +33,26 @@ function ccAmt(p: {
     p.mastercard +
     p.americanExpress +
     p.discover +
-    p.ach +
     p.dinersClub +
     p.debit
   );
+}
+
+function sitelinkAmt(
+  p: {
+    cash: unknown; check: unknown; visa: unknown; mastercard: unknown;
+    americanExpress: unknown; discover: unknown; ach: unknown;
+    dinersClub: unknown; debit: unknown;
+  },
+  connectionType: ConnectionType,
+): number {
+  const f = (v: unknown) => parseFloat((v as string | null)?.toString() ?? "0");
+  if (connectionType === "cash") return f(p.cash) + f(p.check);
+  if (connectionType === "ach") return f(p.ach);
+  return cardsAmt({
+    visa: f(p.visa), mastercard: f(p.mastercard), americanExpress: f(p.americanExpress),
+    discover: f(p.discover), dinersClub: f(p.dinersClub), debit: f(p.debit),
+  });
 }
 
 // ─── Auto-match server action ──────────────────────────────────────────────
@@ -129,9 +144,16 @@ export async function autoMatchAction(
       .filter((m) => m.connectionType === "cash")
       .map((m) => m.dailyPaymentId),
   );
-  const matchedCCIds = new Set(
+  // Cards and ACH are tracked separately so the same daily payment can match
+  // to two different bank CC deposits (one for cards, one for ACH).
+  const matchedCardsIds = new Set(
     existingMatches
       .filter((m) => m.connectionType === "creditCard")
+      .map((m) => m.dailyPaymentId),
+  );
+  const matchedAchIds = new Set(
+    existingMatches
+      .filter((m) => m.connectionType === "ach")
       .map((m) => m.dailyPaymentId),
   );
 
@@ -146,15 +168,15 @@ export async function autoMatchAction(
     dailyPaymentId: p.dailyPaymentId,
     date: p.date ?? "",
     cashAmt: parseFloat(p.cash?.toString() ?? "0") + parseFloat(p.check?.toString() ?? "0"),
-    ccAmt: ccAmt({
+    cardsAmt: cardsAmt({
       visa: parseFloat(p.visa?.toString() ?? "0"),
       mastercard: parseFloat(p.mastercard?.toString() ?? "0"),
       americanExpress: parseFloat(p.americanExpress?.toString() ?? "0"),
       discover: parseFloat(p.discover?.toString() ?? "0"),
-      ach: parseFloat(p.ach?.toString() ?? "0"),
       dinersClub: parseFloat(p.dinersClub?.toString() ?? "0"),
       debit: parseFloat(p.debit?.toString() ?? "0"),
     }),
+    achAmt: parseFloat(p.ach?.toString() ?? "0"),
   }));
 
   type NewMatch = {
@@ -167,7 +189,8 @@ export async function autoMatchAction(
   const toCreate: NewMatch[] = [];
   const usedBankIds = new Set<number>();
   const usedCashIds = new Set<number>();
-  const usedCCIds = new Set<number>();
+  const usedCardsIds = new Set<number>();
+  const usedAchIds = new Set<number>();
 
   function tryMatch(
     connType: ConnectionType,
@@ -175,6 +198,8 @@ export async function autoMatchAction(
     matchedPaymentIds: Set<number>,
     getAmt: (p: (typeof payments)[0]) => number,
   ) {
+    // ACH deposits arrive at the bank as "creditCard" type — the bank doesn't
+    // distinguish. Both cards and ach passes search the same creditCard pool.
     const txnType = connType === "cash" ? "cash" : "creditCard";
 
     const unmatchedBank = bankTxns.filter(
@@ -321,7 +346,8 @@ export async function autoMatchAction(
   }
 
   tryMatch("cash", usedCashIds, matchedCashIds, (p) => p.cashAmt);
-  tryMatch("creditCard", usedCCIds, matchedCCIds, (p) => p.ccAmt);
+  tryMatch("creditCard", usedCardsIds, matchedCardsIds, (p) => p.cardsAmt);
+  tryMatch("ach", usedAchIds, matchedAchIds, (p) => p.achAmt);
 
   if (toCreate.length > 0) {
     await db.insert(transactionsToDailyPayments).values(
@@ -395,19 +421,7 @@ export async function createMatchesAction(
     // 1 bank → N sitelink: each sitelink entry maps to this bank transaction
     const bankId = bankTransactionIds[0];
     for (const p of payments) {
-      const amt =
-        connectionType === "cash"
-          ? parseFloat(p.cash?.toString() ?? "0") +
-            parseFloat(p.check?.toString() ?? "0")
-          : ccAmt({
-              visa: parseFloat(p.visa?.toString() ?? "0"),
-              mastercard: parseFloat(p.mastercard?.toString() ?? "0"),
-              americanExpress: parseFloat(p.americanExpress?.toString() ?? "0"),
-              discover: parseFloat(p.discover?.toString() ?? "0"),
-              ach: parseFloat(p.ach?.toString() ?? "0"),
-              dinersClub: parseFloat(p.dinersClub?.toString() ?? "0"),
-              debit: parseFloat(p.debit?.toString() ?? "0"),
-            });
+      const amt = sitelinkAmt(p, connectionType);
       records.push({
         bankTransactionId: bankId,
         dailyPaymentId: p.dailyPaymentId,
@@ -498,21 +512,10 @@ export async function createMatchWithDiscrepancyAction(
     (s, t) => s + parseFloat(t.amount?.toString() ?? "0"),
     0,
   );
-  const totalSitelink = payments.reduce((s, p) => {
-    const amt =
-      connectionType === "cash"
-        ? parseFloat(p.cash?.toString() ?? "0") + parseFloat(p.check?.toString() ?? "0")
-        : ccAmt({
-            visa: parseFloat(p.visa?.toString() ?? "0"),
-            mastercard: parseFloat(p.mastercard?.toString() ?? "0"),
-            americanExpress: parseFloat(p.americanExpress?.toString() ?? "0"),
-            discover: parseFloat(p.discover?.toString() ?? "0"),
-            ach: parseFloat(p.ach?.toString() ?? "0"),
-            dinersClub: parseFloat(p.dinersClub?.toString() ?? "0"),
-            debit: parseFloat(p.debit?.toString() ?? "0"),
-          });
-    return s + amt;
-  }, 0);
+  const totalSitelink = payments.reduce(
+    (s, p) => s + sitelinkAmt(p, connectionType),
+    0,
+  );
 
   const difference = totalBank - totalSitelink;
 
@@ -529,18 +532,7 @@ export async function createMatchWithDiscrepancyAction(
   if (bankTransactionIds.length === 1) {
     const bankId = bankTransactionIds[0];
     for (const p of payments) {
-      const amt =
-        connectionType === "cash"
-          ? parseFloat(p.cash?.toString() ?? "0") + parseFloat(p.check?.toString() ?? "0")
-          : ccAmt({
-              visa: parseFloat(p.visa?.toString() ?? "0"),
-              mastercard: parseFloat(p.mastercard?.toString() ?? "0"),
-              americanExpress: parseFloat(p.americanExpress?.toString() ?? "0"),
-              discover: parseFloat(p.discover?.toString() ?? "0"),
-              ach: parseFloat(p.ach?.toString() ?? "0"),
-              dinersClub: parseFloat(p.dinersClub?.toString() ?? "0"),
-              debit: parseFloat(p.debit?.toString() ?? "0"),
-            });
+      const amt = sitelinkAmt(p, connectionType);
       records.push({
         bankTransactionId: bankId,
         dailyPaymentId: p.dailyPaymentId,

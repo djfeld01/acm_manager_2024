@@ -119,6 +119,7 @@ type MatchedRow = {
   matchType: string;
   diff: number;
   isNextMonth?: boolean;
+  subType?: "cards" | "ach";
 };
 
 type SitelinkOnlyRow = {
@@ -126,6 +127,7 @@ type SitelinkOnlyRow = {
   date: string;
   sitelinkAmount: number;
   dailyPaymentId: number;
+  subType: "cash" | "cards" | "ach";
 };
 
 type BankOnlyRow = {
@@ -154,10 +156,12 @@ function fmtDate(d: string) {
   );
 }
 
+function cardsTotal(p: DailyPayment) {
+  return p.visa + p.mastercard + p.americanExpress + p.discover + p.dinersClub + p.debit;
+}
+
 function ccTotal(p: DailyPayment) {
-  return (
-    p.visa + p.mastercard + p.americanExpress + p.discover + p.ach + p.dinersClub + p.debit
-  );
+  return cardsTotal(p) + p.ach;
 }
 
 function buildRows(
@@ -166,27 +170,68 @@ function buildRows(
   allMatches: Match[],
   tab: "cash" | "credit",
 ): TableRow[] {
-  const connType = tab === "cash" ? "cash" : "creditCard";
-  const txnType = tab === "cash" ? "cash" : "creditCard";
-
-  const tabMatches = allMatches.filter((m) => m.connectionType === connType);
   const matchedBankIds = new Set(allMatches.map((m) => m.bankTransactionId));
-  const matchedPaymentIds = new Set(tabMatches.map((m) => m.dailyPaymentId));
-
   const rows: TableRow[] = [];
-
-  // Matched pairs — deduplicated on (bankTransactionId, dailyPaymentId)
   const seenPairs = new Set<string>();
-  for (const match of tabMatches) {
+
+  if (tab === "cash") {
+    const cashMatches = allMatches.filter((m) => m.connectionType === "cash");
+    const matchedPaymentIds = new Set(cashMatches.map((m) => m.dailyPaymentId));
+
+    for (const match of cashMatches) {
+      const key = `${match.bankTransactionId}-${match.dailyPaymentId}`;
+      if (seenPairs.has(key)) continue;
+      seenPairs.add(key);
+      const payment = payments.find((p) => p.dailyPaymentId === match.dailyPaymentId);
+      const txn = bankTxns.find((t) => t.bankTransactionId === match.bankTransactionId);
+      if (!payment || !txn) continue;
+      const sitelinkAmount = payment.cash + payment.check;
+      rows.push({
+        type: "matched",
+        date: payment.date || txn.transactionDate,
+        sitelinkAmount,
+        bankAmount: txn.transactionAmount,
+        bankTransactionId: match.bankTransactionId,
+        dailyPaymentId: match.dailyPaymentId,
+        connectionType: "cash",
+        matchType: match.matchType,
+        diff: txn.transactionAmount - sitelinkAmount,
+        isNextMonth: txn.isNextMonth,
+      });
+    }
+
+    for (const p of payments) {
+      if (matchedPaymentIds.has(p.dailyPaymentId)) continue;
+      const amount = p.cash + p.check;
+      if (amount === 0) continue;
+      rows.push({ type: "sitelink_only", date: p.date, sitelinkAmount: amount, dailyPaymentId: p.dailyPaymentId, subType: "cash" });
+    }
+
+    for (const t of bankTxns) {
+      if (matchedBankIds.has(t.bankTransactionId)) continue;
+      if (t.transactionType !== "cash") continue;
+      rows.push({ type: "bank_only", date: t.transactionDate, bankAmount: t.transactionAmount, bankTransactionId: t.bankTransactionId, transactionType: t.transactionType, bankAccountId: t.bankAccountId, isNextMonth: t.isNextMonth });
+    }
+
+    return rows.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  // ── Credit tab: cards and ACH are separate match types ──────────────────
+  const cardMatches = allMatches.filter((m) => m.connectionType === "creditCard");
+  const achMatches = allMatches.filter((m) => m.connectionType === "ach");
+  const allCreditMatches = [...cardMatches, ...achMatches];
+  const cardMatchedPaymentIds = new Set(cardMatches.map((m) => m.dailyPaymentId));
+  const achMatchedPaymentIds = new Set(achMatches.map((m) => m.dailyPaymentId));
+
+  for (const match of allCreditMatches) {
     const key = `${match.bankTransactionId}-${match.dailyPaymentId}`;
     if (seenPairs.has(key)) continue;
     seenPairs.add(key);
-
     const payment = payments.find((p) => p.dailyPaymentId === match.dailyPaymentId);
     const txn = bankTxns.find((t) => t.bankTransactionId === match.bankTransactionId);
     if (!payment || !txn) continue;
-
-    const sitelinkAmount = tab === "cash" ? payment.cash + payment.check : ccTotal(payment);
+    const isAch = match.connectionType === "ach";
+    const sitelinkAmount = isAch ? payment.ach : cardsTotal(payment);
     rows.push({
       type: "matched",
       date: payment.date || txn.transactionDate,
@@ -194,39 +239,29 @@ function buildRows(
       bankAmount: txn.transactionAmount,
       bankTransactionId: match.bankTransactionId,
       dailyPaymentId: match.dailyPaymentId,
-      connectionType: connType,
+      connectionType: match.connectionType,
       matchType: match.matchType,
       diff: txn.transactionAmount - sitelinkAmount,
       isNextMonth: txn.isNextMonth,
+      subType: isAch ? "ach" : "cards",
     });
   }
 
-  // Unmatched SiteLink payments
   for (const p of payments) {
-    if (matchedPaymentIds.has(p.dailyPaymentId)) continue;
-    const amount = tab === "cash" ? p.cash + p.check : ccTotal(p);
-    if (amount === 0) continue;
-    rows.push({
-      type: "sitelink_only",
-      date: p.date,
-      sitelinkAmount: amount,
-      dailyPaymentId: p.dailyPaymentId,
-    });
+    // Cards row — shown if cards amount > 0 and cards not yet matched
+    if (cardsTotal(p) > 0 && !cardMatchedPaymentIds.has(p.dailyPaymentId)) {
+      rows.push({ type: "sitelink_only", date: p.date, sitelinkAmount: cardsTotal(p), dailyPaymentId: p.dailyPaymentId, subType: "cards" });
+    }
+    // ACH row — shown if ACH amount > 0 and ACH not yet matched
+    if (p.ach > 0 && !achMatchedPaymentIds.has(p.dailyPaymentId)) {
+      rows.push({ type: "sitelink_only", date: p.date, sitelinkAmount: p.ach, dailyPaymentId: p.dailyPaymentId, subType: "ach" });
+    }
   }
 
-  // Unmatched bank transactions for this tab's type (truck is excluded since txnType is cash/creditCard)
   for (const t of bankTxns) {
     if (matchedBankIds.has(t.bankTransactionId)) continue;
-    if (t.transactionType !== txnType) continue;
-    rows.push({
-      type: "bank_only",
-      date: t.transactionDate,
-      bankAmount: t.transactionAmount,
-      bankTransactionId: t.bankTransactionId,
-      transactionType: t.transactionType,
-      bankAccountId: t.bankAccountId,
-      isNextMonth: t.isNextMonth,
-    });
+    if (t.transactionType !== "creditCard") continue;
+    rows.push({ type: "bank_only", date: t.transactionDate, bankAmount: t.transactionAmount, bankTransactionId: t.bankTransactionId, transactionType: t.transactionType, bankAccountId: t.bankAccountId, isNextMonth: t.isNextMonth });
   }
 
   return rows.sort((a, b) => a.date.localeCompare(b.date));
@@ -265,9 +300,13 @@ export function ReconciliationWorkspace({
   const [isPending, startTransition] = useTransition();
   const [tab, setTab] = useState<"cash" | "credit" | "truck" | "other" | "sundries">("cash");
 
-  // Multi-select: sets of selected IDs
-  const [selectedSitelinkIds, setSelectedSitelinkIds] = useState<Set<number>>(new Set());
+  // Multi-select: bank uses a plain Set; SiteLink uses a Map so we can track
+  // which sub-type (cash / cards / ach) and amount was selected per payment.
+  const [selectedSitelinkItems, setSelectedSitelinkItems] = useState<
+    Map<number, { subType: "cash" | "cards" | "ach"; amount: number }>
+  >(new Map());
   const [selectedBankIds, setSelectedBankIds] = useState<Set<number>>(new Set());
+  const selectedSitelinkIds = new Set(selectedSitelinkItems.keys());
 
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<string | null>(null);
@@ -288,12 +327,11 @@ export function ReconciliationWorkspace({
   const otherRows = bankTransactions.filter((t) => t.transactionType === "other");
   const currentRows = tab === "cash" ? cashRows : tab === "credit" ? creditRows : [];
 
-  // Running totals for selection
-  const selectedSitelinkTotal = Array.from(selectedSitelinkIds).reduce((sum, id) => {
-    const p = dailyPayments.find((p) => p.dailyPaymentId === id);
-    if (!p) return sum;
-    return sum + (tab === "cash" ? p.cash + p.check : ccTotal(p));
-  }, 0);
+  // Running totals for selection — amount is stored in the Map at selection time
+  const selectedSitelinkTotal = Array.from(selectedSitelinkItems.values()).reduce(
+    (sum, v) => sum + v.amount,
+    0,
+  );
 
   const selectedBankTotal = Array.from(selectedBankIds).reduce((sum, id) => {
     const t = bankTransactions.find((t) => t.bankTransactionId === id);
@@ -337,7 +375,7 @@ export function ReconciliationWorkspace({
   };
 
   const clearSelection = () => {
-    setSelectedSitelinkIds(new Set());
+    setSelectedSitelinkItems(new Map());
     setSelectedBankIds(new Set());
     setShowDiscrepancyForm(false);
     setDiscrepancyNote("");
@@ -345,13 +383,18 @@ export function ReconciliationWorkspace({
     setError(null);
   };
 
-  const toggleSitelink = (id: number) => {
+  const toggleSitelink = (id: number, subType: "cash" | "cards" | "ach", amount: number) => {
     setError(null);
     setLastResult(null);
-    setSelectedSitelinkIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+    setSelectedSitelinkItems((prev) => {
+      const next = new Map(prev);
+      const existing = next.get(id);
+      // Clicking the same row again deselects; clicking a different sub-type replaces
+      if (existing && existing.subType === subType) {
+        next.delete(id);
+      } else {
+        next.set(id, { subType, amount });
+      }
       return next;
     });
   };
@@ -416,7 +459,8 @@ export function ReconciliationWorkspace({
 
     const bankIds = Array.from(selectedBankIds);
     const sitelinkIds = Array.from(selectedSitelinkIds);
-    const connType = tab === "cash" ? "cash" : "creditCard";
+    const firstSubType = Array.from(selectedSitelinkItems.values())[0]?.subType;
+    const connType = tab === "cash" ? "cash" : firstSubType === "ach" ? "ach" : "creditCard";
 
     // Validate: only allow 1:N or N:1 (not N:M)
     if (bankIds.length > 1 && sitelinkIds.length > 1) {
@@ -447,7 +491,8 @@ export function ReconciliationWorkspace({
 
     const bankIds = Array.from(selectedBankIds);
     const sitelinkIds = Array.from(selectedSitelinkIds);
-    const connType = tab === "cash" ? "cash" : "creditCard";
+    const firstSubType = Array.from(selectedSitelinkItems.values())[0]?.subType;
+    const connType = tab === "cash" ? "cash" : firstSubType === "ach" ? "ach" : "creditCard";
 
     if (bankIds.length > 1 && sitelinkIds.length > 1) {
       setError("Cannot match multiple bank rows to multiple SiteLink rows at once.");
@@ -981,7 +1026,7 @@ export function ReconciliationWorkspace({
                       isEditable={isEditable}
                       selectedSitelinkIds={selectedSitelinkIds}
                       selectedBankIds={selectedBankIds}
-                      onToggleSitelink={toggleSitelink}
+                      onToggleSitelink={(id, subType, amount) => toggleSitelink(id, subType, amount)}
                       onToggleBank={toggleBank}
                       onUnmatch={handleUnmatch}
                       onRecategorize={handleRecategorize}
@@ -1111,7 +1156,7 @@ function MatchRow({
   isEditable: boolean;
   selectedSitelinkIds: Set<number>;
   selectedBankIds: Set<number>;
-  onToggleSitelink: (id: number) => void;
+  onToggleSitelink: (id: number, subType: "cash" | "cards" | "ach", amount: number) => void;
   onToggleBank: (id: number) => void;
   onUnmatch: (bankId: number, paymentId: number) => void;
   onRecategorize: (bankTransactionId: number, newType: string) => void;
@@ -1123,6 +1168,7 @@ function MatchRow({
 
   if (row.type === "matched") {
     const hasDiff = Math.abs(row.diff) > 0.01;
+    const isAch = row.subType === "ach";
     return (
       <tr className="hover:bg-muted/20 group">
         <td className="p-3 text-muted-foreground">
@@ -1133,7 +1179,14 @@ function MatchRow({
             </span>
           )}
         </td>
-        <td className="p-3 text-right">{fmt$(row.sitelinkAmount)}</td>
+        <td className="p-3 text-right">
+          {fmt$(row.sitelinkAmount)}
+          {isAch && (
+            <span className="ml-1.5 inline-flex items-center rounded px-1 py-0.5 text-[10px] font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+              ACH
+            </span>
+          )}
+        </td>
         <td className="p-3 text-right">{fmt$(row.bankAmount)}</td>
         <td
           className={`p-3 text-right hidden sm:table-cell ${hasDiff ? "text-destructive font-medium" : "text-muted-foreground/40"}`}
@@ -1166,15 +1219,25 @@ function MatchRow({
 
   if (row.type === "sitelink_only") {
     const isSelected = selectedSitelinkIds.has(row.dailyPaymentId);
+    const isAch = row.subType === "ach";
     return (
       <tr
         className={`transition-colors ${
-          isSelected ? "bg-primary/10" : "hover:bg-muted/30"
+          isSelected
+            ? isAch ? "bg-indigo-100/60 dark:bg-indigo-900/20" : "bg-primary/10"
+            : isAch ? "hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10" : "hover:bg-muted/30"
         } ${isEditable ? "cursor-pointer" : ""}`}
-        onClick={() => isEditable && onToggleSitelink(row.dailyPaymentId)}
+        onClick={() => isEditable && onToggleSitelink(row.dailyPaymentId, row.subType, row.sitelinkAmount)}
       >
         <td className="p-3 text-muted-foreground">{fmtDate(row.date)}</td>
-        <td className="p-3 text-right font-medium">{fmt$(row.sitelinkAmount)}</td>
+        <td className="p-3 text-right">
+          <span className="font-medium">{fmt$(row.sitelinkAmount)}</span>
+          {isAch && (
+            <span className="ml-1.5 inline-flex items-center rounded px-1 py-0.5 text-[10px] font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+              ACH
+            </span>
+          )}
+        </td>
         <td className="p-3 text-right text-muted-foreground/30">—</td>
         <td className="p-3 text-right hidden sm:table-cell text-muted-foreground/30">—</td>
         <td className="p-3 text-center">
