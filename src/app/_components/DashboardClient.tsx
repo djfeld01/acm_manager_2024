@@ -302,8 +302,8 @@ export function DashboardClient() {
 
                 {/* Stats */}
                 <div className="px-3 py-2 flex-1 space-y-2">
-                  {/* Daily / Weekly */}
-                  <div className="grid grid-cols-2 gap-x-2 text-sm">
+                  {/* Daily / Weekly / Monthly */}
+                  <div className="grid grid-cols-3 gap-x-2 text-sm">
                     <div>
                       <p className="text-xs text-muted-foreground">Daily</p>
                       <p className="font-semibold tabular-nums">{loc.dailyRentals}</p>
@@ -311,6 +311,10 @@ export function DashboardClient() {
                     <div>
                       <p className="text-xs text-muted-foreground">Weekly</p>
                       <p className="font-semibold tabular-nums">{loc.weeklyRentals}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Monthly</p>
+                      <p className="font-semibold tabular-nums">{monthly}</p>
                     </div>
                   </div>
 
