@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   pgEnum,
   pgTable,
   primaryKey,
@@ -36,6 +37,11 @@ const usersToFacilities = pgTable(
   },
   (t) => ({
     pk: primaryKey({ columns: [t.storageFacilityId, t.userId] }),
+    // The composite PK leads with storage_facility_id, so a lookup filtered
+    // only by user_id (as done on every page load, for the nav facility
+    // list, and in payroll) can't use it efficiently. This table is queried
+    // by user_id far more often than by facility_id alone.
+    userIdIndex: index("user_to_facilities_user_id_index").on(t.userId),
   })
 );
 export const insertUsersToFacilitiesSchema = createInsertSchema(

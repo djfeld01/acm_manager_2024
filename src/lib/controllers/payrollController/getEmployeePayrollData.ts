@@ -55,7 +55,14 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
       const { startDate, endDate } = nextPayPeriodArray[0];
       payrollId = nextPayPeriodArray[0].payPeriodId;
     }
+    // Only active employees are eligible for a pay period — this used to be
+    // unfiltered and pulled in every user_detail row ever created (terminated
+    // staff, service/API accounts, etc.), most of which have zero hours,
+    // bonus, or commission data for the period. That's the over-fetch bug
+    // flagged from the 2026-07-06 payroll cycle (duplicate rows, an
+    // `apiadmin` row, etc. showing up in the Payroll Report sheet).
     const employees = await db.query.userDetails.findMany({
+      where: (userDetails, { eq }) => eq(userDetails.isActiveEmployee, true),
       columns: {
         firstName: true,
         lastName: true,
@@ -149,7 +156,15 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
         facilityId: true,
       },
     });
+    // Exclude facility assignments that have been ended (position
+    // "TERMINATED") — these are kept in the table for history rather than
+    // deleted, but they should never generate a payroll row.
     const employeeFacilityRelation = await db.query.usersToFacilities.findMany({
+      // `position <> 'TERMINATED'` alone would also silently drop rows where
+      // position is NULL (SQL's NULL-comparison semantics), so explicitly
+      // keep those rather than lose legitimate relations.
+      where: (usersToFacilities, { ne, or, isNull }) =>
+        or(ne(usersToFacilities.position, "TERMINATED"), isNull(usersToFacilities.position)),
       with: { storageFacility: true },
     });
     let finalResult: any = [];
@@ -261,7 +276,25 @@ export async function getEmployeePayrollData(payrollNumber?: string) {
           facilityId: employeeFacility.storageFacilityId,
         };
       });
-      finalResult = [...finalResult, ...employeeOutput];
+      // An active employee can be connected to a facility (e.g. as an Area
+      // Manager who floats between locations) without having any actual
+      // hours, bonus, commission, or mileage for THIS pay period at THAT
+      // facility. Those rows carry no payable data and are exactly what
+      // showed up as noise in the Payroll Report (e.g. a duplicate
+      // "Shaneka Allen" row under a second department code with nothing to
+      // pay). Drop rows with nothing to report for this period.
+      const employeeOutputWithData = employeeOutput.filter(
+        (row) =>
+          row.monthlyBonus !== 0 ||
+          row.christmasBonus !== 0 ||
+          row.mileageDollars !== 0 ||
+          row.commission !== 0 ||
+          row.unpaidCommissionCount > 0 ||
+          row.rentals.length > 0 ||
+          row.vacationHours !== 0 ||
+          row.holidayHours !== 0
+      );
+      finalResult = [...finalResult, ...employeeOutputWithData];
     });
 
     const finalResultArray = finalResult.map((item: any) => [

@@ -62,6 +62,15 @@ const tenantActivities = pgTable(
   (table) => ({
     dateIndex: index().on(table.date),
     uniqueActivity: unique().on(table.date, table.unitName),
+    // Added for the payroll query (filters by pay_period_id) and the
+    // location-detail / dashboard queries (filter by facility_id), both of
+    // which previously ran as full scans of this table.
+    payPeriodIdIndex: index("tenant_activity_pay_period_id_index").on(
+      table.payPeriodId
+    ),
+    facilityIdIndex: index("tenant_activity_facility_id_index").on(
+      table.facilityId
+    ),
   })
 );
 

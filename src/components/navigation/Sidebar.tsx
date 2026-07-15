@@ -1,14 +1,14 @@
 import Link from "next/link";
 import Image from "next/legacy/image";
 import { auth } from "@/auth";
-import { getFacilityConnections } from "@/lib/controllers/facilityController";
+import { getCachedFacilityConnections } from "@/lib/data/cachedFacilityConnections";
 import { SidebarNav } from "./SidebarNav";
 
 export default async function Sidebar() {
   const session = await auth();
   if (!session?.user) return null;
 
-  const locations = await getFacilityConnections(
+  const locations = await getCachedFacilityConnections(
     session.user.userDetailId || ""
   );
 
