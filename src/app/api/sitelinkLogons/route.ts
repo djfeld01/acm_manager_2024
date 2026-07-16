@@ -148,11 +148,11 @@ export async function POST(req: NextRequest) {
     .onConflictDoNothing();
 
   // NOTE: this used to refresh logon_with_facility_user_view inline, right
-  // here, on every sync call (roughly hourly all day). Without CONCURRENTLY
-  // that refresh fully locked the view for up to 79s each time, right in the
-  // middle of a request handler. The refresh now happens on a schedule
-  // instead -- see /api/cron/refresh-views -- and uses CONCURRENTLY (see
-  // migration 0048 for the unique index that makes that possible).
+  // here, on every sync call (roughly hourly all day), which fully locked the
+  // view for up to 79s each time. That materialized view has since been
+  // retired entirely (migration 0049) -- the "latest logons" widget it fed now
+  // reads the base tables directly (getLatestLogonsForFacility), so there is
+  // nothing to refresh here at all.
 
   return NextResponse.json(res);
 }

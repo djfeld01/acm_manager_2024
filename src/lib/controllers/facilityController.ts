@@ -14,7 +14,7 @@ import { and, eq, gte, inArray, sql, desc, count, lte, sum } from "drizzle-orm";
 import { date } from "drizzle-orm/pg-core";
 import { NextRequest, NextResponse } from "next/server";
 import { parseLocalDate } from "../utils";
-import logonWithFacilityUserView from "@/db/schema/views/logonWithFacityUserView";
+import { getLatestLogonsForFacility } from "@/lib/controllers/logonController";
 
 export async function createFacility(req: NextRequest) {
   const body = await req.json();
@@ -165,12 +165,9 @@ export async function getLocationDetailData(sitelinkId: string) {
       .where(eq(dailyManagementReceivable.facilityId, sitelinkId))
       .orderBy(desc(dailyManagementReceivable.date))
       .limit(1),
-    db
-      .select()
-      .from(logonWithFacilityUserView)
-      .where(eq(logonWithFacilityUserView.storageFacilityId, sitelinkId))
-      .orderBy(desc(logonWithFacilityUserView.logonDate))
-      .limit(8),
+    // Latest logons for this facility, read live from the base tables
+    // (replaces the retired logon_with_facility_user_view materialized view).
+    getLatestLogonsForFacility(sitelinkId, 8),
     db
       .select({ total: count() })
       .from(tenantActivities)
@@ -301,12 +298,7 @@ export async function getFacilityPageData(sitelinkId: string) {
     },
   });
 
-  const latestLogons = await db
-    .select()
-    .from(logonWithFacilityUserView)
-    .where(eq(logonWithFacilityUserView.storageFacilityId, sitelinkId))
-    .orderBy(desc(logonWithFacilityUserView.logonDate))
-    .limit(10);
+  const latestLogons = await getLatestLogonsForFacility(sitelinkId, 10);
   const formattedLatestLogons = latestLogons.map((logon) => {
     const correctedDate = parseLocalDate(logon.logonDate.toISOString());
     return { ...logon, logonDate: correctedDate };

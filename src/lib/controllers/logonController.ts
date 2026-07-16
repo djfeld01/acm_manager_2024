@@ -1,26 +1,61 @@
 import { db } from "@/db";
-import logonWithFacilityUserView from "@/db/schema/views/logonWithFacityUserView";
+import {
+  sitelinkLogons,
+  userDetails,
+  storageFacilities,
+  usersToFacilities,
+} from "@/db/schema";
+import { desc, eq } from "drizzle-orm";
 
 /**
- * Refresh the logon_with_facility_user_view materialized view.
+ * Latest SiteLink logons for a single facility, read live from the base tables.
  *
- * Uses CONCURRENTLY so readers (the "last logon" widgets on every location
- * page) are never blocked during the refresh. That requires a unique index
- * on the view, added in migration 0048 on (sitelink_employee_id, date_time).
- * That pair is guaranteed unique in the view's output:
- *   - sitelink_logon's own primary key is (date_time, sitelink_employee_id),
- *     so each source row is already unique on this pair.
- *   - every join the view performs is 1:1, not fan-out: user_to_facilities
- *     has a UNIQUE constraint on sitelink_employee_id, and both
- *     user_detail.id and storage_facility.sitelink_id are primary keys.
- * So no sitelink_logon row can produce more than one output row.
+ * This replaces the old logon_with_facility_user_view materialized view. The
+ * view pre-joined sitelink_logon -> user_to_facilities -> user_detail ->
+ * storage_facility into ~55k rows and had to be refreshed on a schedule; the
+ * only thing that ever read it was the "latest logons" widget on the
+ * location-detail and payroll/facility pages -- always the same shape:
+ * newest N logons for one facility.
  *
- * Previously this ran inline inside /api/sitelinkLogons on every sync call
- * (roughly hourly all day) WITHOUT concurrently(), which fully locked the
- * view for reads for up to 79s each time -- a major contributor to the
- * 2026-07-16 outage. It now runs on a schedule instead -- see
- * /api/cron/refresh-views.
+ * That does not need a materialized view. sitelink_logon is filtered here by
+ * facility via user_to_facilities (its sitelink_employee_id is UNIQUE, so each
+ * employee maps to exactly one facility, and a facility has only a handful of
+ * employees). Migration 0049 adds an index on
+ * sitelink_logon(sitelink_employee_id, date_time) so the per-employee,
+ * date-ordered lookup is an index seek. The result is always current -- no
+ * refresh lag, no blocking REFRESH, no cron.
+ *
+ * The selected columns intentionally match the old view's output shape so
+ * callers and downstream components are unaffected.
  */
-export async function refreshLogonWithFacilityUserView(): Promise<void> {
-  await db.refreshMaterializedView(logonWithFacilityUserView).concurrently();
+export async function getLatestLogonsForFacility(
+  sitelinkId: string,
+  limit: number
+) {
+  return db
+    .select({
+      employeeId: sitelinkLogons.sitelinkEmployeeId,
+      logonDate: sitelinkLogons.dateTime,
+      computerName: sitelinkLogons.computerName,
+      computerIP: sitelinkLogons.computerIP,
+      firstName: userDetails.firstName,
+      lastName: userDetails.lastName,
+      facilityName: storageFacilities.facilityName,
+      facilityAbbreviation: storageFacilities.facilityAbbreviation,
+      storageFacilityId: usersToFacilities.storageFacilityId,
+      userId: usersToFacilities.userId,
+    })
+    .from(sitelinkLogons)
+    .innerJoin(
+      usersToFacilities,
+      eq(sitelinkLogons.sitelinkEmployeeId, usersToFacilities.sitelinkEmployeeId)
+    )
+    .innerJoin(userDetails, eq(usersToFacilities.userId, userDetails.id))
+    .innerJoin(
+      storageFacilities,
+      eq(usersToFacilities.storageFacilityId, storageFacilities.sitelinkId)
+    )
+    .where(eq(usersToFacilities.storageFacilityId, sitelinkId))
+    .orderBy(desc(sitelinkLogons.dateTime))
+    .limit(limit);
 }

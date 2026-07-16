@@ -150,8 +150,43 @@ now present.
 | 0047 | `daily_management_activity_activityType_facility_id_date_index` | `daily_management_activity` |
 | 0047 | `logon_with_facility_user_view_storage_facility_id_index` | `logon_with_facility_user_view` (matview) |
 | 0048 | `logon_with_facility_user_view_employee_date_idx` (UNIQUE) | `logon_with_facility_user_view` (matview) |
+| 0049 | `sitelink_logon_employee_id_date_time_index` | `sitelink_logon` |
 
 > Why the migration `.sql` files were **not** changed to use `CONCURRENTLY`: doing so would make
 > `drizzle-kit migrate` fail with `25001` (CONCURRENTLY inside a transaction). Leaving them as
 > `CREATE INDEX IF NOT EXISTS` is deliberate — it's exactly what makes the post-manual re-run an
 > instant, safe no-op that just records the bookkeeping rows.
+
+## Update — migration 0049 (retire `logon_with_facility_user_view`)
+
+_Added 2026-07-16 on `perf/database-investigation`._
+
+Migration `0049_drop_logon_view_add_base_index` does two things:
+
+1. **Adds** `sitelink_logon_employee_id_date_time_index` on
+   `sitelink_logon(sitelink_employee_id, date_time)`. `sitelink_logon` is ~55k rows, so this build
+   can exceed the statement timeout inside the migrator transaction — treat it exactly like the
+   0046/0047 index builds: run it by hand with `CREATE INDEX CONCURRENTLY` first (after
+   `SET statement_timeout`), then let `npm run migrate` record it as an instant `IF NOT EXISTS` no-op.
+
+   ```sql
+   SET statement_timeout = '600s';
+   CREATE INDEX CONCURRENTLY IF NOT EXISTS "sitelink_logon_employee_id_date_time_index"
+     ON "sitelink_logon" USING btree ("sitelink_employee_id", "date_time");
+   ```
+
+2. **Drops** the `logon_with_facility_user_view` materialized view
+   (`DROP MATERIALIZED VIEW IF EXISTS`). This is instant and needs no `CONCURRENTLY`. Dropping the
+   matview also drops its own indexes, so the two view indexes from 0047/0048
+   (`logon_with_facility_user_view_storage_facility_id_index` and
+   `logon_with_facility_user_view_employee_date_idx`) go away with it.
+
+**If 0046–0048 have not been applied to production yet** (per the top of this runbook, they were
+still pending after the failed run): you can skip building the two *view* indexes
+(0047's `logon_with_facility_user_view_storage_facility_id_index` and 0048's
+`logon_with_facility_user_view_employee_date_idx`) by hand — 0049 drops the view moments later, so
+building them would just be throwaway work. When `npm run migrate` runs 0047/0048's
+`CREATE INDEX IF NOT EXISTS` on the ~55k-row matview inside its transaction it will build them
+quickly (well under the timeout), then 0049 drops the view. Only the **base-table** index in step 1
+above needs the by-hand `CONCURRENTLY` treatment. Still build `0046`'s and `0047`'s *base-table*
+indexes (on `tenant_activity` / `daily_management_activity`) by hand as originally documented.

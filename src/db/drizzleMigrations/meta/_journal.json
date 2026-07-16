@@ -344,6 +344,13 @@
       "when": 1789200000000,
       "tag": "0048_logon_view_unique_index",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1789300000000,
+      "tag": "0049_drop_logon_view_add_base_index",
+      "breakpoints": true
     }
   ]
 }

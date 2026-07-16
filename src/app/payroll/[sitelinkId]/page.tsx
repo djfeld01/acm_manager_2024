@@ -10,7 +10,6 @@ import {
   userDetails,
   usersToFacilities,
 } from "@/db/schema";
-import logonWithFacilityUserView from "@/db/schema/views/logonWithFacityUserView";
 import { and, count, eq, gte, lte, desc } from "drizzle-orm";
 import {
   getDateSentence,
