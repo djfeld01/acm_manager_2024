@@ -40,6 +40,15 @@ const dailyManagementActivity = pgTable(
     pkDateFacility: primaryKey({
       columns: [table.facilityId, table.date, table.activityType],
     }),
+    // Supports `WHERE "activityType" = ... ORDER BY facility_id, date DESC`
+    // (the DISTINCT ON query used for the dashboard's move-in/move-out
+    // tiles), which previously had to sequential-scan + sort the whole
+    // table since the PK leads with facility_id, not activityType.
+    activityTypeIndex: index().on(
+      table.activityType,
+      table.facilityId,
+      table.date
+    ),
   })
 );
 

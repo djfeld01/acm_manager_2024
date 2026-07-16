@@ -1,0 +1,32 @@
+-- Performance pass (2026-07-16, from today's Supabase/Vercel log review):
+--
+--  * daily_management_activity(activityType, facility_id, date) — the
+--    dashboard's move-in/move-out tiles run:
+--      SELECT DISTINCT ON (facility_id) facility_id, daily_total
+--      FROM daily_management_activity
+--      WHERE "activityType" = 'Move-Ins'
+--      ORDER BY facility_id, date DESC
+--    The table's only keys are the (facility_id, date, activityType)
+--    primary key and a standalone index on date — neither supports
+--    filtering by activityType alone, so this ran as a sequential scan
+--    over the whole table followed by a sort. Logged today at 20117ms
+--    and 29350ms. This index lets Postgres satisfy the WHERE, the
+--    facility_id/date ordering, and the DISTINCT ON in one index scan.
+--
+--  * logon_with_facility_user_view(storage_facility_id) — this
+--    materialized view (created via custom SQL in migration 0001, so it
+--    isn't tracked in the Drizzle schema/snapshot the way a normal table
+--    is) is queried per-facility on every location page load:
+--      SELECT ... FROM logon_with_facility_user_view
+--      WHERE storage_facility_id = $1 ORDER BY date_time DESC LIMIT $2
+--    It has never had any index at all, so this was a full sequential
+--    scan every time. Logged today at 28114ms.
+--    Note: this does NOT fix the ~79s refresh time seen in today's logs
+--    (REFRESH MATERIALIZED VIEW rebuilds the whole view from scratch
+--    regardless of indexes on the view itself) or make the refresh
+--    non-blocking — see the log review notes for that; this index only
+--    speeds up reads of the view between refreshes.
+--
+-- IF NOT EXISTS is used defensively so this migration is safe to re-run.
+CREATE INDEX IF NOT EXISTS "daily_management_activity_activityType_facility_id_date_index" ON "daily_management_activity" USING btree ("activityType", "facility_id", "date");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "logon_with_facility_user_view_storage_facility_id_index" ON "logon_with_facility_user_view" USING btree ("storage_facility_id");
