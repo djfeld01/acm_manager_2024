@@ -337,6 +337,13 @@
       "when": 1789100000000,
       "tag": "0047_add_activity_type_and_logon_view_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1789200000000,
+      "tag": "0048_logon_view_unique_index",
+      "breakpoints": true
     }
   ]
 }

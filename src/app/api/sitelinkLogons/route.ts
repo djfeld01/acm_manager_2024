@@ -5,7 +5,6 @@ import {
   userDetails,
   usersToFacilities,
 } from "@/db/schema";
-import logonWithFacilityUserView from "@/db/schema/views/logonWithFacityUserView";
 import { desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -148,11 +147,12 @@ export async function POST(req: NextRequest) {
     .values(toInsert)
     .onConflictDoNothing();
 
-  try {
-    await db.refreshMaterializedView(logonWithFacilityUserView);
-  } catch (e) {
-    console.log(e);
-  }
+  // NOTE: this used to refresh logon_with_facility_user_view inline, right
+  // here, on every sync call (roughly hourly all day). Without CONCURRENTLY
+  // that refresh fully locked the view for up to 79s each time, right in the
+  // middle of a request handler. The refresh now happens on a schedule
+  // instead -- see /api/cron/refresh-views -- and uses CONCURRENTLY (see
+  // migration 0048 for the unique index that makes that possible).
 
   return NextResponse.json(res);
 }
