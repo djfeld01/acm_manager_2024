@@ -6,7 +6,6 @@ import {
   dailyManagementReceivable,
   dailyManagementSundries,
 } from "@/db/schema";
-import { refreshMonthlyOccupancySnapshot } from "@/lib/controllers/dailyOccupancyController/getMonthlyOccupancy";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { interval } from "drizzle-orm/pg-core";
 import { NextRequest, NextResponse } from "next/server";
@@ -74,6 +73,23 @@ export type BodyType = {
   paymentReceipt: SitelinkManagementPaymentReceipt;
   sundries: SitelinkManagementDailySundries;
 };
+
+// Postgres rejects a single INSERT ... ON CONFLICT DO UPDATE statement if the
+// VALUES list contains two or more rows that map to the same conflict target
+// ("ON CONFLICT DO UPDATE command cannot affect row a second time") — it
+// can't apply the UPDATE twice to the same row within one statement. When
+// the upstream SiteLink export contains a duplicate row for the same
+// facility/date/(type) key within a single POST payload, that crashes the
+// whole batch. Deduplicating here (last occurrence wins, since it's what a
+// second UPDATE would have applied anyway) keeps the batch upsert-safe
+// without changing behavior for the normal, non-duplicated case.
+function dedupeByKey<T>(rows: T[], keyFn: (row: T) => string): T[] {
+  const byKey = new Map<string, T>();
+  for (const row of rows) {
+    byKey.set(keyFn(row), row);
+  }
+  return Array.from(byKey.values());
+}
 
 function getDayRange(period: string) {
   switch (period) {
@@ -188,7 +204,12 @@ export async function POST(req: NextRequest) {
 
   await db
     .insert(dailyManagementPaymentReceipt)
-    .values(paymentReceiptToInsert)
+    .values(
+      dedupeByKey(
+        paymentReceiptToInsert,
+        (row) => `${row.facilityId}|${row.date}|${row.description}`
+      )
+    )
     .onConflictDoUpdate({
       target: [
         dailyManagementPaymentReceipt.facilityId,
@@ -205,7 +226,12 @@ export async function POST(req: NextRequest) {
     });
   await db
     .insert(dailyManagementActivity)
-    .values(activityToInsert)
+    .values(
+      dedupeByKey(
+        activityToInsert,
+        (row) => `${row.facilityId}|${row.date}|${row.activityType}`
+      )
+    )
     .onConflictDoUpdate({
       target: [
         dailyManagementActivity.facilityId,
@@ -223,7 +249,12 @@ export async function POST(req: NextRequest) {
 
   await db
     .insert(dailyManagementSundries)
-    .values(sundriesToInsert)
+    .values(
+      dedupeByKey(
+        sundriesToInsert,
+        (row) => `${row.facilityId}|${row.date}|${row.sundryType}`
+      )
+    )
     .onConflictDoUpdate({
       target: [
         dailyManagementSundries.facilityId,
@@ -240,7 +271,13 @@ export async function POST(req: NextRequest) {
     });
   await db
     .insert(dailyManagementReceivable)
-    .values(receivableToInsert)
+    .values(
+      dedupeByKey(
+        receivableToInsert,
+        (row) =>
+          `${row.facilityId}|${row.date}|${row.lowerDayRange}|${row.upperDayRange}`
+      )
+    )
     .onConflictDoUpdate({
       target: [
         dailyManagementReceivable.facilityId,
@@ -260,7 +297,9 @@ export async function POST(req: NextRequest) {
   //   };
   await db
     .insert(dailyManagementOccupancy)
-    .values(occupancyToInsert)
+    .values(
+      dedupeByKey(occupancyToInsert, (row) => `${row.facilityId}|${row.date}`)
+    )
     .onConflictDoUpdate({
       target: [
         dailyManagementOccupancy.facilityId,
@@ -292,9 +331,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
-  // Refresh the materialized view after every write so /api/occupancyByMonth
-  // stays current. CONCURRENTLY means the view remains readable during refresh.
-  await refreshMonthlyOccupancySnapshot();
+  // NOTE: this used to refresh monthly_occupancy_snapshot inline, right here,
+  // on every sync call (roughly hourly all day). That refresh now happens on
+  // a schedule instead -- see /api/cron/refresh-views -- so a slow sync
+  // payload doesn't also carry the cost of an immediate view rebuild.
+  // (This view's refresh already used CONCURRENTLY and already had the
+  // unique index that requires -- see migration 0045 -- so unlike the logon
+  // view, moving it off the request path is the only change needed here.)
 
   return NextResponse.json({ body });
 }

@@ -5,7 +5,6 @@ import {
   userDetails,
   usersToFacilities,
 } from "@/db/schema";
-import logonWithFacilityUserView from "@/db/schema/views/logonWithFacityUserView";
 import { desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -148,11 +147,12 @@ export async function POST(req: NextRequest) {
     .values(toInsert)
     .onConflictDoNothing();
 
-  try {
-    await db.refreshMaterializedView(logonWithFacilityUserView);
-  } catch (e) {
-    console.log(e);
-  }
+  // NOTE: this used to refresh logon_with_facility_user_view inline, right
+  // here, on every sync call (roughly hourly all day), which fully locked the
+  // view for up to 79s each time. That materialized view has since been
+  // retired entirely (migration 0049) -- the "latest logons" widget it fed now
+  // reads the base tables directly (getLatestLogonsForFacility), so there is
+  // nothing to refresh here at all.
 
   return NextResponse.json(res);
 }

@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { getFacilityConnections } from "@/lib/controllers/facilityController";
+import { getCachedFacilityConnections } from "@/lib/data/cachedFacilityConnections";
 import { MobileSidebar } from "./MobileSidebar";
 import Image from "next/legacy/image";
 import {
@@ -18,7 +18,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 export default async function PageHeader() {
   const session = await auth();
   const locations = session?.user?.userDetailId
-    ? await getFacilityConnections(session.user.userDetailId)
+    ? await getCachedFacilityConnections(session.user.userDetailId)
     : [];
 
   return (

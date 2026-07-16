@@ -1,0 +1,36 @@
+-- Perf/cleanup follow-up (2026-07-16, perf/database-investigation branch):
+-- Retire the logon_with_facility_user_view materialized view entirely.
+--
+-- Why: the view was a 4-table join (sitelink_logon -> user_to_facilities ->
+-- user_detail -> storage_facility) materialized to ~55k rows, refreshed on a
+-- schedule, that existed only to serve one kind of read: the "latest logons"
+-- widget on the location-detail and payroll/facility pages. Each read is just
+--     WHERE storage_facility_id = $1 ORDER BY date_time DESC LIMIT ~10
+-- for a single facility. That does not need pre-computation -- the same result
+-- can be read live from the base tables, always current, with one supporting
+-- index. Dropping the view also makes moot the ~79s blocking REFRESH, the
+-- concurrent-refresh unique index (0048), the read index on the view (0047),
+-- and the cron refresh of this view.
+--
+-- The supporting index: sitelink_logon's primary key is
+-- (date_time, sitelink_employee_id) -- date_time first -- so it cannot answer
+-- "latest logons for a given employee" without scanning. user_to_facilities
+-- has a UNIQUE constraint on sitelink_employee_id (one employee -> one
+-- facility), and a facility has only a handful of employees, so the live query
+-- is: find the facility's employees (indexed by the user_to_facilities PK on
+-- storage_facility_id), index-seek each employee's most recent logons, merge,
+-- limit. This index turns that per-employee lookup into an index seek.
+--
+-- Order: create the replacement index first, then drop the view. Dropping the
+-- materialized view also drops its own indexes (from 0047/0048) automatically.
+-- Nothing else in the database depends on the view.
+--
+-- IF (NOT) EXISTS is used defensively so this migration is safe to re-run.
+--
+-- NOTE (production): like the other perf indexes on this branch, build this
+-- index by hand with CREATE INDEX CONCURRENTLY *before* running the migrator,
+-- so the in-transaction CREATE INDEX below is an instant no-op and can't hit
+-- Supabase's ~60s statement timeout on the ~55k-row sitelink_logon table. See
+-- docs/perf-index-migration-runbook.md.
+CREATE INDEX IF NOT EXISTS "sitelink_logon_employee_id_date_time_index" ON "sitelink_logon" USING btree ("sitelink_employee_id", "date_time");--> statement-breakpoint
+DROP MATERIALIZED VIEW IF EXISTS "logon_with_facility_user_view";

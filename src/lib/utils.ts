@@ -29,6 +29,29 @@ export function getDateSentence(date: Date): String {
   return `Something Else`;
 }
 
+/**
+ * Parse a YYYY-MM-DD string as a *local* date.
+ * new Date("YYYY-MM-DD") treats the string as UTC midnight, which rolls
+ * back one day in negative-offset timezones (ET, CT, …). This avoids that.
+ * Also accepts datetime strings by ignoring everything after "T".
+ */
+export function parseDateOnly(s: string): Date {
+  const [y, m, d] = s.split("T")[0].split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/**
+ * Format a YYYY-MM-DD (or datetime) string for display without timezone drift.
+ * Returns "—" for null/undefined/empty.
+ */
+export function fmtDateOnly(
+  s: string | null | undefined,
+  opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" },
+): string {
+  if (!s) return "—";
+  return new Intl.DateTimeFormat("en-US", opts).format(parseDateOnly(s));
+}
+
 export function parseLocalDate(dateString: string): Date | null {
   const dateParts = dateString.split(/[-T:.]/).map(Number);
 
