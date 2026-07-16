@@ -75,6 +75,23 @@ export type BodyType = {
   sundries: SitelinkManagementDailySundries;
 };
 
+// Postgres rejects a single INSERT ... ON CONFLICT DO UPDATE statement if the
+// VALUES list contains two or more rows that map to the same conflict target
+// ("ON CONFLICT DO UPDATE command cannot affect row a second time") — it
+// can't apply the UPDATE twice to the same row within one statement. When
+// the upstream SiteLink export contains a duplicate row for the same
+// facility/date/(type) key within a single POST payload, that crashes the
+// whole batch. Deduplicating here (last occurrence wins, since it's what a
+// second UPDATE would have applied anyway) keeps the batch upsert-safe
+// without changing behavior for the normal, non-duplicated case.
+function dedupeByKey<T>(rows: T[], keyFn: (row: T) => string): T[] {
+  const byKey = new Map<string, T>();
+  for (const row of rows) {
+    byKey.set(keyFn(row), row);
+  }
+  return Array.from(byKey.values());
+}
+
 function getDayRange(period: string) {
   switch (period) {
     case "0-10":
@@ -188,7 +205,12 @@ export async function POST(req: NextRequest) {
 
   await db
     .insert(dailyManagementPaymentReceipt)
-    .values(paymentReceiptToInsert)
+    .values(
+      dedupeByKey(
+        paymentReceiptToInsert,
+        (row) => `${row.facilityId}|${row.date}|${row.description}`
+      )
+    )
     .onConflictDoUpdate({
       target: [
         dailyManagementPaymentReceipt.facilityId,
@@ -205,7 +227,12 @@ export async function POST(req: NextRequest) {
     });
   await db
     .insert(dailyManagementActivity)
-    .values(activityToInsert)
+    .values(
+      dedupeByKey(
+        activityToInsert,
+        (row) => `${row.facilityId}|${row.date}|${row.activityType}`
+      )
+    )
     .onConflictDoUpdate({
       target: [
         dailyManagementActivity.facilityId,
@@ -223,7 +250,12 @@ export async function POST(req: NextRequest) {
 
   await db
     .insert(dailyManagementSundries)
-    .values(sundriesToInsert)
+    .values(
+      dedupeByKey(
+        sundriesToInsert,
+        (row) => `${row.facilityId}|${row.date}|${row.sundryType}`
+      )
+    )
     .onConflictDoUpdate({
       target: [
         dailyManagementSundries.facilityId,
@@ -240,7 +272,13 @@ export async function POST(req: NextRequest) {
     });
   await db
     .insert(dailyManagementReceivable)
-    .values(receivableToInsert)
+    .values(
+      dedupeByKey(
+        receivableToInsert,
+        (row) =>
+          `${row.facilityId}|${row.date}|${row.lowerDayRange}|${row.upperDayRange}`
+      )
+    )
     .onConflictDoUpdate({
       target: [
         dailyManagementReceivable.facilityId,
@@ -260,7 +298,9 @@ export async function POST(req: NextRequest) {
   //   };
   await db
     .insert(dailyManagementOccupancy)
-    .values(occupancyToInsert)
+    .values(
+      dedupeByKey(occupancyToInsert, (row) => `${row.facilityId}|${row.date}`)
+    )
     .onConflictDoUpdate({
       target: [
         dailyManagementOccupancy.facilityId,
