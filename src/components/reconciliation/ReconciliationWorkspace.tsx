@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   CheckCircle2,
   Clock,
   Zap,
@@ -111,6 +117,7 @@ export interface ReconciliationWorkspaceProps {
 type MatchedRow = {
   type: "matched";
   date: string;
+  bankDate: string;
   sitelinkAmount: number;
   bankAmount: number;
   bankTransactionId: number;
@@ -156,6 +163,16 @@ function fmtDate(d: string) {
   );
 }
 
+// Full date incl. year, used for hover tooltips
+function fmtDateFull(d: string) {
+  if (!d) return "—";
+  const [y, m, day] = d.split("-");
+  return new Date(Number(y), Number(m) - 1, Number(day)).toLocaleDateString(
+    "en-US",
+    { month: "short", day: "numeric", year: "numeric" },
+  );
+}
+
 function cardsTotal(p: DailyPayment) {
   return p.visa + p.mastercard + p.americanExpress + p.discover + p.dinersClub + p.debit;
 }
@@ -189,6 +206,7 @@ function buildRows(
       rows.push({
         type: "matched",
         date: payment.date || txn.transactionDate,
+        bankDate: txn.transactionDate,
         sitelinkAmount,
         bankAmount: txn.transactionAmount,
         bankTransactionId: match.bankTransactionId,
@@ -235,6 +253,7 @@ function buildRows(
     rows.push({
       type: "matched",
       date: payment.date || txn.transactionDate,
+      bankDate: txn.transactionDate,
       sitelinkAmount,
       bankAmount: txn.transactionAmount,
       bankTransactionId: match.bankTransactionId,
@@ -995,6 +1014,7 @@ export function ReconciliationWorkspace({
         ) : tab === "other" ? (
           <TruckTable rows={otherRows} bankAccounts={bankAccounts} />
         ) : (
+          <TooltipProvider delayDuration={150}>
           <div className="mt-4 border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -1037,6 +1057,7 @@ export function ReconciliationWorkspace({
               </tbody>
             </table>
           </div>
+          </TooltipProvider>
         )}
       </Tabs>
 
@@ -1187,7 +1208,18 @@ function MatchRow({
             </span>
           )}
         </td>
-        <td className="p-3 text-right">{fmt$(row.bankAmount)}</td>
+        <td className="p-3 text-right">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help underline decoration-dotted decoration-muted-foreground/40 underline-offset-4">
+                {fmt$(row.bankAmount)}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              Bank transaction date: {fmtDateFull(row.bankDate)}
+            </TooltipContent>
+          </Tooltip>
+        </td>
         <td
           className={`p-3 text-right hidden sm:table-cell ${hasDiff ? "text-destructive font-medium" : "text-muted-foreground/40"}`}
         >
