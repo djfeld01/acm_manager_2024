@@ -10,19 +10,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getStoragePugTrend } from "../actions/getStoragePugTrend";
+import { getSourceTrend } from "../actions/getSourceTrend";
 import { ComparisonLineChart, type LineChartData } from "@/components/charts/LineChart";
 
 type Granularity = "monthly" | "quarterly";
 const PORTFOLIO_VALUE = "__portfolio__";
+const DEFAULT_SOURCE = "StoragePug";
 
-export function StoragePugTrendClient() {
+export function SourceTrendClient() {
+  const [source, setSource] = useState(DEFAULT_SOURCE);
   const [granularity, setGranularity] = useState<Granularity>("monthly");
   const [selectedFacility, setSelectedFacility] = useState<string>(PORTFOLIO_VALUE);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["storagePugTrend"],
-    queryFn: () => getStoragePugTrend(),
+    queryKey: ["sourceTrend", source],
+    queryFn: () => getSourceTrend(source),
   });
 
   const facilityLabel = data?.facilities.find((f) => f.sitelinkId === selectedFacility)?.label;
@@ -47,11 +49,29 @@ export function StoragePugTrendClient() {
         ];
   const colors = selectedFacility === PORTFOLIO_VALUE ? ["#94a3b8"] : ["#3b82f6", "#94a3b8"];
 
+  // "StoragePug" is offered even before the fetched list arrives, since it's
+  // the default selection.
+  const sourceOptions = Array.from(
+    new Set([DEFAULT_SOURCE, ...(data?.availableSources ?? [])])
+  ).sort();
+
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-        <CardTitle className="text-lg">StoragePug Inquiries Over Time</CardTitle>
+        <CardTitle className="text-lg">Lead Source Performance Over Time</CardTitle>
         <div className="flex flex-wrap items-center gap-3">
+          <Select value={source} onValueChange={setSource}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Source…" />
+            </SelectTrigger>
+            <SelectContent>
+              {sourceOptions.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <ToggleGroup
             type="single"
             value={granularity}
@@ -81,18 +101,21 @@ export function StoragePugTrendClient() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          StoragePug-attributed inquiries only (source starting "StoragePug"),
-          since it went live in January 2025. Each point is inquiries per
+          "{source}"-attributed inquiries only. Each point is inquiries per
           month — a quarterly point is the average of that quarter's three
           monthly values, not a 3-month sum, so quarterly and monthly points
           sit on the same scale.{" "}
-          {data?.lastCompleteMonth
-            ? `Data runs through ${data.lastCompleteMonth} — the current, still-in-progress month (and any quarter containing it) is excluded so it doesn't drag a point down artificially.`
+          {data?.seriesStart && data?.lastCompleteMonth
+            ? `Data runs ${data.seriesStart} through ${data.lastCompleteMonth} (starts either at this source's first appearance or 24 months back, whichever is later) — the current, still-in-progress month is excluded so it doesn't drag a point down artificially.`
             : ""}
         </p>
         {isLoading ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground">
             Loading…
+          </div>
+        ) : chartData.length === 0 ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            No data for this source in the window.
           </div>
         ) : (
           <ComparisonLineChart
