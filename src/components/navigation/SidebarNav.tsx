@@ -21,6 +21,7 @@ import {
   BarChart3,
   Trophy,
   Upload,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -130,6 +131,11 @@ export function SidebarNav({ locations, userRole }: SidebarNavProps) {
           label: "Rental Goals",
           href: "/reports/rental-goals",
           icon: TrendingUp,
+        },
+        {
+          label: "Marketing Analytics",
+          href: "/marketing",
+          icon: Megaphone,
         },
         ...(userRole === "OWNER" ? [{ label: "Trivia", href: "/trivia", icon: Trophy }] : []),
         {
