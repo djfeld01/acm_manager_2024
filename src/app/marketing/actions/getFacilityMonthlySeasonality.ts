@@ -2,6 +2,7 @@
 import { db } from "@/db";
 import { inquiry } from "@/db/schema";
 import { and, eq, gte, sql } from "drizzle-orm";
+import { normalizeSourceGroup } from "../_lib/weekBuckets";
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -69,7 +70,12 @@ export async function getFacilityMonthlySeasonality(
   const years = Array.from({ length: yearsBack }, (_, i) =>
     String(currentYear - yearsBack + 1 + i)
   );
-  const sources = Array.from(new Set(rows.map((r) => r.source))).sort();
+  // StoragePug's many sub-sources (google/cpc, google/organic, Rental vs.
+  // Reservation vs. Request a Quote, ...) are lumped into one "StoragePug"
+  // group so its aggregate performance is easy to pull up on its own.
+  const sources = Array.from(
+    new Set(rows.map((r) => normalizeSourceGroup(r.source)))
+  ).sort();
 
   function buildSeries(filterSource: string | null): MonthlySeasonalityPoint[] {
     const points: MonthlySeasonalityPoint[] = MONTH_NAMES.map((month) => {
@@ -78,7 +84,7 @@ export async function getFacilityMonthlySeasonality(
       return point;
     });
     for (const row of rows) {
-      if (filterSource != null && row.source !== filterSource) continue;
+      if (filterSource != null && normalizeSourceGroup(row.source) !== filterSource) continue;
       const yearKey = String(row.year);
       if (!years.includes(yearKey)) continue;
       const point = points[row.monthNum - 1];
@@ -94,7 +100,7 @@ export async function getFacilityMonthlySeasonality(
       return point;
     });
     for (const row of rows) {
-      if (filterSource != null && row.source !== filterSource) continue;
+      if (filterSource != null && normalizeSourceGroup(row.source) !== filterSource) continue;
       const yearKey = String(row.year);
       if (!years.includes(yearKey)) continue;
       const point = points[row.monthNum - 1];

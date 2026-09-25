@@ -2,7 +2,12 @@
 import { db } from "@/db";
 import { storageFacilities, inquiry, dailyManagementOccupancy } from "@/db/schema";
 import { and, eq, gte, inArray, sql, desc } from "drizzle-orm";
-import { getRecentWeekLabels, computeStats, type Stats } from "../_lib/weekBuckets";
+import {
+  getRecentWeekLabels,
+  computeStats,
+  collapseStoragePugSources,
+  type Stats,
+} from "../_lib/weekBuckets";
 
 export interface WeeklyFunnelPoint {
   weekStart: string;
@@ -249,14 +254,17 @@ export async function getFacilityMarketingDetail(
     )
     .groupBy(SOURCE_LABEL);
 
+  const groupedSourceRows = collapseStoragePugSources(sourceRows);
+  const groupedPortfolioSourceRows = collapseStoragePugSources(portfolioSourceRows);
+
   const portfolioRateBySource = new Map(
-    portfolioSourceRows.map((r) => [
+    groupedPortfolioSourceRows.map((r) => [
       r.source,
       r.inquiries > 0 ? r.leased / r.inquiries : null,
     ])
   );
 
-  const sourceBreakdown: SourceBreakdownRow[] = sourceRows.map((r) => ({
+  const sourceBreakdown: SourceBreakdownRow[] = groupedSourceRows.map((r) => ({
     source: r.source,
     inquiries: r.inquiries,
     leased: r.leased,

@@ -59,3 +59,31 @@ export function computeStats(values: number[]): Stats {
     max: sorted[sorted.length - 1],
   };
 }
+
+/** StoragePug (the website vendor) tags every inquiry with a distinct
+ *  sub-source like "StoragePug Website Rental google/cpc" — lump them all
+ *  into one "StoragePug" bucket so its aggregate performance is easy to see
+ *  (e.g. for taking numbers back to the vendor), while every other source
+ *  (WalkIn, Phone, SpareFoot, ...) stays distinct. */
+export function normalizeSourceGroup(rawSource: string): string {
+  return rawSource.toLowerCase().startsWith("storagepug") ? "StoragePug" : rawSource;
+}
+
+/** Collapse rows whose source is a StoragePug sub-source into a single
+ *  "StoragePug" row (summing inquiries/leased); other sources pass through
+ *  unchanged. Re-sorts by inquiries desc since the combined total may now
+ *  rank differently than any individual sub-source did. */
+export function collapseStoragePugSources<
+  T extends { source: string; inquiries: number; leased: number }
+>(rows: T[]): T[] {
+  const storagePugRows = rows.filter((r) => normalizeSourceGroup(r.source) === "StoragePug");
+  if (storagePugRows.length === 0) return rows;
+  const otherRows = rows.filter((r) => normalizeSourceGroup(r.source) !== "StoragePug");
+  const combined: T = {
+    ...storagePugRows[0],
+    source: "StoragePug",
+    inquiries: storagePugRows.reduce((sum, r) => sum + r.inquiries, 0),
+    leased: storagePugRows.reduce((sum, r) => sum + r.leased, 0),
+  };
+  return [...otherRows, combined].sort((a, b) => b.inquiries - a.inquiries);
+}
