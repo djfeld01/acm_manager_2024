@@ -126,6 +126,7 @@ type MatchedRow = {
   matchType: string;
   diff: number;
   isNextMonth?: boolean;
+  isPrevMonth?: boolean;
   subType?: "cards" | "ach";
 };
 
@@ -186,6 +187,7 @@ function buildRows(
   bankTxns: BankTransaction[],
   allMatches: Match[],
   tab: "cash" | "credit",
+  monthStart: string,
 ): TableRow[] {
   const matchedBankIds = new Set(allMatches.map((m) => m.bankTransactionId));
   const rows: TableRow[] = [];
@@ -215,6 +217,7 @@ function buildRows(
         matchType: match.matchType,
         diff: txn.transactionAmount - sitelinkAmount,
         isNextMonth: txn.isNextMonth,
+        isPrevMonth: (payment.date || txn.transactionDate) < monthStart,
       });
     }
 
@@ -262,6 +265,7 @@ function buildRows(
       matchType: match.matchType,
       diff: txn.transactionAmount - sitelinkAmount,
       isNextMonth: txn.isNextMonth,
+      isPrevMonth: (payment.date || txn.transactionDate) < monthStart,
       subType: isAch ? "ach" : "cards",
     });
   }
@@ -340,8 +344,9 @@ export function ReconciliationWorkspace({
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const [reviewNotes, setReviewNotes] = useState("");
 
-  const cashRows = buildRows(dailyPayments, bankTransactions, matches, "cash");
-  const creditRows = buildRows(dailyPayments, bankTransactions, matches, "credit");
+  const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
+  const cashRows = buildRows(dailyPayments, bankTransactions, matches, "cash", monthStart);
+  const creditRows = buildRows(dailyPayments, bankTransactions, matches, "credit", monthStart);
   const truckRows = bankTransactions.filter((t) => t.transactionType === "truck");
   const otherRows = bankTransactions.filter((t) => t.transactionType === "other");
   const currentRows = tab === "cash" ? cashRows : tab === "credit" ? creditRows : [];
@@ -1197,6 +1202,11 @@ function MatchRow({
           {row.isNextMonth && (
             <span className="ml-1 text-[10px] text-yellow-600 dark:text-yellow-400 font-medium">
               next mo.
+            </span>
+          )}
+          {row.isPrevMonth && (
+            <span className="ml-1 text-[10px] text-orange-600 dark:text-orange-400 font-medium">
+              prev mo.
             </span>
           )}
         </td>
