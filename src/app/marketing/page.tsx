@@ -1,6 +1,7 @@
 import { PageAuthWrapper } from "@/lib/auth/PageAuthWrapper";
 import { Role } from "@/db/schema/user";
 import { MarketingOverviewClient } from "./_components/MarketingOverviewClient";
+import { StoragePugTrendClient } from "./_components/StoragePugTrendClient";
 
 export default function MarketingPage() {
   return (
@@ -17,6 +18,7 @@ export default function MarketingPage() {
           </p>
         </div>
         <MarketingOverviewClient />
+        <StoragePugTrendClient />
       </div>
     </PageAuthWrapper>
   );
