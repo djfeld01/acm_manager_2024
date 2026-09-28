@@ -11,6 +11,12 @@ export interface EmployeeTimecardSummary {
    *  Department" column) — an employee who floats between stores gets one
    *  summary row per distinct value here. */
   workedDepartment: string;
+  /** Paycor's numeric department code for this line, when the source file
+   *  provides one directly (the Pre-Post Employee Export embeds it right
+   *  in "Department", e.g. "416-Fort Security" — the Time Card export
+   *  doesn't give a number at all, only the free-text name). Preferred
+   *  over name-based lookup when present, since it's unambiguous. */
+  departmentNumber: string | null;
   hourlyRate: number | null;
   regularHours: number;
   otHours: number;
@@ -20,6 +26,12 @@ export interface EmployeeTimecardSummary {
   mileageCsv: number;
   otherEarningsCsv: { code: string; amount: number }[];
   otherEarningsTotalCsv: number;
+  /** Only populated when parsed from the Pre-Post Employee Export — Paycor's
+   *  own final computed gross/net pay for this employee at this department.
+   *  Purely informational (nothing in the app computes taxes to compare
+   *  against), shown as-is on the "final check" upload. */
+  grossPay: number | null;
+  netPay: number | null;
 }
 
 export interface ParsedTimecard {
@@ -43,6 +55,7 @@ function emptySummary(
     firstName,
     homeDepartmentName,
     workedDepartment,
+    departmentNumber: null,
     hourlyRate,
     regularHours: 0,
     otHours: 0,
@@ -52,6 +65,8 @@ function emptySummary(
     mileageCsv: 0,
     otherEarningsCsv: [],
     otherEarningsTotalCsv: 0,
+    grossPay: null,
+    netPay: null,
   };
 }
 

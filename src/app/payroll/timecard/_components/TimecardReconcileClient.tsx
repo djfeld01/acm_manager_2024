@@ -22,6 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { PayPeriod } from "@/db/schema/payPeriod";
 import { parseTimecardCsv } from "@/lib/parseTimecardCsv";
+import { parsePrePostExport } from "@/lib/parsePrePostExport";
 import {
   reconcileTimecard,
   type ReconcileResult,
@@ -88,8 +89,9 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<ReconcileResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sourceLabel, setSourceLabel] = useState<string | null>(null);
 
-  async function handleFileUpload(e: ChangeEvent<HTMLInputElement>) {
+  async function handleTimecardUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !selectedPayPeriodId) return;
     setIsProcessing(true);
@@ -103,6 +105,27 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
         parsed.allDates
       );
       setResult(reconciled);
+      setSourceLabel("Time Card export");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to process file");
+    } finally {
+      setIsProcessing(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handlePrePostUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !selectedPayPeriodId) return;
+    setIsProcessing(true);
+    setError(null);
+    setResult(null);
+    try {
+      const parsed = await parsePrePostExport(file);
+      // No Date column in this report — nothing to range-check.
+      const reconciled = await reconcileTimecard(selectedPayPeriodId, parsed.employees, []);
+      setResult(reconciled);
+      setSourceLabel("Pre-Post Employee Export (final check)");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to process file");
     } finally {
@@ -166,6 +189,9 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
         )
       )
     : [];
+  // Gross/Net only ever come from the Pre-Post Employee Export — show the
+  // columns only when at least one row actually has them.
+  const showPayColumns = sortedEmployees.some((e) => e.grossPay != null || e.netPay != null);
 
   return (
     <div className="space-y-6">
@@ -203,7 +229,23 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
               accept=".csv"
               id="timecard-upload"
               style={{ display: "none" }}
-              onChange={handleFileUpload}
+              onChange={handleTimecardUpload}
+            />
+
+            <Button
+              onClick={() => document.getElementById("prepost-upload")?.click()}
+              disabled={!selectedPayPeriodId}
+              variant="secondary"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Final Payroll Export (Pre-Submit Check)
+            </Button>
+            <input
+              type="file"
+              accept=".csv"
+              id="prepost-upload"
+              style={{ display: "none" }}
+              onChange={handlePrePostUpload}
             />
           </>
         )}
@@ -267,6 +309,11 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
             <CardHeader>
               <CardTitle className="text-lg">
                 Reconciliation — {result.payPeriodLabel}
+                {sourceLabel && (
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    (from: {sourceLabel})
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -281,6 +328,12 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
                     <TableHead>Commission</TableHead>
                     <TableHead>Mileage</TableHead>
                     <TableHead>Bonus</TableHead>
+                    {showPayColumns && (
+                      <>
+                        <TableHead className="text-right">Gross</TableHead>
+                        <TableHead className="text-right">Net</TableHead>
+                      </>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -336,6 +389,16 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
                       <TableCell>
                         <CategoryBadge result={emp.bonus} />
                       </TableCell>
+                      {showPayColumns && (
+                        <>
+                          <TableCell className="text-right">
+                            {emp.grossPay != null ? `$${emp.grossPay.toFixed(2)}` : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {emp.netPay != null ? `$${emp.netPay.toFixed(2)}` : "—"}
+                          </TableCell>
+                        </>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

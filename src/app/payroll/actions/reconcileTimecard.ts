@@ -74,6 +74,10 @@ export interface ReconcileEmployeeResult {
   monthlyIncentiveExport: number;
   commissionExport: number;
   mileageExport: number;
+  /** Paycor's own final computed pay for this line — only present when
+   *  reconciling the Pre-Post Employee Export, purely informational. */
+  grossPay: number | null;
+  netPay: number | null;
 }
 
 export interface ReconcileResult {
@@ -186,6 +190,7 @@ export async function reconcileTimecard(
     .select({ sitelinkId: storageFacilities.sitelinkId, paycorNumber: storageFacilities.paycorNumber })
     .from(storageFacilities);
   const paycorNumberBySitelinkId = new Map(facilities.map((f) => [f.sitelinkId, f.paycorNumber]));
+  const sitelinkIdByPaycorNumber = new Map(facilities.map((f) => [f.paycorNumber, f.sitelinkId]));
 
   const allEmployees = await db.query.userDetails.findMany({
     where: (u, { eq }) => eq(u.isActiveEmployee, true),
@@ -219,6 +224,8 @@ export async function reconcileTimecard(
       commissionCsv: number;
       mileageCsv: number;
       otherEarningsTotalCsv: number;
+      grossPay?: number | null;
+      netPay?: number | null;
     },
     missingFromCsv: boolean
   ): ReconcileEmployeeResult {
@@ -251,6 +258,8 @@ export async function reconcileTimecard(
       monthlyIncentiveExport: app.monthlyBonus,
       commissionExport: app.commission,
       mileageExport: app.mileageDollars,
+      grossPay: csvEmp.grossPay ?? null,
+      netPay: csvEmp.netPay ?? null,
     };
   }
 
@@ -275,7 +284,13 @@ export async function reconcileTimecard(
       }
     }
 
-    const facilityId = PAYCOR_DEPARTMENT_TO_SITELINK[csvEmp.workedDepartment];
+    // Prefer a numeric department code straight from the file (the
+    // Pre-Post Employee Export embeds one, unambiguous) over the free-text
+    // name lookup (the Time Card export's only option).
+    const numericDeptId = csvEmp.departmentNumber ? parseInt(csvEmp.departmentNumber, 10) : NaN;
+    const facilityId = !Number.isNaN(numericDeptId)
+      ? sitelinkIdByPaycorNumber.get(numericDeptId)
+      : PAYCOR_DEPARTMENT_TO_SITELINK[csvEmp.workedDepartment];
     const departmentMapped = facilityId != null;
     if (!departmentMapped && csvEmp.workedDepartment) {
       unmappedDepartments.add(csvEmp.workedDepartment);
