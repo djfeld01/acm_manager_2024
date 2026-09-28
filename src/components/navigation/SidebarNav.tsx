@@ -113,6 +113,7 @@ export function SidebarNav({ locations, userRole }: SidebarNavProps) {
           href: payrollChildren.length === 0 ? "/payroll" : undefined,
         },
         { label: "Add Bonuses", href: "/payroll/addBonus", icon: PlusCircle },
+        { label: "Timecard Check", href: "/payroll/timecard", icon: FileSpreadsheet },
       ],
     },
     {
