@@ -170,6 +170,40 @@ export default async function FacilityReconciliationPage({
           )
       : [];
 
+  // A bank transaction in this window can be matched to a daily payment that
+  // falls OUTSIDE this month (e.g. a July deposit manually matched to a June 30
+  // payment). Those payments aren't in `payments` above, so the matched row
+  // can't render — and because the txn is "matched," it also drops off the
+  // unmatched list, making it invisible on every tab. Pull in any such
+  // out-of-window matched payments so the match always renders (and can be
+  // unmatched in the UI).
+  const loadedPaymentIds = new Set(payments.map((p) => p.dailyPaymentId));
+  const missingPaymentIds = [
+    ...new Set(matchRows.map((m) => m.dailyPaymentId)),
+  ].filter((id) => !loadedPaymentIds.has(id));
+
+  const extraPayments =
+    missingPaymentIds.length > 0
+      ? await db
+          .select({
+            dailyPaymentId: dailyPayments.Id,
+            date: dailyPayments.date,
+            cash: dailyPayments.cash,
+            check: dailyPayments.check,
+            visa: dailyPayments.visa,
+            mastercard: dailyPayments.mastercard,
+            americanExpress: dailyPayments.americanExpress,
+            discover: dailyPayments.discover,
+            ach: dailyPayments.ach,
+            dinersClub: dailyPayments.dinersClub,
+            debit: dailyPayments.debit,
+          })
+          .from(dailyPayments)
+          .where(inArray(dailyPayments.Id, missingPaymentIds))
+      : [];
+
+  const allPayments = [...payments, ...extraPayments];
+
   // Sundries: daily_management_payment_receipt rows on the last day of the month
   const sundriesRows = await db
     .select({
@@ -205,7 +239,7 @@ export default async function FacilityReconciliationPage({
     isNextMonth: (t.transactionDate ?? "") > monthEndDate,
   }));
 
-  const serializedPayments = payments.map((p) => ({
+  const serializedPayments = allPayments.map((p) => ({
     dailyPaymentId: p.dailyPaymentId,
     date: p.date ?? "",
     cash: parseFloat(p.cash?.toString() ?? "0"),
