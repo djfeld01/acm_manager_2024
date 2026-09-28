@@ -36,3 +36,6 @@ yarn-error.log*
 next-env.d.ts
 .qodo
 .env.local.backup
+
+# real payroll/timecard exports dropped in docs/ for local reference — never commit these
+docs/*.csv
