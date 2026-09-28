@@ -122,7 +122,7 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
       `${emp.lastName}, ${emp.firstName}`,
       emp.employeeNumber,
       emp.hourlyRate != null ? r2(emp.hourlyRate) : "",
-      emp.workedDepartment,
+      emp.deptNumber ?? emp.workedDepartment,
       r2(emp.regularHours),
       r2(emp.otHours),
       r2(emp.holidayHoursExport),

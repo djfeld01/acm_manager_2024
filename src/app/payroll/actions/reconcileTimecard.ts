@@ -1,6 +1,6 @@
 "use server";
 import { db } from "@/db";
-import { userDetails, payPeriod } from "@/db/schema";
+import { userDetails, payPeriod, storageFacilities } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { getEmployeePayrollData } from "@/lib/controllers/payrollController/getEmployeePayrollData";
 import type { EmployeeTimecardSummary } from "@/lib/parseTimecardCsv";
@@ -51,6 +51,9 @@ export interface ReconcileEmployeeResult {
    *  hours/pay still pass through to the export, but nothing here could be
    *  cross-checked against the app's committed data for this line. */
   departmentMapped: boolean;
+  /** The resolved facility's Paycor department number, for the export's
+   *  "Dept" column — null when `departmentMapped` is false. */
+  deptNumber: number | null;
   hourlyRate: number | null;
   regularHours: number;
   otHours: number;
@@ -179,6 +182,11 @@ export async function reconcileTimecard(
     });
   }
 
+  const facilities = await db
+    .select({ sitelinkId: storageFacilities.sitelinkId, paycorNumber: storageFacilities.paycorNumber })
+    .from(storageFacilities);
+  const paycorNumberBySitelinkId = new Map(facilities.map((f) => [f.sitelinkId, f.paycorNumber]));
+
   const allEmployees = await db.query.userDetails.findMany({
     where: (u, { eq }) => eq(u.isActiveEmployee, true),
     columns: { id: true, fullName: true, paycorEmployeeId: true },
@@ -218,6 +226,7 @@ export async function reconcileTimecard(
       matched && facilityId
         ? appByEmployeeFacility.get(matched.id)?.get(facilityId) ?? EMPTY_APP_TOTALS
         : EMPTY_APP_TOTALS;
+    const deptNumber = facilityId ? paycorNumberBySitelinkId.get(facilityId) ?? null : null;
     return {
       employeeId: matched?.id ?? null,
       employeeNumber: csvEmp.employeeNumber,
@@ -225,6 +234,7 @@ export async function reconcileTimecard(
       firstName: csvEmp.firstName,
       workedDepartment: csvEmp.workedDepartment,
       departmentMapped,
+      deptNumber,
       hourlyRate: csvEmp.hourlyRate,
       regularHours: csvEmp.regularHours,
       otHours: csvEmp.otHours,
