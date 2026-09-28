@@ -116,6 +116,8 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
     // Round to 2 decimals — summed floats otherwise carry binary rounding
     // noise (e.g. 63.50000999999999) into the spreadsheet.
     const r2 = (n: number) => Math.round(n * 100) / 100;
+    // Hours specifically go out at 4 decimal places, per request.
+    const hrs4 = (n: number) => n.toFixed(4);
     const rows = result.employees.map((emp) => [
       emp.lastName,
       emp.firstName,
@@ -123,10 +125,10 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
       emp.employeeNumber,
       emp.hourlyRate != null ? r2(emp.hourlyRate) : "",
       emp.deptNumber ?? emp.workedDepartment,
-      r2(emp.regularHours),
-      r2(emp.otHours),
-      r2(emp.holidayHoursExport),
-      r2(emp.vacationHoursExport),
+      hrs4(emp.regularHours),
+      hrs4(emp.otHours),
+      hrs4(emp.holidayHoursExport),
+      hrs4(emp.vacationHoursExport),
       "",
       r2(emp.christmasBonusExport),
       r2(emp.monthlyIncentiveExport),
