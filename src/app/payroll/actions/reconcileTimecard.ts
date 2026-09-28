@@ -5,6 +5,35 @@ import { eq, and, isNull } from "drizzle-orm";
 import { getEmployeePayrollData } from "@/lib/controllers/payrollController/getEmployeePayrollData";
 import type { EmployeeTimecardSummary } from "@/lib/parseTimecardCsv";
 
+// Paycor's "Worked Department" is a free-text label that doesn't exactly
+// match any facility field in the app (name, abbreviation, or Paycor
+// number) — confirmed against a real export, 17 distinct values, all but
+// two an unambiguous informal match. The two exceptions were confirmed with
+// the user directly rather than guessed silently.
+const PAYCOR_DEPARTMENT_TO_SITELINK: Record<string, string> = {
+  "A + Maumee": "30548",
+  "A+ Columbus": "33884",
+  "A+ Sylvania": "50552",
+  "A+ Toledo": "36",
+  ACM: "CORP",
+  "Advantage- Miamisburg": "35",
+  // Paycor's name for "Advantage Self Storage Hamilton" — its DB
+  // abbreviation is "TV", confirmed with the user.
+  "Advantage- Tylersville": "64",
+  // "Beach Self Storage" (as distinct from "Beach- South" below) — confirmed
+  // with the user.
+  "Beach- Owings": "33954",
+  "Beach- South": "45509",
+  Breakwater: "55033",
+  "Cove Point": "67",
+  "Fort Security": "7973",
+  "Maryland Self Storage": "43882",
+  "Springfield Storage Depot": "33840",
+  "Stealth- Beavercreek": "39795",
+  "Stealth- Clearcreek": "43133",
+  "Triskett Road": "47650",
+};
+
 export interface ReconcileCategoryResult {
   appValue: number;
   csvValue: number;
@@ -16,13 +45,19 @@ export interface ReconcileEmployeeResult {
   employeeNumber: string;
   lastName: string;
   firstName: string;
-  departmentName: string;
+  /** The facility this line was worked at, as Paycor labels it. */
+  workedDepartment: string;
+  /** False when `workedDepartment` couldn't be resolved to a facility —
+   *  hours/pay still pass through to the export, but nothing here could be
+   *  cross-checked against the app's committed data for this line. */
+  departmentMapped: boolean;
   hourlyRate: number | null;
   regularHours: number;
   otHours: number;
   matchedBy: "paycorId" | "name" | "unmatched";
   /** True for a row synthesized because the app has committed data for this
-   *  employee/period that never showed up anywhere in the uploaded CSV. */
+   *  employee/facility/period that never showed up anywhere in the
+   *  uploaded CSV. */
   missingFromCsv: boolean;
   vacation: ReconcileCategoryResult;
   holiday: ReconcileCategoryResult;
@@ -43,6 +78,9 @@ export interface ReconcileResult {
   employees: ReconcileEmployeeResult[];
   outOfRangeDates: string[];
   linkedEmployeeIds: string[];
+  /** Distinct Worked Department strings from the upload that don't have a
+   *  known facility mapping — surfaced once, not per row. */
+  unmappedDepartments: string[];
 }
 
 const TOLERANCE = 0.01;
@@ -64,6 +102,17 @@ const EMPTY_APP_TOTALS: AppTotals = {
   christmasBonus: 0,
   monthlyBonus: 0,
 };
+
+function hasNonzeroTotals(t: AppTotals): boolean {
+  return (
+    t.vacationHours !== 0 ||
+    t.holidayHours !== 0 ||
+    t.commission !== 0 ||
+    t.mileageDollars !== 0 ||
+    t.christmasBonus !== 0 ||
+    t.monthlyBonus !== 0
+  );
+}
 
 function compareCategory(appValue: number, csvValue: number): ReconcileCategoryResult {
   const a = Math.round(appValue * 100) / 100;
@@ -101,29 +150,33 @@ export async function reconcileTimecard(
   });
 
   const { finalResult } = await getEmployeePayrollData(payPeriodId);
-
-  // finalResult has one row per (employee, facility) — aggregate to one
-  // total per employee, since the CSV/export don't split by facility.
-  const appByEmployee = new Map<string, AppTotals>();
-  for (const row of finalResult as Array<{
+  const facilityRows = finalResult as Array<{
     employeeId: string;
+    facilityId: string;
+    locationAbbreviation: string;
     vacationHours: number;
     holidayHours: number;
     commission: number;
     mileageDollars: number;
     christmasBonus: number;
     monthlyBonus: number;
-  }>) {
-    if (!appByEmployee.has(row.employeeId)) {
-      appByEmployee.set(row.employeeId, { ...EMPTY_APP_TOTALS });
+  }>;
+
+  // employeeId -> facilityId -> totals (the app's grain matches the CSV's
+  // employee-per-worked-department grain — don't collapse across facilities).
+  const appByEmployeeFacility = new Map<string, Map<string, AppTotals>>();
+  for (const row of facilityRows) {
+    if (!appByEmployeeFacility.has(row.employeeId)) {
+      appByEmployeeFacility.set(row.employeeId, new Map());
     }
-    const agg = appByEmployee.get(row.employeeId)!;
-    agg.vacationHours += row.vacationHours;
-    agg.holidayHours += row.holidayHours;
-    agg.commission += row.commission;
-    agg.mileageDollars += row.mileageDollars;
-    agg.christmasBonus += row.christmasBonus;
-    agg.monthlyBonus += row.monthlyBonus;
+    appByEmployeeFacility.get(row.employeeId)!.set(row.facilityId, {
+      vacationHours: row.vacationHours,
+      holidayHours: row.holidayHours,
+      commission: row.commission,
+      mileageDollars: row.mileageDollars,
+      christmasBonus: row.christmasBonus,
+      monthlyBonus: row.monthlyBonus,
+    });
   }
 
   const allEmployees = await db.query.userDetails.findMany({
@@ -137,16 +190,19 @@ export async function reconcileTimecard(
 
   const linkedEmployeeIds: string[] = [];
   const results: ReconcileEmployeeResult[] = [];
-  const matchedEmployeeIds = new Set<string>();
+  const coveredPairs = new Set<string>(); // `${employeeId}|${facilityId}`
+  const unmappedDepartments = new Set<string>();
 
   function buildRow(
     matched: { id: string } | undefined,
     matchedBy: ReconcileEmployeeResult["matchedBy"],
+    facilityId: string | undefined,
+    departmentMapped: boolean,
     csvEmp: {
       employeeNumber: string;
       lastName: string;
       firstName: string;
-      departmentName: string;
+      workedDepartment: string;
       hourlyRate: number | null;
       regularHours: number;
       otHours: number;
@@ -158,13 +214,17 @@ export async function reconcileTimecard(
     },
     missingFromCsv: boolean
   ): ReconcileEmployeeResult {
-    const app = matched ? appByEmployee.get(matched.id) ?? EMPTY_APP_TOTALS : EMPTY_APP_TOTALS;
+    const app =
+      matched && facilityId
+        ? appByEmployeeFacility.get(matched.id)?.get(facilityId) ?? EMPTY_APP_TOTALS
+        : EMPTY_APP_TOTALS;
     return {
       employeeId: matched?.id ?? null,
       employeeNumber: csvEmp.employeeNumber,
       lastName: csvEmp.lastName,
       firstName: csvEmp.firstName,
-      departmentName: csvEmp.departmentName,
+      workedDepartment: csvEmp.workedDepartment,
+      departmentMapped,
       hourlyRate: csvEmp.hourlyRate,
       regularHours: csvEmp.regularHours,
       otHours: csvEmp.otHours,
@@ -205,34 +265,45 @@ export async function reconcileTimecard(
       }
     }
 
-    if (matched) matchedEmployeeIds.add(matched.id);
-    results.push(buildRow(matched, matchedBy, csvEmp, false));
+    const facilityId = PAYCOR_DEPARTMENT_TO_SITELINK[csvEmp.workedDepartment];
+    const departmentMapped = facilityId != null;
+    if (!departmentMapped && csvEmp.workedDepartment) {
+      unmappedDepartments.add(csvEmp.workedDepartment);
+    }
+
+    if (matched && facilityId) coveredPairs.add(`${matched.id}|${facilityId}`);
+    results.push(buildRow(matched, matchedBy, facilityId, departmentMapped, csvEmp, false));
   }
 
-  // Anyone with nonzero committed app data for this period who never showed
-  // up anywhere in the uploaded CSV at all — the case most worth flagging,
-  // since it means nothing for them has been keyed into Paycor yet.
-  for (const [employeeId, totals] of appByEmployee) {
-    if (matchedEmployeeIds.has(employeeId)) continue;
-    const hasData =
-      totals.vacationHours !== 0 ||
-      totals.holidayHours !== 0 ||
-      totals.commission !== 0 ||
-      totals.mileageDollars !== 0 ||
-      totals.christmasBonus !== 0 ||
-      totals.monthlyBonus !== 0;
-    if (!hasData) continue;
-    const employee = allEmployees.find((e) => e.id === employeeId);
+  // Anyone with nonzero committed app data for a specific employee+facility
+  // this period that never showed up anywhere in the uploaded CSV — the
+  // case most worth flagging, since it means nothing for them at that
+  // facility has been keyed into Paycor yet.
+  for (const row of facilityRows) {
+    const pairKey = `${row.employeeId}|${row.facilityId}`;
+    if (coveredPairs.has(pairKey)) continue;
+    const totals: AppTotals = {
+      vacationHours: row.vacationHours,
+      holidayHours: row.holidayHours,
+      commission: row.commission,
+      mileageDollars: row.mileageDollars,
+      christmasBonus: row.christmasBonus,
+      monthlyBonus: row.monthlyBonus,
+    };
+    if (!hasNonzeroTotals(totals)) continue;
+    const employee = allEmployees.find((e) => e.id === row.employeeId);
     const [lastName, firstName] = (employee?.fullName ?? "Unknown, Unknown").split(", ");
     results.push(
       buildRow(
-        { id: employeeId },
+        { id: row.employeeId },
         "unmatched",
+        row.facilityId,
+        true,
         {
           employeeNumber: employee?.paycorEmployeeId != null ? String(employee.paycorEmployeeId) : "",
           lastName: lastName ?? "",
           firstName: firstName ?? "",
-          departmentName: "",
+          workedDepartment: row.locationAbbreviation,
           hourlyRate: null,
           regularHours: 0,
           otHours: 0,
@@ -252,5 +323,6 @@ export async function reconcileTimecard(
     employees: results,
     outOfRangeDates,
     linkedEmployeeIds,
+    unmappedDepartments: Array.from(unmappedDepartments),
   };
 }

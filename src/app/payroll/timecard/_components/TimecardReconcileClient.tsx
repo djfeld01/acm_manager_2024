@@ -122,7 +122,7 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
       `${emp.lastName}, ${emp.firstName}`,
       emp.employeeNumber,
       emp.hourlyRate != null ? r2(emp.hourlyRate) : "",
-      emp.departmentName,
+      emp.workedDepartment,
       r2(emp.regularHours),
       r2(emp.otHours),
       r2(emp.holidayHoursExport),
@@ -155,6 +155,15 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
     const tsv = rows.map((r) => r.join("\t")).join("\n");
     await navigator.clipboard.writeText(tsv);
   }
+
+  // Group an employee's multiple worked-department rows together.
+  const sortedEmployees = result
+    ? [...result.employees].sort((a, b) =>
+        `${a.lastName}, ${a.firstName}, ${a.workedDepartment}`.localeCompare(
+          `${b.lastName}, ${b.firstName}, ${b.workedDepartment}`
+        )
+      )
+    : [];
 
   return (
     <div className="space-y-6">
@@ -225,6 +234,25 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
             </Card>
           )}
 
+          {result.unmappedDepartments.length > 0 && (
+            <Card className="border-amber-500/50">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-2 text-sm">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-medium">
+                      Unrecognized worked department
+                      {result.unmappedDepartments.length !== 1 ? "s" : ""}:
+                    </span>{" "}
+                    {result.unmappedDepartments.join(", ")} — hours/pay still show up below, but
+                    can&apos;t be checked against the app since they aren&apos;t linked to a
+                    facility yet.
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {result.linkedEmployeeIds.length > 0 && (
             <div className="text-sm text-muted-foreground">
               Linked {result.linkedEmployeeIds.length} employee
@@ -244,6 +272,7 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Employee</TableHead>
+                    <TableHead>Department</TableHead>
                     <TableHead className="text-right">Reg / OT Hrs</TableHead>
                     <TableHead>Vacation</TableHead>
                     <TableHead>Holiday</TableHead>
@@ -253,9 +282,9 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {result.employees.map((emp, i) => (
+                  {sortedEmployees.map((emp, i) => (
                     <TableRow
-                      key={`${emp.employeeId ?? emp.employeeNumber}-${i}`}
+                      key={`${emp.employeeId ?? emp.employeeNumber}-${emp.workedDepartment}-${i}`}
                       className={
                         emp.missingFromCsv
                           ? "bg-destructive/5"
@@ -274,6 +303,14 @@ export function TimecardReconcileClient({ payPeriods }: Props) {
                         {emp.missingFromCsv && (
                           <div className="text-xs text-destructive">
                             Not found anywhere in this upload
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {emp.workedDepartment || "—"}
+                        {!emp.departmentMapped && (
+                          <div className="text-xs text-amber-600 dark:text-amber-400">
+                            Not linked to a facility
                           </div>
                         )}
                       </TableCell>

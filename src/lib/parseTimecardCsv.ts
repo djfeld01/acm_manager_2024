@@ -4,7 +4,13 @@ export interface EmployeeTimecardSummary {
   employeeNumber: string;
   lastName: string;
   firstName: string;
-  departmentName: string;
+  /** Their assigned home department ("Department Name" column) — constant
+   *  across all of an employee's rows. */
+  homeDepartmentName: string;
+  /** The department this particular line was worked in ("Worked
+   *  Department" column) — an employee who floats between stores gets one
+   *  summary row per distinct value here. */
+  workedDepartment: string;
   hourlyRate: number | null;
   regularHours: number;
   otHours: number;
@@ -27,14 +33,16 @@ function emptySummary(
   employeeNumber: string,
   lastName: string,
   firstName: string,
-  departmentName: string,
+  homeDepartmentName: string,
+  workedDepartment: string,
   hourlyRate: number | null
 ): EmployeeTimecardSummary {
   return {
     employeeNumber,
     lastName,
     firstName,
-    departmentName,
+    homeDepartmentName,
+    workedDepartment,
     hourlyRate,
     regularHours: 0,
     otHours: 0,
@@ -49,7 +57,10 @@ function emptySummary(
 
 /**
  * Parses a Paycor "Time Card and Approval Customizable" export into one
- * summary row per employee. Each CSV row is either hours-based (`Hours`
+ * summary row per (employee, worked department) — an employee who worked
+ * shifts at more than one facility this period gets a separate row per
+ * facility, matching how the app's own payroll data is tracked per
+ * employee-facility pair. Each CSV row is either hours-based (`Hours`
  * populated, `Pay Item` blank — Reg/OT/Vac/a holiday code) or dollar-based
  * (`Pay Item` populated, `Hours` blank — Storage/Mileage/bonus-type codes).
  * Reg/OT have no counterpart in the app (it doesn't track worked hours) and
@@ -63,7 +74,7 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
     transformHeader: (h) => h.replace(/^﻿/, "").trim(),
   });
 
-  const byEmployee = new Map<string, EmployeeTimecardSummary>();
+  const byEmployeeDept = new Map<string, EmployeeTimecardSummary>();
   const allDatesSet = new Set<string>();
 
   for (const row of data) {
@@ -73,19 +84,23 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
     const date = (row["Date"] ?? "").trim();
     if (date) allDatesSet.add(date);
 
-    if (!byEmployee.has(employeeNumber)) {
-      byEmployee.set(
-        employeeNumber,
+    const workedDepartment = (row["Worked Department"] ?? "").trim();
+    const key = `${employeeNumber}|${workedDepartment}`;
+
+    if (!byEmployeeDept.has(key)) {
+      byEmployeeDept.set(
+        key,
         emptySummary(
           employeeNumber,
           (row["Last Name"] ?? "").trim(),
           (row["First Name"] ?? "").trim(),
           (row["Department Name"] ?? "").trim(),
+          workedDepartment,
           row["Hourly Rate"] ? parseFloat(row["Hourly Rate"]) : null
         )
       );
     }
-    const emp = byEmployee.get(employeeNumber)!;
+    const emp = byEmployeeDept.get(key)!;
 
     const code = (row["Earnings Code"] ?? "").trim();
     const hoursRaw = (row["Hours"] ?? "").trim();
@@ -116,7 +131,7 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
   }
 
   return {
-    employees: Array.from(byEmployee.values()),
+    employees: Array.from(byEmployeeDept.values()),
     allDates: Array.from(allDatesSet),
   };
 }
