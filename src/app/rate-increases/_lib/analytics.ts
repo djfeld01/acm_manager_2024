@@ -115,6 +115,8 @@ export interface StayInput {
   unitType: string;
   /** Normalized size, e.g. "10x10". */
   size: string;
+  /** Current tenants only: lets per-tenant risk be reported back. */
+  ledgerId?: string;
 }
 
 const MIN_EVENTS_FOR_SEGMENT = 30;
@@ -157,6 +159,9 @@ export interface StayAnalysis {
   overall: SegmentSurvival;
   byType: SegmentSurvival[];
   bySize: SegmentSurvival[];
+  /** Baseline chance of leaving in 30/60/90 days, per current tenant by
+   *  ledger ID. Only filled when asked for. */
+  tenantRisk?: Record<string, { d30: number; d60: number; d90: number }>;
   monthly: MonthlyBacktest[];
   baseline: {
     avgMonthlyRate: number;
@@ -190,7 +195,7 @@ function sampleCurve(curve: KMCurve, maxDays = 3650, step = 30): CurvePoint[] {
 
 export function analyzeStays(
   stays: StayInput[],
-  opts: { asOf: string; windowStart: string }
+  opts: { asOf: string; windowStart: string; withTenantRisk?: boolean }
 ): StayAnalysis {
   const { asOf, windowStart } = opts;
   const records = (xs: StayInput[]) => xs.map((s) => toRecord(s, windowStart, asOf));
@@ -272,6 +277,14 @@ export function analyzeStays(
   const bySize = segmentsBy((s) => s.size).list.sort((a, b) => compareSizes(a.label, b.label));
   const curveFor = typeSeg.pick;
 
+  let tenantRisk: StayAnalysis["tenantRisk"];
+  if (opts.withTenantRisk) {
+    tenantRisk = {};
+    for (const s of current) {
+      if (s.ledgerId) tenantRisk[s.ledgerId] = expectedFor([s], curveFor);
+    }
+  }
+
   // ---- monthly backtest: who was here at each month start, what we expected
   // vs what actually happened. In-sample (the curve was fit on this data).
   const monthly: MonthlyBacktest[] = [];
@@ -331,6 +344,7 @@ export function analyzeStays(
     overall,
     byType,
     bySize,
+    tenantRisk,
     monthly,
     baseline: {
       avgMonthlyRate: recentRate,
