@@ -3,6 +3,7 @@ import { rentRollSnapshot, tenantActivities } from "@/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { dayNum, isoFromDayNum, type StayInput } from "../analytics";
 import { normalizeSize, normalizeUnitType } from "../unitTypes";
+import { parseSpecialMonths } from "../specials";
 import type { RentRollSnapshotRow } from "@/db/schema/rentRollSnapshot";
 
 export interface LatestSnapshot {
@@ -72,8 +73,58 @@ export async function loadStayInputs(
         exit: null,
         unitType: r.unitType,
         size: normalizeSize(r.size),
+        ledgerId: r.ledgerId ?? undefined,
       });
     }
   }
   return stays;
+}
+
+/**
+ * Months of move-in discount for each current tenancy, found by matching the
+ * snapshot row (tenant + unit + lease date) to its MoveIn activity record.
+ * Tenants who moved in before our activity records begin (2024-01-02), or
+ * whose special text isn't recognized, come back as null.
+ */
+export async function loadSpecialMonths(
+  sitelinkId: string,
+  snapshotRows: RentRollSnapshotRow[]
+): Promise<Map<string, number | null>> {
+  const moveIns = await db
+    .select({
+      tenant: tenantActivities.tenantSitelinkId,
+      unit: tenantActivities.unitName,
+      date: tenantActivities.date,
+      plan: tenantActivities.moveInDiscountPlan,
+    })
+    .from(tenantActivities)
+    .where(
+      and(
+        eq(tenantActivities.facilityId, sitelinkId),
+        sql`${tenantActivities.activityType} = 'MoveIn'`
+      )
+    );
+
+  const byTenant = new Map<string, { unit: string | null; day: number; plan: string | null }[]>();
+  for (const m of moveIns) {
+    const key = String(m.tenant);
+    const list = byTenant.get(key) ?? [];
+    list.push({ unit: m.unit, day: dayNum(m.date.toISOString().slice(0, 10)), plan: m.plan });
+    byTenant.set(key, list);
+  }
+
+  const out = new Map<string, number | null>();
+  for (const r of snapshotRows) {
+    if (!r.isRented || !r.ledgerId) continue;
+    let months: number | null = null;
+    if (r.tenantId && r.leaseDate) {
+      const lease = dayNum(r.leaseDate);
+      const near = (byTenant.get(r.tenantId) ?? [])
+        .filter((m) => m.unit === r.unitName && Math.abs(m.day - lease) <= 7)
+        .sort((a, b) => Math.abs(a.day - lease) - Math.abs(b.day - lease))[0];
+      if (near) months = parseSpecialMonths(near.plan);
+    }
+    out.set(r.ledgerId, months);
+  }
+  return out;
 }
