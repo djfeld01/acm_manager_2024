@@ -357,3 +357,35 @@ export function analyzeStays(
     },
   };
 }
+
+/**
+ * A reusable exit model fit on stays as of one date: per-unit-type survival
+ * curves (falling back to the overall curve for thin types) plus the
+ * facility's recent monthly exit rate. Used to say how many of a group would
+ * be expected to leave over any horizon.
+ */
+export interface ExitModel {
+  /** Chance a tenant of this type, already `tenureDays` in, leaves within `horizonDays`. */
+  prob: (unitType: string, tenureDays: number, horizonDays: number) => number;
+  /** Trailing-12-month share of tenants leaving per month. */
+  monthlyRate: number;
+}
+
+export function buildExitModel(
+  stays: StayInput[],
+  opts: { asOf: string; windowStart: string }
+): ExitModel {
+  const { asOf, windowStart } = opts;
+  const records = (xs: StayInput[]) => xs.map((s) => toRecord(s, windowStart, asOf));
+  const overall = kaplanMeier(records(stays));
+  const byType = new Map<string, KMCurve>();
+  for (const t of new Set(stays.map((s) => s.unitType))) {
+    const c = kaplanMeier(records(stays.filter((s) => s.unitType === t)));
+    byType.set(t, c.nEvents < MIN_EVENTS_FOR_SEGMENT ? overall : c);
+  }
+  return {
+    prob: (unitType, tenureDays, horizonDays) =>
+      exitProbability(byType.get(unitType) ?? overall, tenureDays, horizonDays),
+    monthlyRate: analyzeStays(stays, { asOf, windowStart }).baseline.avgMonthlyRate,
+  };
+}

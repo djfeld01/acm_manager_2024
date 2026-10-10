@@ -17,6 +17,7 @@ import {
   type ExclusionReason,
 } from "../_lib/batch";
 import { SCHEDULE } from "../_lib/config";
+import { STAGE_LABEL, batchStage } from "../_lib/cohort";
 import { getBatchData } from "../actions/getBatchData";
 import { deleteBatch, finalizeBatch, getBatch, listBatches, saveBatch, type BatchDetail } from "../actions/batches";
 import type { Breakdown } from "./Breakdown";
@@ -205,7 +206,7 @@ export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Br
             {listQ.data!.map((b) => (
               <div key={b.id} className="flex flex-wrap items-center gap-3">
                 <span className="font-medium">{b.name}</span>
-                <Badge variant={b.status === "final" ? "default" : "secondary"}>{b.status}</Badge>
+                <Badge variant={b.status === "final" ? "default" : "secondary"}>{STAGE_LABEL[batchStage(b, today)]}</Badge>
                 <span className="text-muted-foreground">
                   effective {b.effectiveDate} · {b.tenants} tenants · {fmtMoney(b.monthlyGain)}/mo
                 </span>

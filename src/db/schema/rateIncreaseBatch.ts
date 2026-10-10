@@ -30,6 +30,10 @@ export const rateIncreaseBatch = pgTable(
     // 'draft' | 'final'
     status: varchar("status", { length: 16 }).notNull().default("draft"),
     effectiveDate: date("effective_date").notNull(),
+    // When the increase was decided, and when tenants were told (must be at
+    // least 30 days before the effective date). Both set after finalizing.
+    decisionDate: date("decision_date"),
+    noticeDate: date("notice_date"),
     // Rent roll the batch was built from.
     snapshotDate: date("snapshot_date").notNull(),
     // The rules used to suggest the batch, as entered.

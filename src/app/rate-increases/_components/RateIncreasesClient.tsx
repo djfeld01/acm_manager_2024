@@ -13,6 +13,7 @@ import { StayAnalysisTab } from "./StayAnalysisTab";
 import { DemandTab } from "./DemandTab";
 import { SpecialsTab } from "./SpecialsTab";
 import { BatchBuilderTab } from "./BatchBuilderTab";
+import { TrackingTab } from "./TrackingTab";
 import type { Breakdown } from "./Breakdown";
 
 const STALE_AFTER_DAYS = 3;
@@ -92,6 +93,7 @@ export function RateIncreasesClient({ sitelinkId }: { sitelinkId: string }) {
               </TabsTrigger>
               <TabsTrigger value="demand">Marketing &amp; Demand</TabsTrigger>
               <TabsTrigger value="batch">Batch Builder</TabsTrigger>
+            <TabsTrigger value="tracking">Tracking</TabsTrigger>
             <TabsTrigger value="specials">Specials (review)</TabsTrigger>
             </TabsList>
             <div className="flex items-center gap-2 text-sm">
@@ -122,6 +124,9 @@ export function RateIncreasesClient({ sitelinkId }: { sitelinkId: string }) {
           </TabsContent>
           <TabsContent value="batch" className="space-y-6 pt-4">
             <BatchBuilderTab sitelinkId={sitelinkId} by={by} />
+          </TabsContent>
+          <TabsContent value="tracking" className="space-y-6 pt-4">
+            <TrackingTab sitelinkId={sitelinkId} by={by} />
           </TabsContent>
           <TabsContent value="specials" className="space-y-6 pt-4">
             <SpecialsTab sitelinkId={sitelinkId} />

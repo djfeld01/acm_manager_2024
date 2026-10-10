@@ -30,7 +30,7 @@ const STATUS_CLASS = {
 export function BatchSummary({ summary, selected, overall, segments, by, excluded, onToggleExcluded, locked }: Props) {
   // How many MORE tenants than baseline leave because of the increase. Unknown
   // until Phase 3 measures it, so it is an input, not a claim.
-  const [uplift, setUplift] = useState(50);
+  const [uplift, setUplift] = useState(25);
   const extraExits = summary.baselineExits.d90 * (uplift / 100);
   const avgRent = summary.count ? selected.reduce((a, s) => a + s.tenant.rent, 0) / summary.count : 0;
   const spareRefill90 = overall ? Math.max(0, overall.expectedMoveInsPerMonth - overall.expectedMoveOutsPerMonth) * 3 : 0;
@@ -60,8 +60,9 @@ export function BatchSummary({ summary, selected, overall, segments, by, exclude
         <CardHeader>
           <CardTitle>What if the increase makes more people leave?</CardTitle>
           <CardDescription>
-            We don&apos;t yet know how much a rate increase raises move-outs — Phase 3 will measure it from real
-            batches. Until then, try a number.
+            We don&apos;t yet know how much a rate increase raises move-outs; the Tracking tab will measure it from real
+            batches. For a rough guide, the April 2026 increase was followed by move-outs about 25–35% above normal for
+            two months, then back to normal — suggestive, not proof.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">

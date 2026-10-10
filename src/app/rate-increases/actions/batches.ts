@@ -16,6 +16,8 @@ export interface BatchListItem {
   status: "draft" | "final";
   effectiveDate: string;
   snapshotDate: string;
+  decisionDate: string | null;
+  noticeDate: string | null;
   tenants: number;
   monthlyGain: number;
   updatedAt: string;
@@ -75,6 +77,8 @@ export async function listBatches(sitelinkId: string): Promise<BatchListItem[]> 
       status: rateIncreaseBatch.status,
       effectiveDate: rateIncreaseBatch.effectiveDate,
       snapshotDate: rateIncreaseBatch.snapshotDate,
+      decisionDate: rateIncreaseBatch.decisionDate,
+      noticeDate: rateIncreaseBatch.noticeDate,
       updatedAt: rateIncreaseBatch.updatedAt,
       tenants: sql<number>`count(${rateIncreaseBatchItem.id})::int`,
       gain: sql<number>`coalesce(sum(${rateIncreaseBatchItem.newRent} - ${rateIncreaseBatchItem.oldRent}), 0)::float`,
@@ -90,6 +94,8 @@ export async function listBatches(sitelinkId: string): Promise<BatchListItem[]> 
     status: r.status as "draft" | "final",
     effectiveDate: r.effectiveDate,
     snapshotDate: r.snapshotDate,
+    decisionDate: r.decisionDate,
+    noticeDate: r.noticeDate,
     tenants: r.tenants,
     monthlyGain: r.gain,
     updatedAt: r.updatedAt.toISOString(),
