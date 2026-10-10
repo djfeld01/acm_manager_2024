@@ -1,0 +1,423 @@
+"use client";
+import { useState, type ChangeEvent } from "react";
+import { format } from "date-fns";
+import { AlertTriangle, CheckCircle2, Copy, Download, Loader2, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import type { PayPeriod } from "@/db/schema/payPeriod";
+import { parseTimecardCsv } from "@/lib/parseTimecardCsv";
+import { parsePrePostExport } from "@/lib/parsePrePostExport";
+import {
+  reconcileTimecard,
+  type ReconcileResult,
+  type ReconcileCategoryResult,
+} from "../../actions/reconcileTimecard";
+
+function parseAsLocalDate(dateString: string) {
+  const [year, month, day] = dateString.split("T")[0].split("-");
+  return new Date(Number(year), Number(month) - 1, Number(day));
+}
+
+interface Props {
+  payPeriods: PayPeriod[];
+}
+
+const EXPORT_HEADER = [
+  "Last Name",
+  "First Name",
+  "Full Name",
+  "Employee Number",
+  "Rate",
+  "Dept",
+  "Regular Hours",
+  "OT Hours",
+  "Holiday Hours",
+  "Vacation Hours",
+  "Sick Hours",
+  "Christmas Bonus",
+  "Monthly Incentive",
+  "Storage Commission",
+  "Mileage",
+];
+
+function CategoryBadge({ result }: { result: ReconcileCategoryResult }) {
+  if (result.status === "none") {
+    return <span className="text-muted-foreground text-xs">—</span>;
+  }
+  if (result.status === "match") {
+    return (
+      <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
+        <CheckCircle2 className="h-3 w-3" />
+        {result.appValue}
+      </Badge>
+    );
+  }
+  const label =
+    result.status === "app-only"
+      ? `App ${result.appValue} / Paycor —`
+      : result.status === "csv-only"
+      ? `App — / Paycor ${result.csvValue}`
+      : `App ${result.appValue} / Paycor ${result.csvValue}`;
+  return (
+    <Badge variant="destructive" className="gap-1">
+      <AlertTriangle className="h-3 w-3" />
+      {label}
+    </Badge>
+  );
+}
+
+export function TimecardReconcileClient({ payPeriods }: Props) {
+  const [selectedPayPeriodId, setSelectedPayPeriodId] = useState(
+    payPeriods[0]?.payPeriodId ?? ""
+  );
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [result, setResult] = useState<ReconcileResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [sourceLabel, setSourceLabel] = useState<string | null>(null);
+
+  async function handleTimecardUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !selectedPayPeriodId) return;
+    setIsProcessing(true);
+    setError(null);
+    setResult(null);
+    try {
+      const parsed = await parseTimecardCsv(file);
+      const reconciled = await reconcileTimecard(
+        selectedPayPeriodId,
+        parsed.employees,
+        parsed.allDates
+      );
+      setResult(reconciled);
+      setSourceLabel("Time Card export");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to process file");
+    } finally {
+      setIsProcessing(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handlePrePostUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !selectedPayPeriodId) return;
+    setIsProcessing(true);
+    setError(null);
+    setResult(null);
+    try {
+      const parsed = await parsePrePostExport(file);
+      // No Date column in this report — nothing to range-check.
+      const reconciled = await reconcileTimecard(selectedPayPeriodId, parsed.employees, []);
+      setResult(reconciled);
+      setSourceLabel("Pre-Post Employee Export (final check)");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to process file");
+    } finally {
+      setIsProcessing(false);
+      e.target.value = "";
+    }
+  }
+
+  function buildExportRows(): (string | number)[][] {
+    if (!result) return [];
+    // Round to 2 decimals — summed floats otherwise carry binary rounding
+    // noise (e.g. 63.50000999999999) into the spreadsheet.
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    // Hours specifically go out at 4 decimal places, per request.
+    const hrs4 = (n: number) => n.toFixed(4);
+    const rows = result.employees.map((emp) => [
+      emp.lastName,
+      emp.firstName,
+      `${emp.lastName}, ${emp.firstName}`,
+      emp.employeeNumber,
+      emp.hourlyRate != null ? r2(emp.hourlyRate) : "",
+      emp.deptNumber ?? emp.workedDepartment,
+      hrs4(emp.regularHours),
+      hrs4(emp.otHours),
+      hrs4(emp.holidayHoursExport),
+      hrs4(emp.vacationHoursExport),
+      "",
+      r2(emp.christmasBonusExport),
+      r2(emp.monthlyIncentiveExport),
+      r2(emp.commissionExport),
+      r2(emp.mileageExport),
+    ]);
+    return [EXPORT_HEADER, ...rows];
+  }
+
+  function downloadCsv() {
+    const rows = buildExportRows();
+    const csv = rows
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `payroll-export-${selectedPayPeriodId}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function copyToClipboard() {
+    const rows = buildExportRows();
+    const tsv = rows.map((r) => r.join("\t")).join("\n");
+    await navigator.clipboard.writeText(tsv);
+  }
+
+  // Group an employee's multiple worked-department rows together.
+  const sortedEmployees = result
+    ? [...result.employees].sort((a, b) =>
+        `${a.lastName}, ${a.firstName}, ${a.workedDepartment}`.localeCompare(
+          `${b.lastName}, ${b.firstName}, ${b.workedDepartment}`
+        )
+      )
+    : [];
+  // Gross/Net only ever come from the Pre-Post Employee Export — show the
+  // columns only when at least one row actually has them.
+  const showPayColumns = sortedEmployees.some((e) => e.grossPay != null || e.netPay != null);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-4">
+        <Select value={selectedPayPeriodId} onValueChange={setSelectedPayPeriodId}>
+          <SelectTrigger className="w-64">
+            <SelectValue placeholder="Select a pay period…" />
+          </SelectTrigger>
+          <SelectContent>
+            {payPeriods.map((p) => (
+              <SelectItem key={p.payPeriodId} value={p.payPeriodId}>
+                {format(parseAsLocalDate(p.startDate), "MM/dd/yyyy")} -{" "}
+                {p.endDate ? format(parseAsLocalDate(p.endDate), "MM/dd/yyyy") : "?"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {isProcessing ? (
+          <Button disabled>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Processing…
+          </Button>
+        ) : (
+          <>
+            <Button
+              onClick={() => document.getElementById("timecard-upload")?.click()}
+              disabled={!selectedPayPeriodId}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Timecard CSV
+            </Button>
+            <input
+              type="file"
+              accept=".csv"
+              id="timecard-upload"
+              style={{ display: "none" }}
+              onChange={handleTimecardUpload}
+            />
+
+            <Button
+              onClick={() => document.getElementById("prepost-upload")?.click()}
+              disabled={!selectedPayPeriodId}
+              variant="secondary"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Final Payroll Export (Pre-Submit Check)
+            </Button>
+            <input
+              type="file"
+              accept=".csv"
+              id="prepost-upload"
+              style={{ display: "none" }}
+              onChange={handlePrePostUpload}
+            />
+          </>
+        )}
+      </div>
+
+      {error && (
+        <div className="text-sm text-destructive flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4" />
+          {error}
+        </div>
+      )}
+
+      {result && (
+        <>
+          {result.outOfRangeDates.length > 0 && (
+            <Card className="border-destructive/50">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-2 text-sm">
+                  <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-medium">
+                      {result.outOfRangeDates.length} punch date
+                      {result.outOfRangeDates.length !== 1 ? "s" : ""} outside this pay
+                      period&apos;s range:
+                    </span>{" "}
+                    {result.outOfRangeDates.join(", ")}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {result.unmappedDepartments.length > 0 && (
+            <Card className="border-amber-500/50">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-2 text-sm">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-medium">
+                      Unrecognized worked department
+                      {result.unmappedDepartments.length !== 1 ? "s" : ""}:
+                    </span>{" "}
+                    {result.unmappedDepartments.join(", ")} — hours/pay still show up below, but
+                    can&apos;t be checked against the app since they aren&apos;t linked to a
+                    facility yet.
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {result.linkedEmployeeIds.length > 0 && (
+            <div className="text-sm text-muted-foreground">
+              Linked {result.linkedEmployeeIds.length} employee
+              {result.linkedEmployeeIds.length !== 1 ? "s" : ""} to their Paycor number for
+              future uploads.
+            </div>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                Reconciliation — {result.payPeriodLabel}
+                {sourceLabel && (
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    (from: {sourceLabel})
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Department</TableHead>
+                    <TableHead className="text-right">Reg / OT Hrs</TableHead>
+                    <TableHead>Vacation</TableHead>
+                    <TableHead>Holiday</TableHead>
+                    <TableHead>Commission</TableHead>
+                    <TableHead>Mileage</TableHead>
+                    <TableHead>Bonus</TableHead>
+                    {showPayColumns && (
+                      <>
+                        <TableHead className="text-right">Gross</TableHead>
+                        <TableHead className="text-right">Net</TableHead>
+                      </>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedEmployees.map((emp, i) => (
+                    <TableRow
+                      key={`${emp.employeeId ?? emp.employeeNumber}-${emp.workedDepartment}-${i}`}
+                      className={
+                        emp.missingFromCsv
+                          ? "bg-destructive/5"
+                          : emp.matchedBy === "unmatched"
+                          ? "bg-amber-500/5"
+                          : ""
+                      }
+                    >
+                      <TableCell className="font-medium">
+                        {emp.lastName}, {emp.firstName}
+                        {emp.matchedBy === "unmatched" && (
+                          <div className="text-xs text-amber-600 dark:text-amber-400">
+                            No match in app
+                          </div>
+                        )}
+                        {emp.missingFromCsv && (
+                          <div className="text-xs text-destructive">
+                            Not found anywhere in this upload
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {emp.workedDepartment || "—"}
+                        {!emp.departmentMapped && (
+                          <div className="text-xs text-amber-600 dark:text-amber-400">
+                            Not linked to a facility
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {emp.regularHours || emp.otHours
+                          ? `${emp.regularHours.toFixed(2)} / ${emp.otHours.toFixed(2)}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <CategoryBadge result={emp.vacation} />
+                      </TableCell>
+                      <TableCell>
+                        <CategoryBadge result={emp.holiday} />
+                      </TableCell>
+                      <TableCell>
+                        <CategoryBadge result={emp.commission} />
+                      </TableCell>
+                      <TableCell>
+                        <CategoryBadge result={emp.mileage} />
+                      </TableCell>
+                      <TableCell>
+                        <CategoryBadge result={emp.bonus} />
+                      </TableCell>
+                      {showPayColumns && (
+                        <>
+                          <TableCell className="text-right">
+                            {emp.grossPay != null ? `$${emp.grossPay.toFixed(2)}` : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {emp.netPay != null ? `$${emp.netPay.toFixed(2)}` : "—"}
+                          </TableCell>
+                        </>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <div className="flex gap-3">
+            <Button onClick={downloadCsv} variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Download CSV
+            </Button>
+            <Button onClick={copyToClipboard} variant="outline">
+              <Copy className="h-4 w-4 mr-2" />
+              Copy to Clipboard
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
