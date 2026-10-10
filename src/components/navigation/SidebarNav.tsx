@@ -22,6 +22,7 @@ import {
   Trophy,
   Upload,
   Megaphone,
+  Percent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -137,6 +138,9 @@ export function SidebarNav({ locations, userRole }: SidebarNavProps) {
           href: "/marketing",
           icon: Megaphone,
         },
+        ...(userRole === "OWNER" || userRole === "ADMIN"
+          ? [{ label: "Rate Increases", href: "/rate-increases", icon: Percent }]
+          : []),
         ...(userRole === "OWNER" ? [{ label: "Trivia", href: "/trivia", icon: Trophy }] : []),
         {
           label: "Competitor Pricing",

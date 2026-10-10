@@ -199,3 +199,4 @@ export {
   default as ownershipGroupToOwners,
   ownershipGroupToOwnersRelations,
 } from "@/db/schema/ownershipGroupToOwners";
+export { default as rentRollSnapshot } from "@/db/schema/rentRollSnapshot";
