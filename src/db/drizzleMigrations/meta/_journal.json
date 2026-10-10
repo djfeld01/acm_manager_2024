@@ -351,6 +351,13 @@
       "when": 1789300000000,
       "tag": "0049_drop_logon_view_add_base_index",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1791644960205,
+      "tag": "0050_rent_roll_snapshot",
+      "breakpoints": true
     }
   ]
 }
