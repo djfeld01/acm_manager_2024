@@ -192,6 +192,19 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
       });
     }
 
+    // Paycor adds a placeholder row for each missed punch — no punches,
+    // hours, or pay, and a blank Worked Department. The unpaired punch
+    // itself is already flagged above; summarizing the placeholder would
+    // only create an empty, unmapped reconciliation line.
+    if (
+      !inPunch &&
+      !outPunch &&
+      !(row["Hours"] ?? "").trim() &&
+      !(row["Pay Item"] ?? "").trim()
+    ) {
+      continue;
+    }
+
     const key = `${employeeNumber}|${workedDepartment}`;
 
     if (!byEmployeeDept.has(key)) {
