@@ -4,9 +4,23 @@ import { Role } from "@/db/schema/user";
 import { TimecardReconcileClient } from "./_components/TimecardReconcileClient";
 
 export default async function TimecardCheckPage() {
-  const payPeriods = await db.query.payPeriod.findMany({
-    orderBy: (payPeriod, { desc }) => [desc(payPeriod.startDate)],
+  // Today in Eastern time (all stores are Eastern), as YYYY-MM-DD to compare
+  // against the pay period's date column.
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/New_York",
   });
+  // The current pay period plus the three before it — future periods are
+  // left out.
+  const payPeriods = await db.query.payPeriod.findMany({
+    where: (payPeriod, { lte }) => lte(payPeriod.startDate, today),
+    orderBy: (payPeriod, { desc }) => [desc(payPeriod.startDate)],
+    limit: 4,
+  });
+  // Default to the most recent period that has already ended — that's the
+  // one being reconciled — falling back to the newest if none has.
+  const defaultPayPeriodId =
+    payPeriods.find((p) => p.endDate != null && p.endDate < today)
+      ?.payPeriodId ?? payPeriods[0]?.payPeriodId;
 
   return (
     <PageAuthWrapper requireAuthentication={true} allowedRoles={[Role.ADMIN, Role.OWNER]}>
@@ -19,7 +33,10 @@ export default async function TimecardCheckPage() {
             bonuses, and mileage already committed in the app.
           </p>
         </div>
-        <TimecardReconcileClient payPeriods={payPeriods} />
+        <TimecardReconcileClient
+          payPeriods={payPeriods}
+          defaultPayPeriodId={defaultPayPeriodId}
+        />
       </div>
     </PageAuthWrapper>
   );
