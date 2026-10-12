@@ -50,6 +50,24 @@ export interface EarlyClockIn {
   minutesEarly: number;
 }
 
+export interface MissedPunch {
+  employeeNumber: string;
+  lastName: string;
+  firstName: string;
+  workedDepartment: string;
+  date: string;
+  inPunch: string;
+  outPunch: string;
+  /** Which side of the pair is blank, if either. */
+  missing: "in" | "out" | null;
+  /** Paycor's "Exceptions" text for this row, when it reads like a missed
+   *  punch. */
+  exception: string | null;
+}
+
+/** Paycor writes "Missed Punch" in the Exceptions column. */
+const MISSED_PUNCH_EXCEPTION = /missed punch/i;
+
 export interface ParsedTimecard {
   employees: EmployeeTimecardSummary[];
   /** Every distinct punch date seen in the file (MM/DD/YYYY, as Paycor
@@ -57,6 +75,9 @@ export interface ParsedTimecard {
   allDates: string[];
   /** Punches with an "In Punch" before the store opens, in file order. */
   earlyClockIns: EarlyClockIn[];
+  /** Rows with an In Punch but no Out Punch (or vice versa), or a
+   *  missed-punch exception, in file order. */
+  missedPunches: MissedPunch[];
 }
 
 /** "8:42 AM" / "08:42:00 PM" / "20:42" → minutes after midnight. */
@@ -127,6 +148,8 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
   // One punch can be split across several rows (e.g. Reg + OT), so only
   // flag each employee/date/punch once.
   const seenPunches = new Set<string>();
+  const missedPunches: MissedPunch[] = [];
+  const seenMissed = new Set<string>();
 
   for (const row of data) {
     const employeeNumber = (row["Employee Number"] ?? "").trim();
@@ -154,6 +177,28 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
         date,
         inPunch,
         minutesEarly: DEFAULT_STORE_OPEN_MINUTES - punchMinutes,
+      });
+    }
+
+    const outPunch = (row["Out Punch"] ?? "").trim();
+    const exceptionRaw = (row["Exceptions"] ?? "").trim();
+    const exception = MISSED_PUNCH_EXCEPTION.test(exceptionRaw)
+      ? exceptionRaw
+      : null;
+    const missing = inPunch && !outPunch ? "out" : !inPunch && outPunch ? "in" : null;
+    const missedKey = `${employeeNumber}|${date}|${inPunch}|${outPunch}`;
+    if ((missing || exception) && !seenMissed.has(missedKey)) {
+      seenMissed.add(missedKey);
+      missedPunches.push({
+        employeeNumber,
+        lastName: (row["Last Name"] ?? "").trim(),
+        firstName: (row["First Name"] ?? "").trim(),
+        workedDepartment,
+        date,
+        inPunch,
+        outPunch,
+        missing,
+        exception,
       });
     }
 
@@ -206,5 +251,6 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
     employees: Array.from(byEmployeeDept.values()),
     allDates: Array.from(allDatesSet),
     earlyClockIns,
+    missedPunches,
   };
 }

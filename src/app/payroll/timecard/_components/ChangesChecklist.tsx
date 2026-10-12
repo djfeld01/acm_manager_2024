@@ -16,7 +16,7 @@ import type {
   ReconcileEmployeeResult,
   ReconcileCategoryResult,
 } from "../../actions/reconcileTimecard";
-import type { EarlyClockIn } from "@/lib/parseTimecardCsv";
+import type { EarlyClockIn, MissedPunch } from "@/lib/parseTimecardCsv";
 import { groupEarlyClockIns } from "./EarlyClockIns";
 
 type CategoryKey = "vacation" | "holiday" | "commission" | "mileage" | "bonus";
@@ -88,6 +88,7 @@ function categoryInstruction(
 function buildGroups(
   result: ReconcileResult,
   earlyClockIns: EarlyClockIn[],
+  missedPunches: MissedPunch[],
 ): ChecklistGroup[] {
   const groups: ChecklistGroup[] = [];
 
@@ -151,29 +152,58 @@ function buildGroups(
     }
   });
 
-  // One line per employee for early punches — attached to their existing
-  // group when they already have changes, otherwise a group of its own.
-  for (const early of groupEarlyClockIns(earlyClockIns)) {
-    const n = early.punches.length;
-    const item: ChecklistItem = {
-      id: "early-punches",
-      instruction: `Check ${n} punch${n !== 1 ? "es" : ""} before 9:00 AM`,
-    };
+  // Punch items attach to the employee's existing group when they already
+  // have changes, otherwise they get a group of their own.
+  function addEmployeeItem(
+    emp: { employeeNumber: string; lastName: string; firstName: string },
+    department: string,
+    item: ChecklistItem,
+  ) {
     const existing = employeeGroups.find(
-      (g) => g.employeeNumber === early.employeeNumber,
+      (g) => g.employeeNumber === emp.employeeNumber,
     );
     if (existing) {
       existing.items.push(item);
     } else {
       employeeGroups.push({
-        id: `early-${early.employeeNumber}`,
-        title: `${early.lastName}, ${early.firstName}`,
-        subtitle: early.departments.join(", ") || undefined,
+        id: `punch-${emp.employeeNumber}`,
+        title: `${emp.lastName}, ${emp.firstName}`,
+        subtitle: department || undefined,
         items: [item],
-        employeeNumber: early.employeeNumber,
-        sortKey: `${early.lastName}, ${early.firstName}, ${early.departments[0] ?? ""}`,
+        employeeNumber: emp.employeeNumber,
+        sortKey: `${emp.lastName}, ${emp.firstName}, ${department}`,
       });
     }
+  }
+
+  // One line per missed punch — each one needs correcting in Paycor.
+  for (const p of missedPunches) {
+    const instruction =
+      p.missing === "out"
+        ? `Add missing out punch on ${p.date} (in at ${p.inPunch})`
+        : p.missing === "in"
+          ? `Add missing in punch on ${p.date} (out at ${p.outPunch})`
+          : `Fix missed punch on ${p.date}`;
+    const punches = [p.inPunch && `in ${p.inPunch}`, p.outPunch && `out ${p.outPunch}`]
+      .filter(Boolean)
+      .join(", ");
+    addEmployeeItem(p, p.workedDepartment, {
+      id: `missed-${p.date}-${p.inPunch}-${p.outPunch}`,
+      instruction,
+      detail:
+        [p.exception && `Paycor: "${p.exception}"`, !p.missing && punches]
+          .filter(Boolean)
+          .join(" · ") || undefined,
+    });
+  }
+
+  // One line per employee for early punches.
+  for (const early of groupEarlyClockIns(earlyClockIns)) {
+    const n = early.punches.length;
+    addEmployeeItem(early, early.departments.join(", "), {
+      id: "early-punches",
+      instruction: `Check ${n} punch${n !== 1 ? "es" : ""} before 9:00 AM`,
+    });
   }
 
   employeeGroups.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
@@ -261,16 +291,18 @@ function printChecklist(
 export function ChangesChecklist({
   result,
   earlyClockIns = [],
+  missedPunches = [],
 }: {
   result: ReconcileResult;
   earlyClockIns?: EarlyClockIn[];
+  missedPunches?: MissedPunch[];
 }) {
   // Not persisted — a fresh upload remounts this and clears the checks.
   const [done, setDone] = useState<Set<string>>(new Set());
   const [hideDone, setHideDone] = useState(false);
   const [open, setOpen] = useState(true);
 
-  const groups = buildGroups(result, earlyClockIns);
+  const groups = buildGroups(result, earlyClockIns, missedPunches);
   const total = groups.reduce((n, g) => n + g.items.length, 0);
   const doneCount = done.size;
 
