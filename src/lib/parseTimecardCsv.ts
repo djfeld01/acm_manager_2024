@@ -34,11 +34,43 @@ export interface EmployeeTimecardSummary {
   netPay: number | null;
 }
 
+/** Store opening time, in minutes after midnight. Per-store hours aren't
+ *  stored in the app yet, so every store is assumed to open at 9:00 AM. */
+export const DEFAULT_STORE_OPEN_MINUTES = 9 * 60;
+
+export interface EarlyClockIn {
+  employeeNumber: string;
+  lastName: string;
+  firstName: string;
+  workedDepartment: string;
+  /** As Paycor writes it in the "Date" column. */
+  date: string;
+  /** As Paycor writes it in the "In Punch" column, e.g. "8:42 AM". */
+  inPunch: string;
+  minutesEarly: number;
+}
+
 export interface ParsedTimecard {
   employees: EmployeeTimecardSummary[];
   /** Every distinct punch date seen in the file (MM/DD/YYYY, as Paycor
    *  writes it), for validating against the selected pay period's range. */
   allDates: string[];
+  /** Punches with an "In Punch" before the store opens, in file order. */
+  earlyClockIns: EarlyClockIn[];
+}
+
+/** "8:42 AM" / "08:42:00 PM" / "20:42" → minutes after midnight. */
+function parsePunchMinutes(value: string): number | null {
+  const m =
+    value.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AP])\.?M?\.?$/i) ??
+    value.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (!m) return null;
+  let hours = parseInt(m[1], 10);
+  const minutes = parseInt(m[2], 10);
+  const meridiem = m[3]?.toUpperCase();
+  if (meridiem === "P" && hours !== 12) hours += 12;
+  if (meridiem === "A" && hours === 12) hours = 0;
+  return hours * 60 + minutes;
 }
 
 function emptySummary(
@@ -91,6 +123,10 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
 
   const byEmployeeDept = new Map<string, EmployeeTimecardSummary>();
   const allDatesSet = new Set<string>();
+  const earlyClockIns: EarlyClockIn[] = [];
+  // One punch can be split across several rows (e.g. Reg + OT), so only
+  // flag each employee/date/punch once.
+  const seenPunches = new Set<string>();
 
   for (const row of data) {
     const employeeNumber = (row["Employee Number"] ?? "").trim();
@@ -100,6 +136,27 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
     if (date) allDatesSet.add(date);
 
     const workedDepartment = (row["Worked Department"] ?? "").trim();
+
+    const inPunch = (row["In Punch"] ?? "").trim();
+    const punchMinutes = inPunch ? parsePunchMinutes(inPunch) : null;
+    const punchKey = `${employeeNumber}|${date}|${inPunch}`;
+    if (
+      punchMinutes != null &&
+      punchMinutes < DEFAULT_STORE_OPEN_MINUTES &&
+      !seenPunches.has(punchKey)
+    ) {
+      seenPunches.add(punchKey);
+      earlyClockIns.push({
+        employeeNumber,
+        lastName: (row["Last Name"] ?? "").trim(),
+        firstName: (row["First Name"] ?? "").trim(),
+        workedDepartment,
+        date,
+        inPunch,
+        minutesEarly: DEFAULT_STORE_OPEN_MINUTES - punchMinutes,
+      });
+    }
+
     const key = `${employeeNumber}|${workedDepartment}`;
 
     if (!byEmployeeDept.has(key)) {
@@ -148,5 +205,6 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
   return {
     employees: Array.from(byEmployeeDept.values()),
     allDates: Array.from(allDatesSet),
+    earlyClockIns,
   };
 }
