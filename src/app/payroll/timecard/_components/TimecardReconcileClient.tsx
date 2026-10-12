@@ -34,6 +34,7 @@ import {
 } from "../../actions/reconcileTimecard";
 import { ChangesChecklist } from "./ChangesChecklist";
 import { EarlyClockIns } from "./EarlyClockIns";
+import { MissedPunches } from "./MissedPunches";
 
 function parseAsLocalDate(dateString: string) {
   const [year, month, day] = dateString.split("T")[0].split("-");
@@ -99,7 +100,7 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
   const [sourceLabel, setSourceLabel] = useState<string | null>(null);
   // Only the Time Card export has punch times — null after a Pre-Post upload.
   const [earlyClockIns, setEarlyClockIns] = useState<EarlyClockIn[] | null>(null);
-  const [missedPunches, setMissedPunches] = useState<MissedPunch[]>([]);
+  const [missedPunches, setMissedPunches] = useState<MissedPunch[] | null>(null);
 
   async function handleTimecardUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -108,7 +109,7 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
     setError(null);
     setResult(null);
     setEarlyClockIns(null);
-    setMissedPunches([]);
+    setMissedPunches(null);
     try {
       const parsed = await parseTimecardCsv(file);
       const reconciled = await reconcileTimecard(
@@ -135,7 +136,7 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
     setError(null);
     setResult(null);
     setEarlyClockIns(null);
-    setMissedPunches([]);
+    setMissedPunches(null);
     try {
       const parsed = await parsePrePostExport(file);
       // No Date column in this report — nothing to range-check.
@@ -324,8 +325,10 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
           <ChangesChecklist
             result={result}
             earlyClockIns={earlyClockIns ?? []}
-            missedPunches={missedPunches}
+            missedPunches={missedPunches ?? []}
           />
+
+          {missedPunches && <MissedPunches punches={missedPunches} />}
 
           {earlyClockIns && <EarlyClockIns clockIns={earlyClockIns} />}
 
