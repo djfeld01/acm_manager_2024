@@ -178,22 +178,12 @@ function buildGroups(
 
   // One line per missed punch — each one needs correcting in Paycor.
   for (const p of missedPunches) {
-    const instruction =
-      p.missing === "out"
-        ? `Add missing out punch on ${p.date} (in at ${p.inPunch})`
-        : p.missing === "in"
-          ? `Add missing in punch on ${p.date} (out at ${p.outPunch})`
-          : `Fix missed punch on ${p.date}`;
-    const punches = [p.inPunch && `in ${p.inPunch}`, p.outPunch && `out ${p.outPunch}`]
-      .filter(Boolean)
-      .join(", ");
     addEmployeeItem(p, p.workedDepartment, {
       id: `missed-${p.date}-${p.inPunch}-${p.outPunch}`,
-      instruction,
-      detail:
-        [p.exception && `Paycor: "${p.exception}"`, !p.missing && punches]
-          .filter(Boolean)
-          .join(" · ") || undefined,
+      instruction:
+        p.missing === "out"
+          ? `Add missing out punch on ${p.date} (in at ${p.inPunch})`
+          : `Add missing in punch on ${p.date} (out at ${p.outPunch})`,
     });
   }
 

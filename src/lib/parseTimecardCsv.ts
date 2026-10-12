@@ -58,15 +58,9 @@ export interface MissedPunch {
   date: string;
   inPunch: string;
   outPunch: string;
-  /** Which side of the pair is blank, if either. */
-  missing: "in" | "out" | null;
-  /** Paycor's "Exceptions" text for this row, when it reads like a missed
-   *  punch. */
-  exception: string | null;
+  /** Which side of the pair is blank. */
+  missing: "in" | "out";
 }
-
-/** Paycor writes "Missed Punch" in the Exceptions column. */
-const MISSED_PUNCH_EXCEPTION = /missed punch/i;
 
 export interface ParsedTimecard {
   employees: EmployeeTimecardSummary[];
@@ -75,8 +69,9 @@ export interface ParsedTimecard {
   allDates: string[];
   /** Punches with an "In Punch" before the store opens, in file order. */
   earlyClockIns: EarlyClockIn[];
-  /** Rows with an In Punch but no Out Punch (or vice versa), or a
-   *  missed-punch exception, in file order. */
+  /** Rows with an In Punch but no Out Punch (or vice versa), in file
+   *  order. Paycor's "Missed Punch" exception isn't used — it flags the
+   *  same rows, so it only duplicated these. */
   missedPunches: MissedPunch[];
 }
 
@@ -181,13 +176,9 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
     }
 
     const outPunch = (row["Out Punch"] ?? "").trim();
-    const exceptionRaw = (row["Exceptions"] ?? "").trim();
-    const exception = MISSED_PUNCH_EXCEPTION.test(exceptionRaw)
-      ? exceptionRaw
-      : null;
     const missing = inPunch && !outPunch ? "out" : !inPunch && outPunch ? "in" : null;
     const missedKey = `${employeeNumber}|${date}|${inPunch}|${outPunch}`;
-    if ((missing || exception) && !seenMissed.has(missedKey)) {
+    if (missing && !seenMissed.has(missedKey)) {
       seenMissed.add(missedKey);
       missedPunches.push({
         employeeNumber,
@@ -198,7 +189,6 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
         inPunch,
         outPunch,
         missing,
-        exception,
       });
     }
 

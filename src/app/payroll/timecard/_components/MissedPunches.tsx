@@ -17,12 +17,6 @@ import {
 } from "@/components/ui/table";
 import type { MissedPunch } from "@/lib/parseTimecardCsv";
 
-function problem(p: MissedPunch) {
-  if (p.missing === "out") return "No out punch";
-  if (p.missing === "in") return "No in punch";
-  return "Flagged by Paycor";
-}
-
 export function MissedPunches({ punches }: { punches: MissedPunch[] }) {
   const [open, setOpen] = useState(true);
 
@@ -53,8 +47,7 @@ export function MissedPunches({ punches }: { punches: MissedPunch[] }) {
           <CardContent>
             {punches.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No missed punches found — every in punch has an out punch, and
-                nothing is marked &quot;Missed Punch&quot; in Exceptions.
+                No missed punches found — every in punch has an out punch.
               </p>
             ) : (
               <Table>
@@ -81,13 +74,7 @@ export function MissedPunches({ punches }: { punches: MissedPunch[] }) {
                       <TableCell>{p.inPunch || "—"}</TableCell>
                       <TableCell>{p.outPunch || "—"}</TableCell>
                       <TableCell className="text-destructive">
-                        {problem(p)}
-                        {p.exception && p.missing && (
-                          <span className="text-muted-foreground">
-                            {" "}
-                            · {p.exception}
-                          </span>
-                        )}
+                        {p.missing === "out" ? "No out punch" : "No in punch"}
                       </TableCell>
                     </TableRow>
                   ))}
