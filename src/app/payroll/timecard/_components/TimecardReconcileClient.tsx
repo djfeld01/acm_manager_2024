@@ -21,7 +21,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import type { PayPeriod } from "@/db/schema/payPeriod";
-import { parseTimecardCsv, type EarlyClockIn } from "@/lib/parseTimecardCsv";
+import {
+  parseTimecardCsv,
+  type EarlyClockIn,
+  type MissedPunch,
+} from "@/lib/parseTimecardCsv";
 import { parsePrePostExport } from "@/lib/parsePrePostExport";
 import {
   reconcileTimecard,
@@ -30,6 +34,7 @@ import {
 } from "../../actions/reconcileTimecard";
 import { ChangesChecklist } from "./ChangesChecklist";
 import { EarlyClockIns } from "./EarlyClockIns";
+import { MissedPunches } from "./MissedPunches";
 
 function parseAsLocalDate(dateString: string) {
   const [year, month, day] = dateString.split("T")[0].split("-");
@@ -95,6 +100,7 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
   const [sourceLabel, setSourceLabel] = useState<string | null>(null);
   // Only the Time Card export has punch times — null after a Pre-Post upload.
   const [earlyClockIns, setEarlyClockIns] = useState<EarlyClockIn[] | null>(null);
+  const [missedPunches, setMissedPunches] = useState<MissedPunch[] | null>(null);
 
   async function handleTimecardUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -103,6 +109,7 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
     setError(null);
     setResult(null);
     setEarlyClockIns(null);
+    setMissedPunches(null);
     try {
       const parsed = await parseTimecardCsv(file);
       const reconciled = await reconcileTimecard(
@@ -112,6 +119,7 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
       );
       setResult(reconciled);
       setEarlyClockIns(parsed.earlyClockIns);
+      setMissedPunches(parsed.missedPunches);
       setSourceLabel("Time Card export");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to process file");
@@ -128,6 +136,7 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
     setError(null);
     setResult(null);
     setEarlyClockIns(null);
+    setMissedPunches(null);
     try {
       const parsed = await parsePrePostExport(file);
       // No Date column in this report — nothing to range-check.
@@ -313,7 +322,13 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
             </div>
           )}
 
-          <ChangesChecklist result={result} earlyClockIns={earlyClockIns ?? []} />
+          <ChangesChecklist
+            result={result}
+            earlyClockIns={earlyClockIns ?? []}
+            missedPunches={missedPunches ?? []}
+          />
+
+          {missedPunches && <MissedPunches punches={missedPunches} />}
 
           {earlyClockIns && <EarlyClockIns clockIns={earlyClockIns} />}
 

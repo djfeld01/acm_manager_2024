@@ -50,6 +50,18 @@ export interface EarlyClockIn {
   minutesEarly: number;
 }
 
+export interface MissedPunch {
+  employeeNumber: string;
+  lastName: string;
+  firstName: string;
+  workedDepartment: string;
+  date: string;
+  inPunch: string;
+  outPunch: string;
+  /** Which side of the pair is blank. */
+  missing: "in" | "out";
+}
+
 export interface ParsedTimecard {
   employees: EmployeeTimecardSummary[];
   /** Every distinct punch date seen in the file (MM/DD/YYYY, as Paycor
@@ -57,6 +69,10 @@ export interface ParsedTimecard {
   allDates: string[];
   /** Punches with an "In Punch" before the store opens, in file order. */
   earlyClockIns: EarlyClockIn[];
+  /** Rows with an In Punch but no Out Punch (or vice versa), in file
+   *  order. Paycor's "Missed Punch" exception isn't used — it flags the
+   *  same rows, so it only duplicated these. */
+  missedPunches: MissedPunch[];
 }
 
 /** "8:42 AM" / "08:42:00 PM" / "20:42" → minutes after midnight. */
@@ -127,6 +143,8 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
   // One punch can be split across several rows (e.g. Reg + OT), so only
   // flag each employee/date/punch once.
   const seenPunches = new Set<string>();
+  const missedPunches: MissedPunch[] = [];
+  const seenMissed = new Set<string>();
 
   for (const row of data) {
     const employeeNumber = (row["Employee Number"] ?? "").trim();
@@ -155,6 +173,36 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
         inPunch,
         minutesEarly: DEFAULT_STORE_OPEN_MINUTES - punchMinutes,
       });
+    }
+
+    const outPunch = (row["Out Punch"] ?? "").trim();
+    const missing = inPunch && !outPunch ? "out" : !inPunch && outPunch ? "in" : null;
+    const missedKey = `${employeeNumber}|${date}|${inPunch}|${outPunch}`;
+    if (missing && !seenMissed.has(missedKey)) {
+      seenMissed.add(missedKey);
+      missedPunches.push({
+        employeeNumber,
+        lastName: (row["Last Name"] ?? "").trim(),
+        firstName: (row["First Name"] ?? "").trim(),
+        workedDepartment,
+        date,
+        inPunch,
+        outPunch,
+        missing,
+      });
+    }
+
+    // Paycor adds a placeholder row for each missed punch — no punches,
+    // hours, or pay, and a blank Worked Department. The unpaired punch
+    // itself is already flagged above; summarizing the placeholder would
+    // only create an empty, unmapped reconciliation line.
+    if (
+      !inPunch &&
+      !outPunch &&
+      !(row["Hours"] ?? "").trim() &&
+      !(row["Pay Item"] ?? "").trim()
+    ) {
+      continue;
     }
 
     const key = `${employeeNumber}|${workedDepartment}`;
@@ -206,5 +254,6 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
     employees: Array.from(byEmployeeDept.values()),
     allDates: Array.from(allDatesSet),
     earlyClockIns,
+    missedPunches,
   };
 }
