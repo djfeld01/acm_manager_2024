@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -182,12 +182,51 @@ function ccTotal(p: DailyPayment) {
   return cardsTotal(p) + p.ach;
 }
 
+type Period = "prev" | "current" | "next";
+
+// Which month a row belongs to. Matched/SiteLink rows go by the SiteLink date
+// (a Sep 30 sale that cleared Oct 2 is still September); bank-only rows go by
+// the bank date.
+function rowPeriod(row: TableRow, monthStart: string, monthEnd: string): Period {
+  if (row.date < monthStart) return "prev";
+  if (row.date > monthEnd) return "next";
+  return "current";
+}
+
+// Section totals. 1:N and N:1 matches repeat the shared side on every row, so
+// dedupe by id to avoid double-counting.
+function sumRows(rows: TableRow[]) {
+  const seenSitelink = new Set<string>();
+  const seenBank = new Set<number>();
+  let sitelink = 0;
+  let bank = 0;
+  for (const r of rows) {
+    if (r.type !== "bank_only") {
+      const key = `${r.dailyPaymentId}-${r.subType ?? "cash"}`;
+      if (!seenSitelink.has(key)) {
+        seenSitelink.add(key);
+        sitelink += r.sitelinkAmount;
+      }
+    }
+    if (r.type !== "sitelink_only" && !seenBank.has(r.bankTransactionId)) {
+      seenBank.add(r.bankTransactionId);
+      bank += r.bankAmount;
+    }
+  }
+  return { sitelink, bank };
+}
+
+function monthName(year: number, month: number) {
+  return new Date(year, month - 1).toLocaleDateString("en-US", { month: "long" });
+}
+
 function buildRows(
   payments: DailyPayment[],
   bankTxns: BankTransaction[],
   allMatches: Match[],
   tab: "cash" | "credit",
   monthStart: string,
+  monthEnd: string,
 ): TableRow[] {
   const matchedBankIds = new Set(allMatches.map((m) => m.bankTransactionId));
   const rows: TableRow[] = [];
@@ -222,6 +261,9 @@ function buildRows(
     }
 
     for (const p of payments) {
+      // Out-of-month payments are only loaded to render their matches here;
+      // their unmatched remainder belongs to that month's reconciliation.
+      if (p.date < monthStart || p.date > monthEnd) continue;
       if (matchedPaymentIds.has(p.dailyPaymentId)) continue;
       const amount = p.cash + p.check;
       if (amount === 0) continue;
@@ -271,6 +313,7 @@ function buildRows(
   }
 
   for (const p of payments) {
+    if (p.date < monthStart || p.date > monthEnd) continue;
     // Cards row — shown if cards amount > 0 and cards not yet matched
     if (cardsTotal(p) > 0 && !cardMatchedPaymentIds.has(p.dailyPaymentId)) {
       rows.push({ type: "sitelink_only", date: p.date, sitelinkAmount: cardsTotal(p), dailyPaymentId: p.dailyPaymentId, subType: "cards" });
@@ -322,6 +365,7 @@ export function ReconciliationWorkspace({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [tab, setTab] = useState<"cash" | "credit" | "truck" | "other" | "sundries">("cash");
+  const [showAdjacent, setShowAdjacent] = useState(true);
 
   // Multi-select: bank uses a plain Set; SiteLink uses a Map so we can track
   // which sub-type (cash / cards / ach) and amount was selected per payment.
@@ -345,11 +389,29 @@ export function ReconciliationWorkspace({
   const [reviewNotes, setReviewNotes] = useState("");
 
   const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
-  const cashRows = buildRows(dailyPayments, bankTransactions, matches, "cash", monthStart);
-  const creditRows = buildRows(dailyPayments, bankTransactions, matches, "credit", monthStart);
+  const monthEnd = `${year}-${String(month).padStart(2, "0")}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`;
+  const thisMonthName = monthName(year, month);
+  const prevMonthName = monthName(month === 1 ? year - 1 : year, month === 1 ? 12 : month - 1);
+  const nextMonthName = monthName(month === 12 ? year + 1 : year, month === 12 ? 1 : month + 1);
+  const cashRows = buildRows(dailyPayments, bankTransactions, matches, "cash", monthStart, monthEnd);
+  const creditRows = buildRows(dailyPayments, bankTransactions, matches, "credit", monthStart, monthEnd);
   const truckRows = bankTransactions.filter((t) => t.transactionType === "truck");
   const otherRows = bankTransactions.filter((t) => t.transactionType === "other");
   const currentRows = tab === "cash" ? cashRows : tab === "credit" ? creditRows : [];
+  const sections = (["prev", "current", "next"] as const)
+    .map((period) => ({
+      period,
+      rows: currentRows.filter((r) => rowPeriod(r, monthStart, monthEnd) === period),
+    }))
+    .filter((sec) => sec.rows.length > 0 || sec.period === "current");
+  const adjacentCount = sections
+    .filter((sec) => sec.period !== "current")
+    .reduce((n, sec) => n + sec.rows.length, 0);
+  const sectionLabel: Record<Period, string> = {
+    prev: `${prevMonthName} — matched to ${thisMonthName} deposits`,
+    current: thisMonthName,
+    next: `${nextMonthName} 1–10 — after month-end`,
+  };
 
   // Running totals for selection — amount is stored in the Map at selection time
   const selectedSitelinkTotal = Array.from(selectedSitelinkItems.values()).reduce(
@@ -372,31 +434,55 @@ export function ReconciliationWorkspace({
       ? selectedBankTotal - selectedSitelinkTotal
       : null;
 
+  // Summary totals cover the reconciliation month only. `dailyPayments` can
+  // include prior-month payments (loaded to render cross-month matches) and
+  // `bankTransactions` includes a buffer into next month — neither belongs in
+  // this month's totals.
+  const monthPayments = dailyPayments.filter((p) => p.date >= monthStart && p.date <= monthEnd);
+  const monthBankTxns = bankTransactions.filter((t) => !t.isNextMonth);
+  const lateBankTxns = bankTransactions.filter((t) => t.isNextMonth);
+  const sumBank = (txns: BankTransaction[], type: string) =>
+    txns.filter((t) => t.transactionType === type).reduce((s, t) => s + t.transactionAmount, 0);
+
   const totalSitelink = {
-    cash: dailyPayments.reduce((s, p) => s + p.cash + p.check, 0),
-    credit: dailyPayments.reduce((s, p) => s + ccTotal(p), 0),
+    cash: monthPayments.reduce((s, p) => s + p.cash + p.check, 0),
+    cards: monthPayments.reduce((s, p) => s + cardsTotal(p), 0),
+    ach: monthPayments.reduce((s, p) => s + p.ach, 0),
+    credit: monthPayments.reduce((s, p) => s + ccTotal(p), 0),
   };
   const totalBank = {
-    cash: bankTransactions
-      .filter((t) => t.transactionType === "cash")
-      .reduce((s, t) => s + t.transactionAmount, 0),
-    credit: bankTransactions
-      .filter((t) => t.transactionType === "creditCard")
-      .reduce((s, t) => s + t.transactionAmount, 0),
+    cash: sumBank(monthBankTxns, "cash"),
+    credit: sumBank(monthBankTxns, "creditCard"),
+  };
+  const lateBank = {
+    cash: sumBank(lateBankTxns, "cash"),
+    credit: sumBank(lateBankTxns, "creditCard"),
+  };
+  const unmatchedSitelink = {
+    cash: cashRows
+      .filter((r) => r.type === "sitelink_only")
+      .reduce((s, r) => s + (r.type === "sitelink_only" ? r.sitelinkAmount : 0), 0),
+    credit: creditRows
+      .filter((r) => r.type === "sitelink_only")
+      .reduce((s, r) => s + (r.type === "sitelink_only" ? r.sitelinkAmount : 0), 0),
   };
 
-  // Matched bank totals — deduplicate by bankTransactionId so 1:N matches
-  // don't double-count the same bank transaction
+  // Matched bank totals (this month's deposits only) — deduplicate by
+  // bankTransactionId so 1:N matches don't double-count the same transaction
+  const matchedBankSum = (connTypes: string[]) =>
+    [...new Set(matches.filter((m) => connTypes.includes(m.connectionType)).map((m) => m.bankTransactionId))].reduce(
+      (s, id) => s + (monthBankTxns.find((t) => t.bankTransactionId === id)?.transactionAmount ?? 0),
+      0,
+    );
   const matchedBankTotal = {
-    cash: [...new Set(matches.filter((m) => m.connectionType === "cash").map((m) => m.bankTransactionId))].reduce(
-      (s, id) => s + (bankTransactions.find((t) => t.bankTransactionId === id)?.transactionAmount ?? 0),
-      0,
-    ),
-    credit: [...new Set(matches.filter((m) => m.connectionType === "creditCard").map((m) => m.bankTransactionId))].reduce(
-      (s, id) => s + (bankTransactions.find((t) => t.bankTransactionId === id)?.transactionAmount ?? 0),
-      0,
-    ),
+    cash: matchedBankSum(["cash"]),
+    credit: matchedBankSum(["creditCard", "ach"]),
   };
+
+  const lateNote = (amount: number) =>
+    amount > 0.005 ? `+${fmt$(amount)} cleared ${nextMonthName} 1–10` : undefined;
+  const unmatchedNote = (amount: number) =>
+    amount > 0.005 ? `${fmt$(amount)} unmatched` : "All matched";
 
   const clearSelection = () => {
     setSelectedSitelinkItems(new Map());
@@ -629,13 +715,23 @@ export function ReconciliationWorkspace({
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3 max-w-md mx-auto text-left">
-          <SummaryCard label="SiteLink Cash / Check" value={fmt$(totalSitelink.cash)} />
-          <SummaryCard label="Bank Cash Deposits" value={fmt$(totalBank.cash)} diff={cashDiff} />
-          <SummaryCard label="SiteLink Credit Card" value={fmt$(totalSitelink.credit)} />
+          <SummaryCard label={`SiteLink Cash / Check · ${thisMonthName}`} value={fmt$(totalSitelink.cash)} />
           <SummaryCard
-            label="Bank CC Deposits"
+            label={`Bank Cash Deposits · ${thisMonthName}`}
+            value={fmt$(totalBank.cash)}
+            diff={cashDiff}
+            notes={[lateNote(lateBank.cash)]}
+          />
+          <SummaryCard
+            label={`SiteLink Credit Card · ${thisMonthName}`}
+            value={fmt$(totalSitelink.credit)}
+            notes={[`Cards ${fmt$(totalSitelink.cards)} · ACH ${fmt$(totalSitelink.ach)}`]}
+          />
+          <SummaryCard
+            label={`Bank CC Deposits · ${thisMonthName}`}
             value={fmt$(totalBank.credit)}
             diff={creditDiff}
+            notes={[lateNote(lateBank.credit)]}
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
@@ -945,19 +1041,32 @@ export function ReconciliationWorkspace({
 
       {/* Totals summary row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <SummaryCard label="SiteLink Cash / Check" value={fmt$(totalSitelink.cash)} />
         <SummaryCard
-          label="Bank Cash Deposits"
+          label={`SiteLink Cash / Check · ${thisMonthName}`}
+          value={fmt$(totalSitelink.cash)}
+          notes={[unmatchedNote(unmatchedSitelink.cash)]}
+        />
+        <SummaryCard
+          label={`Bank Cash Deposits · ${thisMonthName}`}
           value={fmt$(totalBank.cash)}
           matched={matchedBankTotal.cash}
           diff={totalBank.cash - totalSitelink.cash}
+          notes={[lateNote(lateBank.cash)]}
         />
-        <SummaryCard label="SiteLink Credit Card" value={fmt$(totalSitelink.credit)} />
         <SummaryCard
-          label="Bank CC Deposits"
+          label={`SiteLink Credit Card · ${thisMonthName}`}
+          value={fmt$(totalSitelink.credit)}
+          notes={[
+            `Cards ${fmt$(totalSitelink.cards)} · ACH ${fmt$(totalSitelink.ach)}`,
+            unmatchedNote(unmatchedSitelink.credit),
+          ]}
+        />
+        <SummaryCard
+          label={`Bank CC Deposits · ${thisMonthName}`}
           value={fmt$(totalBank.credit)}
           matched={matchedBankTotal.credit}
           diff={totalBank.credit - totalSitelink.credit}
+          notes={[lateNote(lateBank.credit)]}
         />
       </div>
 
@@ -1012,6 +1121,21 @@ export function ReconciliationWorkspace({
           </TabsTrigger>
         </TabsList>
 
+        {(tab === "cash" || tab === "credit") && adjacentCount > 0 && (
+          <label className="ml-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none align-middle">
+            <input
+              type="checkbox"
+              checked={showAdjacent}
+              onChange={(e) => {
+                setShowAdjacent(e.target.checked);
+                clearSelection();
+              }}
+              className="h-3.5 w-3.5 accent-primary"
+            />
+            Show {prevMonthName} / {nextMonthName} rows ({adjacentCount})
+          </label>
+        )}
+
         {tab === "sundries" ? (
           <SundriesTable sundries={sundries} />
         ) : tab === "truck" ? (
@@ -1044,20 +1168,60 @@ export function ReconciliationWorkspace({
                     </td>
                   </tr>
                 ) : (
-                  currentRows.map((row, i) => (
-                    <MatchRow
-                      key={i}
-                      row={row}
-                      isEditable={isEditable}
-                      selectedSitelinkIds={selectedSitelinkIds}
-                      selectedBankIds={selectedBankIds}
-                      onToggleSitelink={(id, subType, amount) => toggleSitelink(id, subType, amount)}
-                      onToggleBank={toggleBank}
-                      onUnmatch={handleUnmatch}
-                      onRecategorize={handleRecategorize}
-                      isPending={isPending}
-                    />
-                  ))
+                  sections
+                    .filter((sec) => showAdjacent || sec.period === "current")
+                    .map((sec) => {
+                      const totals = sumRows(sec.rows);
+                      const isCurrent = sec.period === "current";
+                      return (
+                        <Fragment key={sec.period}>
+                          <tr
+                            className={
+                              isCurrent
+                                ? "bg-primary/5 border-y"
+                                : "bg-muted/40 border-y text-muted-foreground"
+                            }
+                          >
+                            <td className="px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+                              {sectionLabel[sec.period]}
+                            </td>
+                            <td className="px-3 py-2 text-right text-xs font-semibold">
+                              {fmt$(totals.sitelink)}
+                            </td>
+                            <td className="px-3 py-2 text-right text-xs font-semibold">
+                              {fmt$(totals.bank)}
+                            </td>
+                            <td className="hidden sm:table-cell" />
+                            <td className="px-3 py-2 text-center text-xs">
+                              {sec.rows.length} row{sec.rows.length === 1 ? "" : "s"}
+                            </td>
+                            {isEditable && <td />}
+                          </tr>
+                          {sec.rows.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="py-6 text-center text-sm text-muted-foreground">
+                                No {thisMonthName} transactions.
+                              </td>
+                            </tr>
+                          ) : (
+                            sec.rows.map((row, i) => (
+                              <MatchRow
+                                key={`${sec.period}-${i}`}
+                                row={row}
+                                isEditable={isEditable}
+                                selectedSitelinkIds={selectedSitelinkIds}
+                                selectedBankIds={selectedBankIds}
+                                onToggleSitelink={(id, subType, amount) => toggleSitelink(id, subType, amount)}
+                                onToggleBank={toggleBank}
+                                onUnmatch={handleUnmatch}
+                                onRecategorize={handleRecategorize}
+                                isPending={isPending}
+                              />
+                            ))
+                          )}
+                        </Fragment>
+                      );
+                    })
                 )}
               </tbody>
             </table>
@@ -1085,11 +1249,13 @@ function SummaryCard({
   value,
   diff,
   matched,
+  notes,
 }: {
   label: string;
   value: string;
   diff?: number;
   matched?: number;
+  notes?: (string | undefined)[];
 }) {
   const fmt$ = (n: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
@@ -1110,6 +1276,11 @@ function SummaryCard({
           {fmt$(diff)} vs SiteLink
         </div>
       )}
+      {notes?.filter(Boolean).map((n) => (
+        <div key={n} className="text-xs mt-0.5 text-muted-foreground">
+          {n}
+        </div>
+      ))}
     </div>
   );
 }
