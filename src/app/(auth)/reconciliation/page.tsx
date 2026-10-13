@@ -9,7 +9,7 @@ import {
 } from "@/db/schema";
 import { eq, and, sql, count, inArray } from "drizzle-orm";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MonthNav } from "@/components/reconciliation/MonthNav";
 import { Building2, ArrowRight } from "lucide-react";
@@ -200,12 +200,16 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
                   </div>
                 </div>
 
-                <Button variant="outline" size="sm" asChild className="shrink-0">
-                  <Link href={`/reconciliation/${f.facilityId}?month=${month}&year=${year}`}>
-                    {f.status === "not_started" ? "Start" : "Open"}
-                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                  </Link>
-                </Button>
+                {/* Styled Link rather than <Button asChild>: Radix Slot renders
+                    nothing when RSC hands it a lazy child, which silently
+                    dropped the button for some rows. */}
+                <Link
+                  href={`/reconciliation/${f.facilityId}?month=${month}&year=${year}`}
+                  className={buttonVariants({ variant: "outline", size: "sm", className: "shrink-0" })}
+                >
+                  {f.status === "not_started" ? "Start" : "Open"}
+                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </Link>
               </div>
             );
           })
