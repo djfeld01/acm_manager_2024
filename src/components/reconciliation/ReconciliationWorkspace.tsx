@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, useTransition } from "react";
+import { Fragment, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1285,16 +1285,82 @@ function SummaryCard({
   );
 }
 
+// Rent is booked via an adjusting entry in QuickBooks, so it's excluded from
+// the selected total by default. Other exclusions are remembered per browser.
+const SUNDRY_EXCLUDED_KEY = "reconciliation.sundries.excluded";
+const DEFAULT_EXCLUDED_SUNDRIES = ["rent"];
+
+function loadExcludedSundries(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SUNDRY_EXCLUDED_KEY);
+    if (raw) return new Set(JSON.parse(raw) as string[]);
+  } catch {
+    // storage unavailable — fall back to defaults
+  }
+  return new Set(DEFAULT_EXCLUDED_SUNDRIES);
+}
+
 function SundriesTable({ sundries }: { sundries: { description: string; monthlyAmount: number }[] }) {
   const fmt$ = (n: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+  // Keyed by lowercased description so the choice carries across facilities/months
+  const [excluded, setExcluded] = useState<Set<string>>(
+    () => new Set(DEFAULT_EXCLUDED_SUNDRIES),
+  );
+  useEffect(() => setExcluded(loadExcludedSundries()), []);
+
+  const keyOf = (description: string) => description.trim().toLowerCase();
+  const isIncluded = (description: string) => !excluded.has(keyOf(description));
+
+  const updateExcluded = (next: Set<string>) => {
+    setExcluded(next);
+    try {
+      localStorage.setItem(SUNDRY_EXCLUDED_KEY, JSON.stringify([...next]));
+    } catch {
+      // ignore — selection still works for this session
+    }
+  };
+
+  const toggle = (description: string) => {
+    const next = new Set(excluded);
+    const key = keyOf(description);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    updateExcluded(next);
+  };
+
+  const allIncluded = sundries.every((r) => isIncluded(r.description));
+  const toggleAll = () => {
+    const next = new Set(excluded);
+    for (const r of sundries) {
+      if (allIncluded) next.add(keyOf(r.description));
+      else next.delete(keyOf(r.description));
+    }
+    updateExcluded(next);
+  };
+
   const total = sundries.reduce((s, r) => s + r.monthlyAmount, 0);
+  const selectedTotal = sundries
+    .filter((r) => isIncluded(r.description))
+    .reduce((s, r) => s + r.monthlyAmount, 0);
+  const selectedCount = sundries.filter((r) => isIncluded(r.description)).length;
 
   return (
     <div className="mt-4 border rounded-lg overflow-hidden">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-muted/60 border-b">
+            <th className="w-10 p-3">
+              {sundries.length > 0 && (
+                <input
+                  type="checkbox"
+                  checked={allIncluded}
+                  onChange={toggleAll}
+                  aria-label="Include all in total"
+                  className="h-3.5 w-3.5 accent-primary align-middle"
+                />
+              )}
+            </th>
             <th className="text-left p-3 font-medium text-muted-foreground">Description</th>
             <th className="text-right p-3 font-medium text-muted-foreground">Monthly Amount</th>
           </tr>
@@ -1302,24 +1368,54 @@ function SundriesTable({ sundries }: { sundries: { description: string; monthlyA
         <tbody className="divide-y">
           {sundries.length === 0 ? (
             <tr>
-              <td colSpan={2} className="py-10 text-center text-sm text-muted-foreground">
+              <td colSpan={3} className="py-10 text-center text-sm text-muted-foreground">
                 No sundry income found for the last day of this month.
               </td>
             </tr>
           ) : (
-            sundries.map((row, i) => (
-              <tr key={i} className="hover:bg-muted/20">
-                <td className="p-3">{row.description}</td>
-                <td className="p-3 text-right">{fmt$(row.monthlyAmount)}</td>
-              </tr>
-            ))
+            sundries.map((row, i) => {
+              const included = isIncluded(row.description);
+              return (
+                <tr
+                  key={i}
+                  className={`hover:bg-muted/20 cursor-pointer ${included ? "" : "text-muted-foreground"}`}
+                  onClick={() => toggle(row.description)}
+                >
+                  <td className="p-3">
+                    <input
+                      type="checkbox"
+                      checked={included}
+                      onChange={() => toggle(row.description)}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Include ${row.description} in total`}
+                      className="h-3.5 w-3.5 accent-primary align-middle"
+                    />
+                  </td>
+                  <td className="p-3">{row.description}</td>
+                  <td className={`p-3 text-right ${included ? "" : "line-through decoration-muted-foreground/50"}`}>
+                    {fmt$(row.monthlyAmount)}
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
         {sundries.length > 0 && (
           <tfoot>
             <tr className="bg-muted/40 border-t font-semibold">
-              <td className="p-3">Total</td>
-              <td className="p-3 text-right">{fmt$(total)}</td>
+              <td />
+              <td className="p-3">
+                Selected total
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                  ({selectedCount} of {sundries.length})
+                </span>
+              </td>
+              <td className="p-3 text-right">{fmt$(selectedTotal)}</td>
+            </tr>
+            <tr className="text-xs text-muted-foreground">
+              <td />
+              <td className="px-3 pb-3">All sundries</td>
+              <td className="px-3 pb-3 text-right">{fmt$(total)}</td>
             </tr>
           </tfoot>
         )}
