@@ -11,6 +11,20 @@ import { auth } from "@/auth";
 import { sql, desc, eq, and } from "drizzle-orm";
 import { Row } from "@tanstack/react-table";
 import LocationHeader from "@/app/location2/_components/LocationHeader";
+import { exactCents, exactCentsSum } from "@/lib/exactCents";
+
+const creditCardColumns = [
+  dailyPayments.visa,
+  dailyPayments.mastercard,
+  dailyPayments.discover,
+  dailyPayments.americanExpress,
+  dailyPayments.ach,
+  dailyPayments.dinersClub,
+  dailyPayments.debit,
+];
+
+// exactCents values arrive as numeric strings (or null).
+const toAmount = (value: string | null) => Number(value ?? 0);
 
 async function getData(sitelinkId: string): Promise<Payment[]> {
   const session = await auth();
@@ -25,25 +39,22 @@ async function getData(sitelinkId: string): Promise<Payment[]> {
       dailyPaymentId: dailyPayments.Id,
       sitelinkDate: dailyPayments.date,
       facilityId: dailyPayments.facilityId,
-      cash: dailyPayments.cash,
-      check: dailyPayments.check,
-      cashCheckDeposit: sql`(${dailyPayments.cash} + ${dailyPayments.check})`,
-      visa: dailyPayments.visa,
-      mastercard: dailyPayments.mastercard,
-      discover: dailyPayments.discover,
-      americanExpress: dailyPayments.americanExpress,
-      ach: dailyPayments.ach,
-      dinersClub: dailyPayments.dinersClub,
-      debit: dailyPayments.debit,
-      creditCardDeposit: sql`(
-      ${dailyPayments.visa} + ${dailyPayments.mastercard} + 
-      ${dailyPayments.discover} + ${dailyPayments.americanExpress} + 
-      ${dailyPayments.ach} + ${dailyPayments.dinersClub} + ${dailyPayments.debit}
-    )`,
-      dailyTotal: sql`(
-      ${dailyPayments.visa} + ${dailyPayments.mastercard} + 
-      ${dailyPayments.discover} + ${dailyPayments.americanExpress} + 
-      ${dailyPayments.ach} + ${dailyPayments.dinersClub} + ${dailyPayments.debit}+${dailyPayments.cash} + ${dailyPayments.check})`,
+      cash: exactCents(dailyPayments.cash),
+      check: exactCents(dailyPayments.check),
+      cashCheckDeposit: exactCentsSum(dailyPayments.cash, dailyPayments.check),
+      visa: exactCents(dailyPayments.visa),
+      mastercard: exactCents(dailyPayments.mastercard),
+      discover: exactCents(dailyPayments.discover),
+      americanExpress: exactCents(dailyPayments.americanExpress),
+      ach: exactCents(dailyPayments.ach),
+      dinersClub: exactCents(dailyPayments.dinersClub),
+      debit: exactCents(dailyPayments.debit),
+      creditCardDeposit: exactCentsSum(...creditCardColumns),
+      dailyTotal: exactCentsSum(
+        ...creditCardColumns,
+        dailyPayments.cash,
+        dailyPayments.check
+      ),
       bankTransactions: sql`
       COALESCE(
         json_agg(
@@ -115,18 +126,18 @@ async function getData(sitelinkId: string): Promise<Payment[]> {
         dailyPaymentId: payment.dailyPaymentId,
         sitelinkDate: new Date(`${payment.sitelinkDate}T00:00:00`), // Convert string to Date
         facilityId: payment.facilityId,
-        cash: payment.cash ?? 0, // Provide default values for null
-        check: payment.check ?? 0,
-        visa: payment.visa ?? 0,
-        mastercard: payment.mastercard ?? 0,
-        discover: payment.discover ?? 0,
-        americanExpress: payment.americanExpress ?? 0,
-        ach: payment.ach ?? 0,
-        dinersClub: payment.dinersClub ?? 0,
-        debit: payment.debit ?? 0,
-        cashCheckDeposit: Number(payment.cashCheckDeposit), // Cast unknown to number
-        creditCardDeposit: Number(payment.creditCardDeposit), // Cast unknown to number
-        dailyTotal: Number(payment.dailyTotal),
+        cash: toAmount(payment.cash),
+        check: toAmount(payment.check),
+        visa: toAmount(payment.visa),
+        mastercard: toAmount(payment.mastercard),
+        discover: toAmount(payment.discover),
+        americanExpress: toAmount(payment.americanExpress),
+        ach: toAmount(payment.ach),
+        dinersClub: toAmount(payment.dinersClub),
+        debit: toAmount(payment.debit),
+        cashCheckDeposit: toAmount(payment.cashCheckDeposit),
+        creditCardDeposit: toAmount(payment.creditCardDeposit),
+        dailyTotal: toAmount(payment.dailyTotal),
         cashBankTransactions,
         hasCashBankTransaction,
         creditCardTransactions,
