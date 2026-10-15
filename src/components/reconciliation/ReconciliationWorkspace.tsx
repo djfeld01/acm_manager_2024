@@ -823,8 +823,8 @@ export function ReconciliationWorkspace({
   const isPendingReview = reconciliation.status === "pending_review";
   const isCompleted = reconciliation.status === "completed";
   const canReview = ["ADMIN", "OWNER", "SUPERVISOR"].includes(userRole);
-  // Reviewers can undo matches while reviewing without sending it back
-  const canUnmatch = isEditable || (isPendingReview && canReview);
+  // Reviewers can fix matches while reviewing without sending it back
+  const canMatch = isEditable || (isPendingReview && canReview);
   const totalUnmatched = cashRows.filter((r) => r.type !== "matched").length +
     creditRows.filter((r) => r.type !== "matched").length;
   const cashUnmatched = cashRows.filter((r) => r.type !== "matched").length;
@@ -839,7 +839,7 @@ export function ReconciliationWorkspace({
           {lastResult && (
             <span className="text-sm text-muted-foreground">
               {lastResult.text}
-              {lastResult.undo && isEditable && (
+              {lastResult.undo && canMatch && (
                 <button
                   onClick={lastResult.undo}
                   disabled={isPending}
@@ -853,7 +853,7 @@ export function ReconciliationWorkspace({
           )}
         </div>
         <div className="flex gap-2 flex-wrap">
-          {isEditable && (
+          {canMatch && (
             <Button
               variant="outline"
               size="sm"
@@ -868,7 +868,7 @@ export function ReconciliationWorkspace({
               Auto-match
             </Button>
           )}
-          {isEditable && selectedSitelinkIds.size > 0 && selectedBankIds.size > 0 && (
+          {canMatch && selectedSitelinkIds.size > 0 && selectedBankIds.size > 0 && (
             <>
               {selectionBalances && (
                 <Button size="sm" onClick={handleMatch} disabled={isPending}>
@@ -1017,7 +1017,7 @@ export function ReconciliationWorkspace({
       )}
 
       {/* Selection totals — shown when anything is selected */}
-      {isEditable && (selectedSitelinkIds.size > 0 || selectedBankIds.size > 0) && (
+      {canMatch && (selectedSitelinkIds.size > 0 || selectedBankIds.size > 0) && (
         <div className="border rounded-lg p-3 bg-muted/40 flex flex-wrap gap-4 text-sm">
           <span>
             <span className="text-muted-foreground">Selected SiteLink:</span>{" "}
@@ -1052,7 +1052,7 @@ export function ReconciliationWorkspace({
       )}
 
       {/* Discrepancy form — shown when "Match with Note" is clicked */}
-      {isEditable && showDiscrepancyForm && (
+      {canMatch && showDiscrepancyForm && (
         <div className="border border-yellow-300 dark:border-yellow-700 rounded-lg p-4 bg-yellow-50/50 dark:bg-yellow-900/10 space-y-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 shrink-0" />
@@ -1239,7 +1239,7 @@ export function ReconciliationWorkspace({
                     Diff
                   </th>
                   <th className="text-center p-3 font-medium text-muted-foreground">Status</th>
-                  {canUnmatch && (
+                  {canMatch && (
                     <th className="w-8 p-3" />
                   )}
                 </tr>
@@ -1279,7 +1279,7 @@ export function ReconciliationWorkspace({
                             <td className="px-3 py-2 text-center text-xs">
                               {sec.rows.length} row{sec.rows.length === 1 ? "" : "s"}
                             </td>
-                            {canUnmatch && <td />}
+                            {canMatch && <td />}
                           </tr>
                           {sec.rows.length === 0 ? (
                             <tr>
@@ -1292,8 +1292,7 @@ export function ReconciliationWorkspace({
                               <MatchRow
                                 key={`${sec.period}-${i}`}
                                 row={row}
-                                isEditable={isEditable}
-                                canUnmatch={canUnmatch}
+                                isEditable={canMatch}
                                 selectedSitelinkIds={selectedSitelinkIds}
                                 selectedBankIds={selectedBankIds}
                                 onToggleSitelink={(id, subType, amount) => toggleSitelink(id, subType, amount)}
@@ -1318,7 +1317,7 @@ export function ReconciliationWorkspace({
       </Tabs>
 
       {/* Helper text */}
-      {isEditable && selectedSitelinkIds.size === 0 && selectedBankIds.size === 0 && (
+      {canMatch && selectedSitelinkIds.size === 0 && selectedBankIds.size === 0 && (
         <p className="text-xs text-muted-foreground">
           Click unmatched rows to select them. Select one or more SiteLink rows and one or more
           bank rows whose amounts balance, then click{" "}
@@ -1524,7 +1523,6 @@ function txnTypeLabel(type: string) {
 function MatchRow({
   row,
   isEditable,
-  canUnmatch,
   selectedSitelinkIds,
   selectedBankIds,
   onToggleSitelink,
@@ -1537,7 +1535,6 @@ function MatchRow({
 }: {
   row: TableRow;
   isEditable: boolean;
-  canUnmatch: boolean;
   selectedSitelinkIds: Set<number>;
   selectedBankIds: Set<number>;
   onToggleSitelink: (id: number, subType: "cash" | "cards" | "ach", amount: number) => void;
@@ -1611,7 +1608,7 @@ function MatchRow({
             {row.matchType === "automatic" ? "Auto" : "Matched"}
           </span>
         </td>
-        {canUnmatch && (
+        {isEditable && (
           <td className="p-3 text-right whitespace-nowrap">
             {confirmUnmatch ? (
               <span className="inline-flex items-center gap-1">
@@ -1685,7 +1682,7 @@ function MatchRow({
             SiteLink only
           </span>
         </td>
-        {canUnmatch && <td className="p-3" />}
+        {isEditable && <td className="p-3" />}
       </tr>
     );
   }
@@ -1747,7 +1744,7 @@ function MatchRow({
           </div>
         )}
       </td>
-      {canUnmatch && <td className="p-3" />}
+      {isEditable && <td className="p-3" />}
     </tr>
   );
 }
