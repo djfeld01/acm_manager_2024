@@ -345,12 +345,16 @@ function buildRows(
 // Mirrors unmatchGroupAction: a bank txn linked to several payments groups by
 // bank; otherwise the match groups by payment (N bank → 1 payment, or 1:1).
 function matchGroupKey(match: Match, allMatches: Match[]) {
+  // Cards and ACH can share one deposit, so they group as one family
+  const family = (t: string) => (t === "cash" ? "cash" : "credit");
   const bankLinks = allMatches.filter(
-    (m) => m.connectionType === match.connectionType && m.bankTransactionId === match.bankTransactionId,
+    (m) =>
+      family(m.connectionType) === family(match.connectionType) &&
+      m.bankTransactionId === match.bankTransactionId,
   ).length;
   return bankLinks > 1
-    ? `${match.connectionType}-b${match.bankTransactionId}`
-    : `${match.connectionType}-p${match.dailyPaymentId}`;
+    ? `${family(match.connectionType)}-b${match.bankTransactionId}`
+    : `${family(match.connectionType)}-p${match.dailyPaymentId}`;
 }
 
 function withGroupSizes(rows: TableRow[]) {
@@ -593,6 +597,16 @@ export function ReconciliationWorkspace({
     });
   };
 
+  // Per-row type for the selected SiteLink rows (a mixed cards + ACH selection
+  // must not be saved under a single type)
+  const paymentConnectionTypes = () =>
+    Object.fromEntries(
+      Array.from(selectedSitelinkItems.entries()).map(([id, v]) => [
+        id,
+        v.subType === "cash" ? "cash" : v.subType === "ach" ? "ach" : "creditCard",
+      ]),
+    ) as Record<number, "cash" | "creditCard" | "ach">;
+
   const handleMatch = () => {
     if (!selectionBalances) return;
     setError(null);
@@ -614,7 +628,7 @@ export function ReconciliationWorkspace({
 
     startTransition(async () => {
       try {
-        await createMatchesAction(bankIds, sitelinkIds, connType, facilityId);
+        await createMatchesAction(bankIds, sitelinkIds, connType, facilityId, paymentConnectionTypes());
         clearSelection();
         setLastResult({
           text: "Matched.",
@@ -655,6 +669,7 @@ export function ReconciliationWorkspace({
           reconciliation.reconciliationId,
           discrepancyType,
           discrepancyNote.trim(),
+          paymentConnectionTypes(),
         );
         clearSelection();
         setLastResult({

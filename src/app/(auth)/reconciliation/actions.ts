@@ -387,6 +387,8 @@ export async function createMatchesAction(
   dailyPaymentIds: number[],
   connectionType: ConnectionType,
   facilityId: string, // unused but kept for future audit
+  // One deposit can combine ACH and card days; each payment keeps its own type
+  paymentConnectionTypes?: Record<number, ConnectionType>,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
@@ -429,11 +431,12 @@ export async function createMatchesAction(
     // 1 bank → N sitelink: each sitelink entry maps to this bank transaction
     const bankId = bankTransactionIds[0];
     for (const p of payments) {
-      const amt = sitelinkAmt(p, connectionType);
+      const type = paymentConnectionTypes?.[p.dailyPaymentId] ?? connectionType;
+      const amt = sitelinkAmt(p, type);
       records.push({
         bankTransactionId: bankId,
         dailyPaymentId: p.dailyPaymentId,
-        connectionType,
+        connectionType: type,
         amount: amt,
         depositDifference: 0,
       });
@@ -485,6 +488,7 @@ export async function createMatchWithDiscrepancyAction(
   reconciliationId: number,
   discrepancyType: DiscrepancyType,
   note: string,
+  paymentConnectionTypes?: Record<number, ConnectionType>,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
@@ -521,7 +525,8 @@ export async function createMatchWithDiscrepancyAction(
     0,
   );
   const totalSitelink = payments.reduce(
-    (s, p) => s + sitelinkAmt(p, connectionType),
+    (s, p) =>
+      s + sitelinkAmt(p, paymentConnectionTypes?.[p.dailyPaymentId] ?? connectionType),
     0,
   );
 
@@ -540,11 +545,12 @@ export async function createMatchWithDiscrepancyAction(
   if (bankTransactionIds.length === 1) {
     const bankId = bankTransactionIds[0];
     for (const p of payments) {
-      const amt = sitelinkAmt(p, connectionType);
+      const type = paymentConnectionTypes?.[p.dailyPaymentId] ?? connectionType;
+      const amt = sitelinkAmt(p, type);
       records.push({
         bankTransactionId: bankId,
         dailyPaymentId: p.dailyPaymentId,
-        connectionType,
+        connectionType: type,
         amount: amt,
         depositDifference: difference,
         reconciliationNotes: note,
@@ -631,7 +637,11 @@ export async function unmatchGroupAction(
     );
   if (!link) return { removed: 0 };
 
-  const sameType = eq(transactionsToDailyPayments.connectionType, link.connectionType);
+  // Cards and ACH can share one deposit, so treat them as one family here
+  const sameType = inArray(
+    transactionsToDailyPayments.connectionType,
+    link.connectionType === "cash" ? ["cash"] : ["creditCard", "ach"],
+  );
   const bankLinks = await db
     .select({
       bankTransactionId: transactionsToDailyPayments.bankTransactionId,
