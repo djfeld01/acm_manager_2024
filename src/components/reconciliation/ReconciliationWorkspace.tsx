@@ -512,7 +512,7 @@ export function ReconciliationWorkspace({
   };
 
   const lateNote = (amount: number) =>
-    amount > 0.005 ? `+${fmt$(amount)} cleared ${nextMonthName} 1–10` : undefined;
+    amount > 0.005 ? `+${fmt$(amount)} cleared in ${nextMonthName}` : undefined;
   const unmatchedNote = (amount: number) =>
     amount > 0.005 ? `${fmt$(amount)} unmatched` : "All matched";
 
