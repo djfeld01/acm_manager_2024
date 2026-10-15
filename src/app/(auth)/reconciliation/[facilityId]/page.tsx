@@ -11,6 +11,7 @@ import {
   dailyManagementPaymentReceipt,
 } from "@/db/schema";
 import { eq, and, sql, inArray, ne, or } from "drizzle-orm";
+import { exactCents } from "@/app/(auth)/reconciliation/exactCents";
 import { ReconciliationWorkspace } from "@/components/reconciliation/ReconciliationWorkspace";
 import { MonthNav } from "@/components/reconciliation/MonthNav";
 
@@ -131,15 +132,15 @@ export default async function FacilityReconciliationPage({
     .select({
       dailyPaymentId: dailyPayments.Id,
       date: dailyPayments.date,
-      cash: dailyPayments.cash,
-      check: dailyPayments.check,
-      visa: dailyPayments.visa,
-      mastercard: dailyPayments.mastercard,
-      americanExpress: dailyPayments.americanExpress,
-      discover: dailyPayments.discover,
-      ach: dailyPayments.ach,
-      dinersClub: dailyPayments.dinersClub,
-      debit: dailyPayments.debit,
+      cash: exactCents(dailyPayments.cash),
+      check: exactCents(dailyPayments.check),
+      visa: exactCents(dailyPayments.visa),
+      mastercard: exactCents(dailyPayments.mastercard),
+      americanExpress: exactCents(dailyPayments.americanExpress),
+      discover: exactCents(dailyPayments.discover),
+      ach: exactCents(dailyPayments.ach),
+      dinersClub: exactCents(dailyPayments.dinersClub),
+      debit: exactCents(dailyPayments.debit),
     })
     .from(dailyPayments)
     .where(
@@ -219,15 +220,15 @@ export default async function FacilityReconciliationPage({
           .select({
             dailyPaymentId: dailyPayments.Id,
             date: dailyPayments.date,
-            cash: dailyPayments.cash,
-            check: dailyPayments.check,
-            visa: dailyPayments.visa,
-            mastercard: dailyPayments.mastercard,
-            americanExpress: dailyPayments.americanExpress,
-            discover: dailyPayments.discover,
-            ach: dailyPayments.ach,
-            dinersClub: dailyPayments.dinersClub,
-            debit: dailyPayments.debit,
+            cash: exactCents(dailyPayments.cash),
+            check: exactCents(dailyPayments.check),
+            visa: exactCents(dailyPayments.visa),
+            mastercard: exactCents(dailyPayments.mastercard),
+            americanExpress: exactCents(dailyPayments.americanExpress),
+            discover: exactCents(dailyPayments.discover),
+            ach: exactCents(dailyPayments.ach),
+            dinersClub: exactCents(dailyPayments.dinersClub),
+            debit: exactCents(dailyPayments.debit),
           })
           .from(dailyPayments)
           .where(inArray(dailyPayments.Id, missingPaymentIds))
