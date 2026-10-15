@@ -10,7 +10,7 @@ import {
   transactionsToDailyPayments,
   dailyManagementPaymentReceipt,
 } from "@/db/schema";
-import { eq, and, sql, inArray, ne } from "drizzle-orm";
+import { eq, and, sql, inArray, ne, or } from "drizzle-orm";
 import { exactCents } from "@/app/(auth)/reconciliation/exactCents";
 import { ReconciliationWorkspace } from "@/components/reconciliation/ReconciliationWorkspace";
 import { MonthNav } from "@/components/reconciliation/MonthNav";
