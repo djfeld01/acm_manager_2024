@@ -10,6 +10,7 @@ import {
   monthlyReconciliation,
 } from "@/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
+import { exactCents } from "@/app/(auth)/reconciliation/exactCents";
 
 type ConnectionType = "cash" | "creditCard" | "ach";
 
@@ -106,15 +107,15 @@ export async function autoMatchAction(
     .select({
       dailyPaymentId: dailyPayments.Id,
       date: dailyPayments.date,
-      cash: dailyPayments.cash,
-      check: dailyPayments.check,
-      visa: dailyPayments.visa,
-      mastercard: dailyPayments.mastercard,
-      americanExpress: dailyPayments.americanExpress,
-      discover: dailyPayments.discover,
-      ach: dailyPayments.ach,
-      dinersClub: dailyPayments.dinersClub,
-      debit: dailyPayments.debit,
+      cash: exactCents(dailyPayments.cash),
+      check: exactCents(dailyPayments.check),
+      visa: exactCents(dailyPayments.visa),
+      mastercard: exactCents(dailyPayments.mastercard),
+      americanExpress: exactCents(dailyPayments.americanExpress),
+      discover: exactCents(dailyPayments.discover),
+      ach: exactCents(dailyPayments.ach),
+      dinersClub: exactCents(dailyPayments.dinersClub),
+      debit: exactCents(dailyPayments.debit),
     })
     .from(dailyPayments)
     .where(
@@ -406,15 +407,15 @@ export async function createMatchesAction(
   const payments = await db
     .select({
       dailyPaymentId: dailyPayments.Id,
-      cash: dailyPayments.cash,
-      check: dailyPayments.check,
-      visa: dailyPayments.visa,
-      mastercard: dailyPayments.mastercard,
-      americanExpress: dailyPayments.americanExpress,
-      discover: dailyPayments.discover,
-      ach: dailyPayments.ach,
-      dinersClub: dailyPayments.dinersClub,
-      debit: dailyPayments.debit,
+      cash: exactCents(dailyPayments.cash),
+      check: exactCents(dailyPayments.check),
+      visa: exactCents(dailyPayments.visa),
+      mastercard: exactCents(dailyPayments.mastercard),
+      americanExpress: exactCents(dailyPayments.americanExpress),
+      discover: exactCents(dailyPayments.discover),
+      ach: exactCents(dailyPayments.ach),
+      dinersClub: exactCents(dailyPayments.dinersClub),
+      debit: exactCents(dailyPayments.debit),
     })
     .from(dailyPayments)
     .where(inArray(dailyPayments.Id, dailyPaymentIds));
@@ -507,15 +508,15 @@ export async function createMatchWithDiscrepancyAction(
   const payments = await db
     .select({
       dailyPaymentId: dailyPayments.Id,
-      cash: dailyPayments.cash,
-      check: dailyPayments.check,
-      visa: dailyPayments.visa,
-      mastercard: dailyPayments.mastercard,
-      americanExpress: dailyPayments.americanExpress,
-      discover: dailyPayments.discover,
-      ach: dailyPayments.ach,
-      dinersClub: dailyPayments.dinersClub,
-      debit: dailyPayments.debit,
+      cash: exactCents(dailyPayments.cash),
+      check: exactCents(dailyPayments.check),
+      visa: exactCents(dailyPayments.visa),
+      mastercard: exactCents(dailyPayments.mastercard),
+      americanExpress: exactCents(dailyPayments.americanExpress),
+      discover: exactCents(dailyPayments.discover),
+      ach: exactCents(dailyPayments.ach),
+      dinersClub: exactCents(dailyPayments.dinersClub),
+      debit: exactCents(dailyPayments.debit),
     })
     .from(dailyPayments)
     .where(inArray(dailyPayments.Id, dailyPaymentIds));
