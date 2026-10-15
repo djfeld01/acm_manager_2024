@@ -24,12 +24,14 @@ import {
   RotateCcw,
   CheckCheck,
   Pencil,
+  Undo2,
 } from "lucide-react";
 import {
   autoMatchAction,
   createMatchesAction,
   createMatchWithDiscrepancyAction,
-  unmatchAction,
+  unmatchGroupAction,
+  undoAutoMatchAction,
   submitForReviewAction,
   markCompleteAction,
   requestChangesAction,
@@ -128,6 +130,9 @@ type MatchedRow = {
   isNextMonth?: boolean;
   isPrevMonth?: boolean;
   subType?: "cards" | "ach";
+  // Rows from the same split match share a groupKey and are unmatched together
+  groupKey: string;
+  groupSize: number;
 };
 
 type SitelinkOnlyRow = {
@@ -257,6 +262,8 @@ function buildRows(
         diff: txn.transactionAmount - sitelinkAmount,
         isNextMonth: txn.isNextMonth,
         isPrevMonth: (payment.date || txn.transactionDate) < monthStart,
+        groupKey: matchGroupKey(match, allMatches),
+        groupSize: 0,
       });
     }
 
@@ -276,7 +283,7 @@ function buildRows(
       rows.push({ type: "bank_only", date: t.transactionDate, bankAmount: t.transactionAmount, bankTransactionId: t.bankTransactionId, transactionType: t.transactionType, bankAccountId: t.bankAccountId, isNextMonth: t.isNextMonth });
     }
 
-    return rows.sort((a, b) => a.date.localeCompare(b.date));
+    return withGroupSizes(rows).sort((a, b) => a.date.localeCompare(b.date));
   }
 
   // ── Credit tab: cards and ACH are separate match types ──────────────────
@@ -309,6 +316,8 @@ function buildRows(
       isNextMonth: txn.isNextMonth,
       isPrevMonth: (payment.date || txn.transactionDate) < monthStart,
       subType: isAch ? "ach" : "cards",
+      groupKey: matchGroupKey(match, allMatches),
+      groupSize: 0,
     });
   }
 
@@ -330,7 +339,29 @@ function buildRows(
     rows.push({ type: "bank_only", date: t.transactionDate, bankAmount: t.transactionAmount, bankTransactionId: t.bankTransactionId, transactionType: t.transactionType, bankAccountId: t.bankAccountId, isNextMonth: t.isNextMonth });
   }
 
-  return rows.sort((a, b) => a.date.localeCompare(b.date));
+  return withGroupSizes(rows).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Mirrors unmatchGroupAction: a bank txn linked to several payments groups by
+// bank; otherwise the match groups by payment (N bank → 1 payment, or 1:1).
+function matchGroupKey(match: Match, allMatches: Match[]) {
+  // Cards and ACH can share one deposit, so they group as one family
+  const family = (t: string) => (t === "cash" ? "cash" : "credit");
+  const bankLinks = allMatches.filter(
+    (m) =>
+      family(m.connectionType) === family(match.connectionType) &&
+      m.bankTransactionId === match.bankTransactionId,
+  ).length;
+  return bankLinks > 1
+    ? `${family(match.connectionType)}-b${match.bankTransactionId}`
+    : `${family(match.connectionType)}-p${match.dailyPaymentId}`;
+}
+
+function withGroupSizes(rows: TableRow[]) {
+  const sizes = new Map<string, number>();
+  for (const r of rows) if (r.type === "matched") sizes.set(r.groupKey, (sizes.get(r.groupKey) ?? 0) + 1);
+  for (const r of rows) if (r.type === "matched") r.groupSize = sizes.get(r.groupKey) ?? 1;
+  return rows;
 }
 
 // ─── Status config ──────────────────────────────────────────────────────────
@@ -376,7 +407,8 @@ export function ReconciliationWorkspace({
   const selectedSitelinkIds = new Set(selectedSitelinkItems.keys());
 
   const [error, setError] = useState<string | null>(null);
-  const [lastResult, setLastResult] = useState<string | null>(null);
+  const [lastResult, setLastResult] = useState<{ text: string; undo?: () => void } | null>(null);
+  const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
 
   // Discrepancy form state
   const [showDiscrepancyForm, setShowDiscrepancyForm] = useState(false);
@@ -551,8 +583,11 @@ export function ReconciliationWorkspace({
         const result = await autoMatchAction(facilityId, bankAccountIds, month, year);
         setLastResult(
           result.matched > 0
-            ? `Auto-match created ${result.matched} match${result.matched === 1 ? "" : "es"}.`
-            : "No new automatic matches found.",
+            ? {
+                text: `Auto-match created ${result.matched} match${result.matched === 1 ? "" : "es"}.`,
+                undo: () => runUndo(() => undoAutoMatchAction(result.pairs)),
+              }
+            : { text: "No new automatic matches found." },
         );
         clearSelection();
         router.refresh();
@@ -561,6 +596,16 @@ export function ReconciliationWorkspace({
       }
     });
   };
+
+  // Per-row type for the selected SiteLink rows (a mixed cards + ACH selection
+  // must not be saved under a single type)
+  const paymentConnectionTypes = () =>
+    Object.fromEntries(
+      Array.from(selectedSitelinkItems.entries()).map(([id, v]) => [
+        id,
+        v.subType === "cash" ? "cash" : v.subType === "ach" ? "ach" : "creditCard",
+      ]),
+    ) as Record<number, "cash" | "creditCard" | "ach">;
 
   const handleMatch = () => {
     if (!selectionBalances) return;
@@ -583,8 +628,12 @@ export function ReconciliationWorkspace({
 
     startTransition(async () => {
       try {
-        await createMatchesAction(bankIds, sitelinkIds, connType, facilityId);
+        await createMatchesAction(bankIds, sitelinkIds, connType, facilityId, paymentConnectionTypes());
         clearSelection();
+        setLastResult({
+          text: "Matched.",
+          undo: () => runUndo(() => unmatchGroupAction(bankIds[0], sitelinkIds[0])),
+        });
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Match failed");
@@ -620,8 +669,13 @@ export function ReconciliationWorkspace({
           reconciliation.reconciliationId,
           discrepancyType,
           discrepancyNote.trim(),
+          paymentConnectionTypes(),
         );
         clearSelection();
+        setLastResult({
+          text: "Matched with note.",
+          undo: () => runUndo(() => unmatchGroupAction(bankIds[0], sitelinkIds[0])),
+        });
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Match failed");
@@ -645,12 +699,28 @@ export function ReconciliationWorkspace({
 
   const handleUnmatch = (bankTransactionId: number, dailyPaymentId: number) => {
     setError(null);
+    setLastResult(null);
     startTransition(async () => {
       try {
-        await unmatchAction(bankTransactionId, dailyPaymentId);
+        const { removed } = await unmatchGroupAction(bankTransactionId, dailyPaymentId);
+        setHoveredGroup(null);
+        setLastResult({ text: `Unmatched ${removed} row${removed === 1 ? "" : "s"}.` });
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unmatch failed");
+      }
+    });
+  };
+
+  const runUndo = (undo: () => Promise<{ removed: number }>) => {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const { removed } = await undo();
+        setLastResult({ text: `Undone — removed ${removed} match${removed === 1 ? "" : "es"}.` });
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Undo failed");
       }
     });
   };
@@ -753,6 +823,8 @@ export function ReconciliationWorkspace({
   const isPendingReview = reconciliation.status === "pending_review";
   const isCompleted = reconciliation.status === "completed";
   const canReview = ["ADMIN", "OWNER", "SUPERVISOR"].includes(userRole);
+  // Reviewers can fix matches while reviewing without sending it back
+  const canMatch = isEditable || (isPendingReview && canReview);
   const totalUnmatched = cashRows.filter((r) => r.type !== "matched").length +
     creditRows.filter((r) => r.type !== "matched").length;
   const cashUnmatched = cashRows.filter((r) => r.type !== "matched").length;
@@ -765,11 +837,23 @@ export function ReconciliationWorkspace({
         <div className="flex items-center gap-3 flex-wrap">
           <Badge className={statusCfg.cls}>{statusCfg.label}</Badge>
           {lastResult && (
-            <span className="text-sm text-muted-foreground">{lastResult}</span>
+            <span className="text-sm text-muted-foreground">
+              {lastResult.text}
+              {lastResult.undo && canMatch && (
+                <button
+                  onClick={lastResult.undo}
+                  disabled={isPending}
+                  className="ml-2 inline-flex items-center gap-1 font-medium text-primary hover:underline disabled:opacity-50"
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                  Undo
+                </button>
+              )}
+            </span>
           )}
         </div>
         <div className="flex gap-2 flex-wrap">
-          {isEditable && (
+          {canMatch && (
             <Button
               variant="outline"
               size="sm"
@@ -784,7 +868,7 @@ export function ReconciliationWorkspace({
               Auto-match
             </Button>
           )}
-          {isEditable && selectedSitelinkIds.size > 0 && selectedBankIds.size > 0 && (
+          {canMatch && selectedSitelinkIds.size > 0 && selectedBankIds.size > 0 && (
             <>
               {selectionBalances && (
                 <Button size="sm" onClick={handleMatch} disabled={isPending}>
@@ -933,7 +1017,7 @@ export function ReconciliationWorkspace({
       )}
 
       {/* Selection totals — shown when anything is selected */}
-      {isEditable && (selectedSitelinkIds.size > 0 || selectedBankIds.size > 0) && (
+      {canMatch && (selectedSitelinkIds.size > 0 || selectedBankIds.size > 0) && (
         <div className="border rounded-lg p-3 bg-muted/40 flex flex-wrap gap-4 text-sm">
           <span>
             <span className="text-muted-foreground">Selected SiteLink:</span>{" "}
@@ -968,7 +1052,7 @@ export function ReconciliationWorkspace({
       )}
 
       {/* Discrepancy form — shown when "Match with Note" is clicked */}
-      {isEditable && showDiscrepancyForm && (
+      {canMatch && showDiscrepancyForm && (
         <div className="border border-yellow-300 dark:border-yellow-700 rounded-lg p-4 bg-yellow-50/50 dark:bg-yellow-900/10 space-y-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 shrink-0" />
@@ -1144,7 +1228,7 @@ export function ReconciliationWorkspace({
           <TruckTable rows={otherRows} bankAccounts={bankAccounts} />
         ) : (
           <TooltipProvider delayDuration={150}>
-          <div className="mt-4 border rounded-lg overflow-hidden">
+          <div className="mt-4 border rounded-lg overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-muted/60 border-b">
@@ -1155,7 +1239,7 @@ export function ReconciliationWorkspace({
                     Diff
                   </th>
                   <th className="text-center p-3 font-medium text-muted-foreground">Status</th>
-                  {isEditable && (
+                  {canMatch && (
                     <th className="w-8 p-3" />
                   )}
                 </tr>
@@ -1195,7 +1279,7 @@ export function ReconciliationWorkspace({
                             <td className="px-3 py-2 text-center text-xs">
                               {sec.rows.length} row{sec.rows.length === 1 ? "" : "s"}
                             </td>
-                            {isEditable && <td />}
+                            {canMatch && <td />}
                           </tr>
                           {sec.rows.length === 0 ? (
                             <tr>
@@ -1208,7 +1292,7 @@ export function ReconciliationWorkspace({
                               <MatchRow
                                 key={`${sec.period}-${i}`}
                                 row={row}
-                                isEditable={isEditable}
+                                isEditable={canMatch}
                                 selectedSitelinkIds={selectedSitelinkIds}
                                 selectedBankIds={selectedBankIds}
                                 onToggleSitelink={(id, subType, amount) => toggleSitelink(id, subType, amount)}
@@ -1216,6 +1300,8 @@ export function ReconciliationWorkspace({
                                 onUnmatch={handleUnmatch}
                                 onRecategorize={handleRecategorize}
                                 isPending={isPending}
+                                hoveredGroup={hoveredGroup}
+                                onHoverGroup={setHoveredGroup}
                               />
                             ))
                           )}
@@ -1231,7 +1317,7 @@ export function ReconciliationWorkspace({
       </Tabs>
 
       {/* Helper text */}
-      {isEditable && selectedSitelinkIds.size === 0 && selectedBankIds.size === 0 && (
+      {canMatch && selectedSitelinkIds.size === 0 && selectedBankIds.size === 0 && (
         <p className="text-xs text-muted-foreground">
           Click unmatched rows to select them. Select one or more SiteLink rows and one or more
           bank rows whose amounts balance, then click{" "}
@@ -1444,6 +1530,8 @@ function MatchRow({
   onUnmatch,
   onRecategorize,
   isPending,
+  hoveredGroup,
+  onHoverGroup,
 }: {
   row: TableRow;
   isEditable: boolean;
@@ -1454,8 +1542,11 @@ function MatchRow({
   onUnmatch: (bankId: number, paymentId: number) => void;
   onRecategorize: (bankTransactionId: number, newType: string) => void;
   isPending: boolean;
+  hoveredGroup: string | null;
+  onHoverGroup: (key: string | null) => void;
 }) {
   const [isEditingType, setIsEditingType] = useState(false);
+  const [confirmUnmatch, setConfirmUnmatch] = useState(false);
   const fmt$ = (n: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
@@ -1463,7 +1554,14 @@ function MatchRow({
     const hasDiff = Math.abs(row.diff) > 0.01;
     const isAch = row.subType === "ach";
     return (
-      <tr className="hover:bg-muted/20 group">
+      <tr
+        className={hoveredGroup === row.groupKey ? "bg-muted/40" : ""}
+        onMouseEnter={() => onHoverGroup(row.groupKey)}
+        onMouseLeave={() => {
+          onHoverGroup(null);
+          setConfirmUnmatch(false);
+        }}
+      >
         <td className="p-3 text-muted-foreground">
           {fmtDate(row.date)}
           {row.isNextMonth && (
@@ -1511,15 +1609,44 @@ function MatchRow({
           </span>
         </td>
         {isEditable && (
-          <td className="p-3 text-center">
-            <button
-              onClick={() => onUnmatch(row.bankTransactionId, row.dailyPaymentId)}
-              disabled={isPending}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/50 hover:text-destructive"
-              title="Remove match"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+          <td className="p-3 text-right whitespace-nowrap">
+            {confirmUnmatch ? (
+              <span className="inline-flex items-center gap-1">
+                <button
+                  onClick={() => onUnmatch(row.bankTransactionId, row.dailyPaymentId)}
+                  disabled={isPending}
+                  title={`Unmatch all ${row.groupSize} rows of this split match`}
+                  className="rounded px-1.5 py-0.5 text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+                >
+                  Unmatch {row.groupSize}
+                </button>
+                <button
+                  onClick={() => setConfirmUnmatch(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                  title="Cancel"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            ) : (
+              <button
+                onClick={() =>
+                  row.groupSize > 1
+                    ? setConfirmUnmatch(true)
+                    : onUnmatch(row.bankTransactionId, row.dailyPaymentId)
+                }
+                disabled={isPending}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive disabled:opacity-50"
+                title={
+                  row.groupSize > 1
+                    ? `Unmatch this split match (${row.groupSize} rows)`
+                    : "Unmatch"
+                }
+              >
+                <Undo2 className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Unmatch</span>
+              </button>
+            )}
           </td>
         )}
       </tr>

@@ -13,6 +13,8 @@ import { eq, and, sql, inArray } from "drizzle-orm";
 
 type ConnectionType = "cash" | "creditCard" | "ach";
 
+export type MatchPair = { bankTransactionId: number; dailyPaymentId: number };
+
 function daysBetween(a: string, b: string): number {
   return (
     Math.abs(new Date(a).getTime() - new Date(b).getTime()) /
@@ -66,11 +68,11 @@ export async function autoMatchAction(
   bankAccountIds: number[],
   month: number,
   year: number,
-): Promise<{ matched: number }> {
+): Promise<{ matched: number; pairs: MatchPair[] }> {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  if (bankAccountIds.length === 0) return { matched: 0 };
+  if (bankAccountIds.length === 0) return { matched: 0, pairs: [] };
 
   // Date windows
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -365,7 +367,13 @@ export async function autoMatchAction(
     );
   }
 
-  return { matched: toCreate.length };
+  return {
+    matched: toCreate.length,
+    pairs: toCreate.map((m) => ({
+      bankTransactionId: m.bankTransactionId,
+      dailyPaymentId: m.dailyPaymentId,
+    })),
+  };
 }
 
 // ─── Manual multi-match server action ─────────────────────────────────────
@@ -379,6 +387,8 @@ export async function createMatchesAction(
   dailyPaymentIds: number[],
   connectionType: ConnectionType,
   facilityId: string, // unused but kept for future audit
+  // One deposit can combine ACH and card days; each payment keeps its own type
+  paymentConnectionTypes?: Record<number, ConnectionType>,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
@@ -421,11 +431,12 @@ export async function createMatchesAction(
     // 1 bank → N sitelink: each sitelink entry maps to this bank transaction
     const bankId = bankTransactionIds[0];
     for (const p of payments) {
-      const amt = sitelinkAmt(p, connectionType);
+      const type = paymentConnectionTypes?.[p.dailyPaymentId] ?? connectionType;
+      const amt = sitelinkAmt(p, type);
       records.push({
         bankTransactionId: bankId,
         dailyPaymentId: p.dailyPaymentId,
-        connectionType,
+        connectionType: type,
         amount: amt,
         depositDifference: 0,
       });
@@ -477,6 +488,7 @@ export async function createMatchWithDiscrepancyAction(
   reconciliationId: number,
   discrepancyType: DiscrepancyType,
   note: string,
+  paymentConnectionTypes?: Record<number, ConnectionType>,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
@@ -513,7 +525,8 @@ export async function createMatchWithDiscrepancyAction(
     0,
   );
   const totalSitelink = payments.reduce(
-    (s, p) => s + sitelinkAmt(p, connectionType),
+    (s, p) =>
+      s + sitelinkAmt(p, paymentConnectionTypes?.[p.dailyPaymentId] ?? connectionType),
     0,
   );
 
@@ -532,11 +545,12 @@ export async function createMatchWithDiscrepancyAction(
   if (bankTransactionIds.length === 1) {
     const bankId = bankTransactionIds[0];
     for (const p of payments) {
-      const amt = sitelinkAmt(p, connectionType);
+      const type = paymentConnectionTypes?.[p.dailyPaymentId] ?? connectionType;
+      const amt = sitelinkAmt(p, type);
       records.push({
         bankTransactionId: bankId,
         dailyPaymentId: p.dailyPaymentId,
-        connectionType,
+        connectionType: type,
         amount: amt,
         depositDifference: difference,
         reconciliationNotes: note,
@@ -599,6 +613,122 @@ export async function unmatchAction(
         eq(transactionsToDailyPayments.dailyPaymentId, dailyPaymentId),
       ),
     );
+}
+
+// Removes the whole match a row belongs to. Split matches are stored as one
+// link per row (1 bank → N payments, or N bank → 1 payment), so unmatching a
+// single link would leave the rest of the split half-matched. Also drops the
+// pending discrepancy recorded by "Match with Note" for that match.
+export async function unmatchGroupAction(
+  bankTransactionId: number,
+  dailyPaymentId: number,
+): Promise<{ removed: number }> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const [link] = await db
+    .select({ connectionType: transactionsToDailyPayments.connectionType })
+    .from(transactionsToDailyPayments)
+    .where(
+      and(
+        eq(transactionsToDailyPayments.bankTransactionId, bankTransactionId),
+        eq(transactionsToDailyPayments.dailyPaymentId, dailyPaymentId),
+      ),
+    );
+  if (!link) return { removed: 0 };
+
+  // Cards and ACH can share one deposit, so treat them as one family here
+  const sameType = inArray(
+    transactionsToDailyPayments.connectionType,
+    link.connectionType === "cash" ? ["cash"] : ["creditCard", "ach"],
+  );
+  const bankLinks = await db
+    .select({
+      bankTransactionId: transactionsToDailyPayments.bankTransactionId,
+      dailyPaymentId: transactionsToDailyPayments.dailyPaymentId,
+    })
+    .from(transactionsToDailyPayments)
+    .where(and(sameType, eq(transactionsToDailyPayments.bankTransactionId, bankTransactionId)));
+
+  // 1 bank → N payments groups by the bank side; otherwise by the payment side
+  const group =
+    bankLinks.length > 1
+      ? bankLinks
+      : await db
+          .select({
+            bankTransactionId: transactionsToDailyPayments.bankTransactionId,
+            dailyPaymentId: transactionsToDailyPayments.dailyPaymentId,
+          })
+          .from(transactionsToDailyPayments)
+          .where(and(sameType, eq(transactionsToDailyPayments.dailyPaymentId, dailyPaymentId)));
+
+  const bankIds = [...new Set(group.map((g) => g.bankTransactionId))];
+  const paymentIds = [...new Set(group.map((g) => g.dailyPaymentId))];
+
+  await db
+    .delete(transactionsToDailyPayments)
+    .where(
+      and(
+        sameType,
+        inArray(transactionsToDailyPayments.bankTransactionId, bankIds),
+        inArray(transactionsToDailyPayments.dailyPaymentId, paymentIds),
+      ),
+    );
+
+  // Discrepancies only store their transaction ids as JSON text, so match in JS
+  const pending = await db
+    .select({
+      discrepancyId: reconciliationDiscrepancies.discrepancyId,
+      referenceTransactionIds: reconciliationDiscrepancies.referenceTransactionIds,
+      referenceDailyPaymentIds: reconciliationDiscrepancies.referenceDailyPaymentIds,
+    })
+    .from(reconciliationDiscrepancies)
+    .where(eq(reconciliationDiscrepancies.status, "pending_approval"));
+
+  const parseIds = (raw: string | null) => {
+    try {
+      return (JSON.parse(raw ?? "[]") as unknown[]).map(Number);
+    } catch {
+      return [];
+    }
+  };
+  const staleIds = pending
+    .filter(
+      (d) =>
+        parseIds(d.referenceTransactionIds).some((id) => bankIds.includes(id)) &&
+        parseIds(d.referenceDailyPaymentIds).some((id) => paymentIds.includes(id)),
+    )
+    .map((d) => d.discrepancyId);
+  if (staleIds.length > 0) {
+    await db
+      .delete(reconciliationDiscrepancies)
+      .where(inArray(reconciliationDiscrepancies.discrepancyId, staleIds));
+  }
+
+  return { removed: group.length };
+}
+
+// Undo for a just-run auto-match. Only removes links still marked automatic,
+// so anything the user re-matched by hand in the meantime is left alone.
+export async function undoAutoMatchAction(pairs: MatchPair[]): Promise<{ removed: number }> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  let removed = 0;
+  for (const p of pairs) {
+    const rows = await db
+      .delete(transactionsToDailyPayments)
+      .where(
+        and(
+          eq(transactionsToDailyPayments.bankTransactionId, p.bankTransactionId),
+          eq(transactionsToDailyPayments.dailyPaymentId, p.dailyPaymentId),
+          eq(transactionsToDailyPayments.matchType, "automatic"),
+        ),
+      )
+      .returning({ id: transactionsToDailyPayments.bankTransactionId });
+    removed += rows.length;
+  }
+  return { removed };
 }
 
 // ─── Finalization actions ──────────────────────────────────────────────────
