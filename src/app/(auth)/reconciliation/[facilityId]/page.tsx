@@ -10,7 +10,7 @@ import {
   transactionsToDailyPayments,
   dailyManagementPaymentReceipt,
 } from "@/db/schema";
-import { eq, and, sql, inArray, ne } from "drizzle-orm";
+import { eq, and, sql, inArray, ne, or } from "drizzle-orm";
 import { exactCents } from "@/lib/exactCents";
 import { ReconciliationWorkspace } from "@/components/reconciliation/ReconciliationWorkspace";
 import { MonthNav } from "@/components/reconciliation/MonthNav";
@@ -152,10 +152,14 @@ export default async function FacilityReconciliationPage({
     )
     .orderBy(dailyPayments.date);
 
-  // Existing matches for these bank transactions
+  // Existing matches for these bank transactions, plus matches for this
+  // month's payments whose deposit cleared after the buffer window (e.g. a
+  // Sep 30 deposit that hit the bank Oct 13). Without the latter those
+  // payments would look unmatched here even though they're matched.
   const bankTxnIds = bankTxns.map((t) => t.bankTransactionId);
+  const paymentIds = payments.map((p) => p.dailyPaymentId);
   const matchRows =
-    bankTxnIds.length > 0
+    bankTxnIds.length > 0 || paymentIds.length > 0
       ? await db
           .select({
             bankTransactionId: transactionsToDailyPayments.bankTransactionId,
@@ -167,9 +171,36 @@ export default async function FacilityReconciliationPage({
           })
           .from(transactionsToDailyPayments)
           .where(
-            inArray(transactionsToDailyPayments.bankTransactionId, bankTxnIds),
+            or(
+              bankTxnIds.length > 0
+                ? inArray(transactionsToDailyPayments.bankTransactionId, bankTxnIds)
+                : undefined,
+              paymentIds.length > 0
+                ? inArray(transactionsToDailyPayments.dailyPaymentId, paymentIds)
+                : undefined,
+            ),
           )
       : [];
+
+  // Bank transactions for those late matches aren't in `bankTxns` yet
+  const loadedBankIds = new Set(bankTxnIds);
+  const missingBankIds = [
+    ...new Set(matchRows.map((m) => m.bankTransactionId)),
+  ].filter((id) => !loadedBankIds.has(id));
+  const lateMatchedBankTxns =
+    missingBankIds.length > 0
+      ? await db
+          .select({
+            bankTransactionId: bankTransaction.bankTransactionId,
+            bankAccountId: bankTransaction.bankAccountId,
+            transactionDate: bankTransaction.transactionDate,
+            transactionType: bankTransaction.transactionType,
+            transactionAmount: bankTransaction.transactionAmount,
+          })
+          .from(bankTransaction)
+          .where(inArray(bankTransaction.bankTransactionId, missingBankIds))
+      : [];
+  const allBankTxns = [...bankTxns, ...lateMatchedBankTxns];
 
   // A bank transaction in this window can be matched to a daily payment that
   // falls OUTSIDE this month (e.g. a July deposit manually matched to a June 30
@@ -234,7 +265,7 @@ export default async function FacilityReconciliationPage({
 
   // Serialize numeric fields (Drizzle returns numeric columns as strings)
   // Tag transactions that fall after month-end (late-clearing deposits)
-  const serializedBankTxns = bankTxns.map((t) => ({
+  const serializedBankTxns = allBankTxns.map((t) => ({
     ...t,
     transactionAmount: parseFloat(t.transactionAmount?.toString() ?? "0"),
     isNextMonth: (t.transactionDate ?? "") > monthEndDate,
