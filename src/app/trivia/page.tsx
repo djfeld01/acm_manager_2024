@@ -34,11 +34,14 @@ const fmt$ = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
+// Widened to float8: adding/summing the float4 columns as-is gives a float4
+// result, which our connection rounds to 6 significant digits.
 const totalPayments = sql<number>`
-  ${dailyPayments.cash} + ${dailyPayments.check} + ${dailyPayments.visa} +
-  ${dailyPayments.mastercard} + ${dailyPayments.americanExpress} +
-  ${dailyPayments.discover} + ${dailyPayments.ach} +
-  ${dailyPayments.dinersClub} + ${dailyPayments.debit}`;
+  ${dailyPayments.cash}::float8 + ${dailyPayments.check}::float8 +
+  ${dailyPayments.visa}::float8 + ${dailyPayments.mastercard}::float8 +
+  ${dailyPayments.americanExpress}::float8 + ${dailyPayments.discover}::float8 +
+  ${dailyPayments.ach}::float8 + ${dailyPayments.dinersClub}::float8 +
+  ${dailyPayments.debit}::float8`;
 
 export default async function TriviaPage() {
   const session = await auth();
