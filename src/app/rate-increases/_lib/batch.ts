@@ -19,27 +19,52 @@ export interface BatchTenant {
   schedRentStart: string | null;
   schedOut: string | null;
   chargeBalance: number | null;
+  /** In a finalized batch whose new rent the rent roll doesn't show yet. */
+  inOtherBatch: boolean;
   /** Baseline (no rate increase) chance of leaving in the next 30/60/90 days. */
   exit30: number;
   exit60: number;
   exit90: number;
 }
 
+/**
+ * How a tenant becomes eligible:
+ * - "schedule": first increase N months after the move-in special ends, then
+ *   every M months from the last rent change.
+ * - "tenure": simply here at least N months by the effective date (optionally
+ *   only if never raised since move-in, or not raised within M months).
+ */
+export type EligibilityMode = "schedule" | "tenure";
+
 export interface BatchRules {
   /** Date the new rent takes effect, YYYY-MM-DD. */
   effectiveDate: string;
+  eligibility: EligibilityMode;
+
+  // --- schedule mode
   /** Wait after the special ends before the first increase. */
   firstWaitMonths: number;
   /** Wait after the last rent change for later increases. */
   repeatWaitMonths: number;
+
+  // --- tenure mode
+  /** Months in the unit by the effective date. */
+  minTenureMonths: number;
+  /** Only tenants whose rent hasn't changed since move-in. */
+  onlyNeverRaised: boolean;
+  /** Skip tenants whose rent changed within this many months (0 = ignore). */
+  minMonthsSinceLastChange: number;
+
   /** Increase as a share of current rent (0.06 = 6%). */
   increasePct: number;
-  /** Largest dollar increase per tenant; null = no cap. */
+
+  // --- guardrails; null / 0 / false = off
+  /** Largest dollar increase per tenant. */
   maxIncreaseDollars: number | null;
   /** Smallest increase worth sending a notice for. */
   minIncreaseDollars: number;
   /** New rent may not exceed street x (1 + this). 0.25 = 25% over street. */
-  maxOverStreetPct: number;
+  maxOverStreetPct: number | null;
   excludeWithBalance: boolean;
   excludeScheduledMoveOut: boolean;
   excludedUnitTypes: string[];
@@ -48,9 +73,16 @@ export interface BatchRules {
   targetCount: number | null;
 }
 
-export const DEFAULT_RULES: Omit<BatchRules, "effectiveDate"> = {
+type RuleSet = Omit<BatchRules, "effectiveDate">;
+
+/** The original plan: after the special ends, then every 9 months, with guardrails. */
+export const SCHEDULE_RULES: RuleSet = {
+  eligibility: "schedule",
   firstWaitMonths: SCHEDULE.firstIncreaseMonthsAfterSpecial,
   repeatWaitMonths: SCHEDULE.nextIncreaseMonths,
+  minTenureMonths: 6,
+  onlyNeverRaised: false,
+  minMonthsSinceLastChange: 0,
   increasePct: 0.06,
   maxIncreaseDollars: 20,
   minIncreaseDollars: 3,
@@ -62,8 +94,53 @@ export const DEFAULT_RULES: Omit<BatchRules, "effectiveDate"> = {
   targetCount: null,
 };
 
+/** A flat 6% for everyone here 6+ months, no guardrails. */
+export const ACROSS_THE_BOARD_RULES: RuleSet = {
+  ...SCHEDULE_RULES,
+  eligibility: "tenure",
+  minTenureMonths: 6,
+  onlyNeverRaised: false,
+  minMonthsSinceLastChange: 0,
+  maxIncreaseDollars: null,
+  minIncreaseDollars: 0,
+  maxOverStreetPct: null,
+  excludeWithBalance: false,
+  excludeScheduledMoveOut: false,
+};
+
+/** The monthly follow-up: tenants who have reached 6 months and never been raised. */
+export const NEW_TENANT_RULES: RuleSet = {
+  ...ACROSS_THE_BOARD_RULES,
+  onlyNeverRaised: true,
+};
+
+export type PolicyKey = "across-the-board" | "new-tenants" | "schedule";
+
+export const POLICIES: Record<PolicyKey, { label: string; description: string; rules: RuleSet }> = {
+  "across-the-board": {
+    label: "Across the board",
+    description: "Flat increase for everyone who has been here the minimum time, no matter when they were last raised.",
+    rules: ACROSS_THE_BOARD_RULES,
+  },
+  "new-tenants": {
+    label: "New tenants at 6 months",
+    description: "Run monthly: tenants who have just reached 6 months and have never had an increase.",
+    rules: NEW_TENANT_RULES,
+  },
+  schedule: {
+    label: "After special, then every 9 months",
+    description: "The original schedule, with the guardrails on.",
+    rules: SCHEDULE_RULES,
+  },
+};
+
+/** What to fill in for any rule a saved batch predates. */
+export const LEGACY_RULES: RuleSet = SCHEDULE_RULES;
+
 export type ExclusionReason =
   | "not-yet-eligible"
+  | "already-raised"
+  | "in-other-batch"
   | "existing-scheduled-change"
   | "scheduled-move-out"
   | "open-balance"
@@ -76,6 +153,8 @@ export type ExclusionReason =
 
 export const REASON_LABEL: Record<ExclusionReason, string> = {
   "not-yet-eligible": "Not eligible yet",
+  "already-raised": "Already had an increase",
+  "in-other-batch": "Already in another batch",
   "existing-scheduled-change": "Already has a scheduled change",
   "scheduled-move-out": "Scheduled to move out",
   "open-balance": "Open balance",
@@ -132,22 +211,59 @@ export function eligibleFrom(
   };
 }
 
+/**
+ * Eligibility under whichever mode the rules use. `blocked` is set when the
+ * tenant can never qualify under the rules (e.g. "only never-raised tenants"
+ * and this one has been raised), as opposed to merely not yet.
+ */
+export function eligibility(
+  t: Pick<BatchTenant, "leaseDate" | "rentLastChanged" | "specialMonths">,
+  rules: Pick<
+    BatchRules,
+    | "eligibility"
+    | "firstWaitMonths"
+    | "repeatWaitMonths"
+    | "minTenureMonths"
+    | "onlyNeverRaised"
+    | "minMonthsSinceLastChange"
+  >
+): { date: string | null; neverRaised: boolean; specialAssumed: boolean; blocked: ExclusionReason | null } {
+  if (rules.eligibility === "schedule") return { ...eligibleFrom(t, rules), blocked: null };
+
+  if (!t.leaseDate) return { date: null, neverRaised: false, specialAssumed: false, blocked: null };
+  const neverRaised = !t.rentLastChanged || t.rentLastChanged <= t.leaseDate;
+  if (rules.onlyNeverRaised && !neverRaised) {
+    return { date: null, neverRaised, specialAssumed: false, blocked: "already-raised" };
+  }
+  let date = addMonthsIso(t.leaseDate, rules.minTenureMonths);
+  if (!neverRaised && rules.minMonthsSinceLastChange > 0) {
+    const afterChange = addMonthsIso(t.rentLastChanged!, rules.minMonthsSinceLastChange);
+    if (afterChange > date) date = afterChange;
+  }
+  return { date, neverRaised, specialAssumed: false, blocked: null };
+}
+
 /** The new rent for a tenant under the guardrails, or why there is none. */
 export function suggestRent(
   t: Pick<BatchTenant, "rent" | "standardRate">,
   rules: Pick<BatchRules, "increasePct" | "maxIncreaseDollars" | "minIncreaseDollars" | "maxOverStreetPct">
 ): { newRent: number | null; reason: ExclusionReason | null } {
-  if (!(t.rent > 0) || !(t.standardRate > 0)) return { newRent: null, reason: "missing-rate" };
+  if (!(t.rent > 0)) return { newRent: null, reason: "missing-rate" };
+  // Street rate is only needed when there's a cap measured against it.
+  if (rules.maxOverStreetPct !== null && !(t.standardRate > 0)) return { newRent: null, reason: "missing-rate" };
+
   let inc = t.rent * rules.increasePct;
   if (rules.maxIncreaseDollars !== null) inc = Math.min(inc, rules.maxIncreaseDollars);
-  let target = Math.round(t.rent + inc);
-  const ceiling = Math.floor(t.standardRate * (1 + rules.maxOverStreetPct));
-  if (target > ceiling) target = ceiling;
-  const increase = target - t.rent;
-  if (ceiling <= t.rent) return { newRent: null, reason: "at-street-cap" };
-  if (increase < rules.minIncreaseDollars) {
-    // Capped down to something not worth a notice.
-    return { newRent: null, reason: target < Math.round(t.rent + inc) ? "at-street-cap" : "increase-too-small" };
+  const wanted = Math.round(t.rent + inc);
+  let target = wanted;
+  if (rules.maxOverStreetPct !== null) {
+    const ceiling = Math.floor(t.standardRate * (1 + rules.maxOverStreetPct));
+    if (ceiling <= t.rent) return { newRent: null, reason: "at-street-cap" };
+    if (target > ceiling) target = ceiling;
+  }
+  // Always at least a dollar: a "0" increase is not an increase.
+  if (target - t.rent < Math.max(1, rules.minIncreaseDollars)) {
+    return { newRent: null, reason: target < wanted ? "at-street-cap" : "increase-too-small" };
   }
   return { newRent: target, reason: null };
 }
@@ -160,7 +276,7 @@ export function suggestRent(
  */
 export function evaluateCandidates(tenants: BatchTenant[], rules: BatchRules): Candidate[] {
   const out: Candidate[] = tenants.map((t) => {
-    const el = eligibleFrom(t, rules);
+    const el = eligibility(t, rules);
     const ratio = t.rent > 0 && t.standardRate > 0 ? t.rent / t.standardRate : null;
     const base: Candidate = {
       tenant: t,
@@ -179,7 +295,9 @@ export function evaluateCandidates(tenants: BatchTenant[], rules: BatchRules): C
     if (rules.excludedSizes.includes(t.size)) return exclude("size-excluded");
     if (t.schedRent !== null && t.schedRentStart) return exclude("existing-scheduled-change");
     if (rules.excludeScheduledMoveOut && t.schedOut) return exclude("scheduled-move-out");
+    if (t.inOtherBatch) return exclude("in-other-batch");
     if (rules.excludeWithBalance && (t.chargeBalance ?? 0) > 0.5) return exclude("open-balance");
+    if (el.blocked) return exclude(el.blocked);
     if (!el.date || el.date > rules.effectiveDate) return exclude("not-yet-eligible");
 
     const s = suggestRent(t, rules);

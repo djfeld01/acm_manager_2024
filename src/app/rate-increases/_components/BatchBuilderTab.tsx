@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  DEFAULT_RULES,
+  ACROSS_THE_BOARD_RULES,
+  LEGACY_RULES,
   REASON_LABEL,
   evaluateCandidates,
   firstOfMonthAtLeast,
@@ -38,7 +39,7 @@ export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Br
   const listQ = useQuery({ queryKey: ["rateInc", "batches", sitelinkId], queryFn: () => listBatches(sitelinkId) });
 
   const [rules, setRules] = useState<BatchRules>(() => ({
-    ...DEFAULT_RULES,
+    ...ACROSS_THE_BOARD_RULES,
     effectiveDate: firstOfMonthAtLeast(today, SCHEDULE.noticeDays + 5),
   }));
   const [manual, setManual] = useState<Manual>({});
@@ -100,7 +101,8 @@ export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Br
     setMessage(null);
     try {
       const b = await getBatch(sitelinkId, id);
-      const savedRules = { ...DEFAULT_RULES, ...b.rules, effectiveDate: b.effectiveDate };
+      // Batches saved before a rule existed fill it in with what the tool did then.
+      const savedRules = { ...LEGACY_RULES, ...b.rules, effectiveDate: b.effectiveDate };
       // Recreate the saved selection as hand adjustments on top of the saved rules.
       const base = evaluateCandidates(data.tenants, savedRules);
       const inBatch = new Map(b.items.map((i) => [i.ledgerId, i.newRent]));
@@ -238,9 +240,12 @@ export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Br
             )}
           </CardTitle>
           <CardDescription>
-            Eligible = the first increase comes {rules.firstWaitMonths} months after the move-in special ends; after
-            that, every {rules.repeatWaitMonths} months from the last rent change. Defaults are a starting point — tune
-            them.
+            {rules.eligibility === "tenure"
+              ? rules.onlyNeverRaised
+                ? `Eligible = here at least ${rules.minTenureMonths} months by the effective date and never raised since moving in. Run it each month to pick up tenants as they reach ${rules.minTenureMonths} months.`
+                : `Eligible = here at least ${rules.minTenureMonths} months by the effective date${rules.minMonthsSinceLastChange > 0 ? `, and not raised in the last ${rules.minMonthsSinceLastChange} months` : ", however recently they were last raised"}.`
+              : `Eligible = the first increase comes ${rules.firstWaitMonths} months after the move-in special ends; after that, every ${rules.repeatWaitMonths} months from the last rent change.`}{" "}
+            Adjust anything below.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

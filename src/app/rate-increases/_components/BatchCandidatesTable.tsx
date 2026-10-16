@@ -16,7 +16,7 @@ export interface Row {
 }
 
 /** Reasons that mean there is no sensible rent to send, so a tenant can't be added by hand. */
-const HARD_REASONS: ExclusionReason[] = ["missing-rate", "existing-scheduled-change", "at-street-cap", "increase-too-small"];
+const HARD_REASONS: ExclusionReason[] = ["missing-rate", "existing-scheduled-change", "in-other-batch", "at-street-cap", "increase-too-small"];
 
 interface Props {
   rows: Row[];
@@ -46,7 +46,7 @@ export function BatchCandidatesTable({ rows, rules, locked, onToggle, onRent }: 
     if (!r.included || r.newRent === null) return null;
     const t = r.c.tenant;
     if (r.newRent <= t.rent) return "Not an increase";
-    if (r.newRent > t.standardRate * (1 + rules.maxOverStreetPct) + 0.5) return "Over the street cap";
+    if (rules.maxOverStreetPct !== null && r.newRent > t.standardRate * (1 + rules.maxOverStreetPct) + 0.5) return "Over the street cap";
     if (rules.maxIncreaseDollars !== null && r.newRent - t.rent > rules.maxIncreaseDollars) return "Over the max increase";
     return null;
   };

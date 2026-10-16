@@ -158,6 +158,14 @@ function Outcome({ batch, sitelinkId, by }: { batch: BatchListItem; sitelinkId: 
             })()}
           </p>
 
+          {!o.control && (
+            <p className="text-sm text-muted-foreground">
+              There are no comparable tenants who weren&apos;t raised — expected when an increase goes to nearly everyone who has
+              been here a while. The baseline built from what we knew on the notice date is the yardstick here. Batches that
+              go out in later months also help: tenants not yet raised are a natural comparison for the ones just raised.
+            </p>
+          )}
+
           <LineChart
             title="Cumulative move-outs since the notice"
             description="Actual vs what we'd expect with no increase. Weekly points."
