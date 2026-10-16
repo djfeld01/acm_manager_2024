@@ -17,8 +17,12 @@ import { Building2, ArrowRight } from "lucide-react";
 import { pickFacilityReconciliation } from "./facilityReconciliation";
 
 interface PageProps {
-  searchParams: Promise<{ month?: string; year?: string }>;
+  searchParams: Promise<{ month?: string; year?: string; status?: string }>;
 }
+
+// "open" = anything not completed — the reconciliations that still need work
+type StatusFilter = "all" | "open" | FacilityStatus;
+const STATUS_FILTERS: StatusFilter[] = ["all", "open", "completed", "pending_review", "in_progress", "not_started"];
 
 type FacilityStatus = "completed" | "pending_review" | "in_progress" | "not_started";
 
@@ -40,6 +44,12 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
   const now = new Date();
   const month = Math.min(12, Math.max(1, parseInt(sp.month || String(now.getMonth() + 1))));
   const year = parseInt(sp.year || String(now.getFullYear()));
+
+  const statusFilter: StatusFilter = STATUS_FILTERS.includes(sp.status as StatusFilter)
+    ? (sp.status as StatusFilter)
+    : "all";
+  const filterHref = (status: StatusFilter) =>
+    `/reconciliation?month=${month}&year=${year}${status === "all" ? "" : `&status=${status}`}`;
 
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const endDate = new Date(year, month, 0).toISOString().split("T")[0];
@@ -171,6 +181,15 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
     inProgress: summaries.filter((s) => s.status === "in_progress").length,
     notStarted: summaries.filter((s) => s.status === "not_started").length,
   };
+  const openCount = summaries.length - counts.completed;
+
+  const visible = summaries.filter((s) =>
+    statusFilter === "all"
+      ? true
+      : statusFilter === "open"
+        ? s.status !== "completed"
+        : s.status === statusFilter,
+  );
 
   const monthLabel = new Date(year, month - 1).toLocaleDateString("en-US", {
     month: "long",
@@ -191,11 +210,58 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
       </div>
 
       {/* Stats */}
+      {/* Stats — click to filter by that status, click again to clear */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard label="Completed" value={counts.completed} valueClass="text-green-600" />
-        <StatCard label="Pending Review" value={counts.pendingReview} valueClass="text-yellow-600 dark:text-yellow-400" />
-        <StatCard label="In Progress" value={counts.inProgress} valueClass="text-primary" />
-        <StatCard label="Not Started" value={counts.notStarted} valueClass="text-muted-foreground" />
+        {(
+          [
+            ["completed", counts.completed, "text-green-600"],
+            ["pending_review", counts.pendingReview, "text-yellow-600 dark:text-yellow-400"],
+            ["in_progress", counts.inProgress, "text-primary"],
+            ["not_started", counts.notStarted, "text-muted-foreground"],
+          ] as const
+        ).map(([status, value, valueClass]) => (
+          <StatCard
+            key={status}
+            label={STATUS_CONFIG[status].label}
+            value={value}
+            valueClass={valueClass}
+            href={filterHref(statusFilter === status ? "all" : status)}
+            active={statusFilter === status}
+          />
+        ))}
+      </div>
+
+      {/* Filter */}
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Show:</span>
+        <div className="inline-flex rounded-md border p-0.5">
+          {(
+            [
+              ["all", `All (${summaries.length})`],
+              ["open", `Not done (${openCount})`],
+            ] as const
+          ).map(([value, label]) => (
+            <Link
+              key={value}
+              href={filterHref(value)}
+              className={`rounded px-3 py-1 transition-colors ${
+                statusFilter === value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+        {statusFilter !== "all" && statusFilter !== "open" && (
+          <span className="text-muted-foreground">
+            Showing {STATUS_CONFIG[statusFilter].label} only ·{" "}
+            <Link href={filterHref("all")} className="text-primary hover:underline">
+              Clear
+            </Link>
+          </span>
+        )}
       </div>
 
       {/* Facility list */}
@@ -204,8 +270,14 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
           <div className="py-12 text-center text-muted-foreground text-sm">
             No facilities with bank accounts configured.
           </div>
+        ) : visible.length === 0 ? (
+          <div className="py-12 text-center text-muted-foreground text-sm">
+            {statusFilter === "open"
+              ? `All ${monthLabel} reconciliations are complete.`
+              : `No ${STATUS_CONFIG[statusFilter as FacilityStatus].label.toLowerCase()} reconciliations for ${monthLabel}.`}
+          </div>
         ) : (
-          summaries.map((f) => {
+          visible.map((f) => {
             const cfg = STATUS_CONFIG[f.status];
             return (
               <div
@@ -256,15 +328,24 @@ function StatCard({
   label,
   value,
   valueClass,
+  href,
+  active,
 }: {
   label: string;
   value: number;
   valueClass: string;
+  href: string;
+  active: boolean;
 }) {
   return (
-    <div className="border rounded-lg p-4">
+    <Link
+      href={href}
+      className={`border rounded-lg p-4 transition-colors hover:bg-muted/40 ${
+        active ? "ring-2 ring-primary border-primary" : ""
+      }`}
+    >
       <div className={`text-2xl font-bold ${valueClass}`}>{value}</div>
       <div className="text-sm text-muted-foreground mt-0.5">{label}</div>
-    </div>
+    </Link>
   );
 }
