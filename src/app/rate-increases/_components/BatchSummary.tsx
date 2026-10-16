@@ -1,10 +1,12 @@
 "use client";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { BatchSummary as Summary, BatchTenant } from "../_lib/batch";
+import type { PooledEvidence } from "../_lib/waves";
 import type { SegmentContext } from "../actions/getBatchData";
 import { breakdownNoun, breakdownTitle, type Breakdown } from "./Breakdown";
 import { fmtMoney, fmtNum, fmtPct } from "./format";
@@ -19,6 +21,8 @@ interface Props {
   excluded: string[];
   onToggleExcluded: (label: string) => void;
   locked: boolean;
+  /** What past increases did to move-outs, when reports have been imported. */
+  evidence?: PooledEvidence | null;
 }
 
 const STATUS_CLASS = {
@@ -27,7 +31,7 @@ const STATUS_CLASS = {
   low: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
 } as const;
 
-export function BatchSummary({ summary, selected, overall, segments, by, excluded, onToggleExcluded, locked }: Props) {
+export function BatchSummary({ summary, selected, overall, segments, by, excluded, onToggleExcluded, locked, evidence }: Props) {
   // How many MORE tenants than baseline leave because of the increase. Unknown
   // until Phase 3 measures it, so it is an input, not a claim.
   const [uplift, setUplift] = useState(25);
@@ -60,12 +64,30 @@ export function BatchSummary({ summary, selected, overall, segments, by, exclude
         <CardHeader>
           <CardTitle>What if the increase makes more people leave?</CardTitle>
           <CardDescription>
-            We don&apos;t yet know how much a rate increase raises move-outs; the Tracking tab will measure it from real
-            batches. For a rough guide, the April 2026 increase was followed by move-outs about 25–35% above normal for
-            two months, then back to normal — suggestive, not proof.
+            We don&apos;t know in advance how much a rate increase raises move-outs; the Tracking tab measures it for each
+            batch you send. Until then, try a number.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
+          {evidence ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 p-2">
+              <span>
+                Past increases ({evidence.waves} measured at {evidence.facilities} facilit{evidence.facilities === 1 ? "y" : "ies"}):
+                move-outs ran <strong>{Math.abs(Math.round(evidence.excess * 100))}%</strong> {evidence.excess >= 0 ? "above" : "below"} usual over the
+                next three months (95% range {Math.round(evidence.excessLow * 100)}% to {Math.round(evidence.excessHigh * 100)}%).
+                {evidence.waves < 3 && " Only a few increases so far — a rough guide."}
+              </span>
+              {!locked && (
+                <Button size="sm" variant="outline" onClick={() => setUplift(Math.max(0, Math.round(evidence.excess * 100)))}>
+                  Use {Math.max(0, Math.round(evidence.excess * 100))}%
+                </Button>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Import SiteLink&apos;s past-increase reports on the Past Increases tab to see what earlier increases did.
+            </p>
+          )}
           <label className="flex flex-wrap items-center gap-2">
             Suppose
             <Input

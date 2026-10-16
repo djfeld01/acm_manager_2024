@@ -372,6 +372,13 @@
       "when": 1791658941387,
       "tag": "0052_rate_increase_batch_notice_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1792177952998,
+      "tag": "0053_increase_history_reports",
+      "breakpoints": true
     }
   ]
 }

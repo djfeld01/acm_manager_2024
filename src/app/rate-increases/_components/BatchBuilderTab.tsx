@@ -20,6 +20,7 @@ import {
 import { SCHEDULE } from "../_lib/config";
 import { STAGE_LABEL, batchStage } from "../_lib/cohort";
 import { getBatchData } from "../actions/getBatchData";
+import { getWaveEvidence } from "../actions/pastIncreases";
 import { deleteBatch, finalizeBatch, getBatch, listBatches, saveBatch, type BatchDetail } from "../actions/batches";
 import type { Breakdown } from "./Breakdown";
 import { BatchCandidatesTable, type Row } from "./BatchCandidatesTable";
@@ -37,6 +38,8 @@ export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Br
 
   const dataQ = useQuery({ queryKey: ["rateInc", "batchData", sitelinkId], queryFn: () => getBatchData(sitelinkId) });
   const listQ = useQuery({ queryKey: ["rateInc", "batches", sitelinkId], queryFn: () => listBatches(sitelinkId) });
+  // Past increases, when reports have been imported; the what-if works without them.
+  const evidenceQ = useQuery({ queryKey: ["rateInc", "waveEvidence"], queryFn: () => getWaveEvidence(), retry: false });
 
   const [rules, setRules] = useState<BatchRules>(() => ({
     ...ACROSS_THE_BOARD_RULES,
@@ -272,6 +275,7 @@ export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Br
         excluded={excluded}
         onToggleExcluded={toggleExcluded}
         locked={!!locked}
+        evidence={evidenceQ.data ?? null}
       />
 
       <BatchCandidatesTable

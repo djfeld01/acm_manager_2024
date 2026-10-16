@@ -202,3 +202,4 @@ export {
 export { default as rentRollSnapshot } from "@/db/schema/rentRollSnapshot";
 export { rateIncreaseBatch, rateIncreaseBatchItem } from "@/db/schema/rateIncreaseBatch";
 
+export { increaseWaveMonth, occupancyMonth } from "@/db/schema/increaseHistory";
