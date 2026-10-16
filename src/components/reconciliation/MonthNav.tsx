@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -17,13 +17,18 @@ interface MonthNavProps {
 export function MonthNav({ month, year }: MonthNavProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const navigate = (delta: number) => {
     let m = month + delta;
     let y = year;
     if (m < 1) { m = 12; y--; }
     if (m > 12) { m = 1; y++; }
-    router.push(`${pathname}?month=${m}&year=${y}`);
+    // Keep other params (e.g. the overview's status filter) when changing month
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("month", String(m));
+    params.set("year", String(y));
+    router.push(`${pathname}?${params}`);
   };
 
   return (
