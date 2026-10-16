@@ -6,6 +6,7 @@ import {
   bankAccount,
   monthlyReconciliation,
   bankTransaction,
+  reconciliationDiscrepancies,
 } from "@/db/schema";
 import { eq, and, sql, count, inArray } from "drizzle-orm";
 import Link from "next/link";
@@ -89,7 +90,6 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
       facilityId: monthlyReconciliation.facilityId,
       status: monthlyReconciliation.status,
       totalTransactionsMatched: monthlyReconciliation.totalTransactionsMatched,
-      totalDiscrepancies: monthlyReconciliation.totalDiscrepancies,
     })
     .from(monthlyReconciliation)
     .where(
@@ -106,6 +106,28 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
   }
   const recMap = new Map(
     [...recsByFacility].map(([id, rows]) => [id, pickFacilityReconciliation(rows)]),
+  );
+
+  // Pending discrepancies per facility, across all of its bank-account rows.
+  // (monthly_reconciliation.total_discrepancies is never updated, so the badge
+  // never showed.)
+  const pendingDiscrepancies = await db
+    .select({ facilityId: monthlyReconciliation.facilityId, total: count() })
+    .from(reconciliationDiscrepancies)
+    .innerJoin(
+      monthlyReconciliation,
+      eq(reconciliationDiscrepancies.reconciliationId, monthlyReconciliation.reconciliationId),
+    )
+    .where(
+      and(
+        eq(reconciliationDiscrepancies.status, "pending_approval"),
+        eq(monthlyReconciliation.reconciliationMonth, month),
+        eq(monthlyReconciliation.reconciliationYear, year),
+      ),
+    )
+    .groupBy(monthlyReconciliation.facilityId);
+  const pendingByFacility = new Map(
+    pendingDiscrepancies.map((r) => [r.facilityId, Number(r.total)]),
   );
 
   // Bank transaction counts grouped by account
@@ -138,7 +160,7 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
       ...f,
       status: (rec?.status ?? "not_started") as FacilityStatus,
       matched: rec?.totalTransactionsMatched ?? 0,
-      discrepancies: rec?.totalDiscrepancies ?? 0,
+      discrepancies: pendingByFacility.get(f.facilityId) ?? 0,
       bankTxnCount,
     };
   });
