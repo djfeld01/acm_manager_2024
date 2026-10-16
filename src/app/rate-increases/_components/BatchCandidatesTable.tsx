@@ -1,19 +1,28 @@
 "use client";
 import { useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { REASON_LABEL, type BatchRules, type Candidate, type ExclusionReason } from "../_lib/batch";
+import { type BatchRules, type ExclusionReason } from "../_lib/batch";
+import {
+  NO_FILTERS,
+  applyFilters,
+  facets,
+  hasExtraFilters,
+  noteOf,
+  sortRows,
+  type Filters,
+  type Row,
+  type SortDir,
+  type SortKey,
+  type StatusFilter,
+} from "../_lib/tableView";
 import { fmtMoney, fmtPct } from "./format";
 
-export interface Row {
-  c: Candidate;
-  included: boolean;
-  /** Rent that will be sent if included; null when no rent can be worked out. */
-  newRent: number | null;
-}
+export type { Row } from "../_lib/tableView";
 
 /** Reasons that mean there is no sensible rent to send, so a tenant can't be added by hand. */
 const HARD_REASONS: ExclusionReason[] = ["missing-rate", "existing-scheduled-change", "in-other-batch", "at-street-cap", "increase-too-small"];
@@ -26,73 +35,191 @@ interface Props {
   onRent: (ledgerId: string, rent: number) => void;
 }
 
-type Filter = "included" | "excluded" | "all";
 const PAGE = 100;
 
+const COLUMNS: { key: SortKey; label: string; right?: boolean }[] = [
+  { key: "unit", label: "Unit" },
+  { key: "type", label: "Type" },
+  { key: "size", label: "Size" },
+  { key: "rent", label: "Rent", right: true },
+  { key: "street", label: "Street", right: true },
+  { key: "vsStreet", label: "Vs street", right: true },
+  { key: "lastChanged", label: "Last changed" },
+  { key: "eligible", label: "Eligible from" },
+  { key: "newRent", label: "New rent", right: true },
+  { key: "after", label: "After vs street", right: true },
+  { key: "risk", label: "Leave in 90d", right: true },
+  { key: "note", label: "Note" },
+];
+
+/** First click on a column: the direction people usually want first. */
+const FIRST_DIR: Partial<Record<SortKey, SortDir>> = { risk: "desc", included: "desc" };
+
+const selectClass =
+  "h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-ring";
+
+function SortHeader({
+  col,
+  sort,
+  onSort,
+}: {
+  col: { key: SortKey; label: string; right?: boolean };
+  sort: { key: SortKey; dir: SortDir };
+  onSort: (k: SortKey) => void;
+}) {
+  const active = sort.key === col.key;
+  const Icon = !active ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <TableHead
+      className={col.right ? "text-right" : ""}
+      aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(col.key)}
+        className={`inline-flex items-center gap-1 hover:text-foreground ${col.right ? "flex-row-reverse" : ""} ${
+          active ? "text-foreground" : ""
+        }`}
+      >
+        {col.label}
+        <Icon className={`h-3 w-3 ${active ? "" : "opacity-40"}`} />
+      </button>
+    </TableHead>
+  );
+}
+
 export function BatchCandidatesTable({ rows, rules, locked, onToggle, onRent }: Props) {
-  const [filter, setFilter] = useState<Filter>("included");
-  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "vsStreet", dir: "asc" });
   const [limit, setLimit] = useState(PAGE);
 
-  const shown = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return rows
-      .filter((r) => (filter === "all" ? true : filter === "included" ? r.included : !r.included))
-      .filter((r) => !q || (r.c.tenant.unitName ?? "").toLowerCase().includes(q) || r.c.tenant.unitType.toLowerCase().includes(q) || r.c.tenant.size.includes(q))
-      .sort((a, b) => (a.c.ratio ?? 9) - (b.c.ratio ?? 9));
-  }, [rows, filter, query]);
-
-  const warn = (r: Row): string | null => {
-    if (!r.included || r.newRent === null) return null;
-    const t = r.c.tenant;
-    if (r.newRent <= t.rent) return "Not an increase";
-    if (rules.maxOverStreetPct !== null && r.newRent > t.standardRate * (1 + rules.maxOverStreetPct) + 0.5) return "Over the street cap";
-    if (rules.maxIncreaseDollars !== null && r.newRent - t.rent > rules.maxIncreaseDollars) return "Over the max increase";
-    return null;
+  const change = (patch: Partial<Filters>) => {
+    setFilters((f) => ({ ...f, ...patch }));
+    setLimit(PAGE);
   };
+  const onSort = (key: SortKey) => {
+    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: FIRST_DIR[key] ?? "asc" }));
+    setLimit(PAGE);
+  };
+
+  const options = useMemo(() => facets(rows, rules), [rows, rules]);
+  const shown = useMemo(
+    () => sortRows(applyFilters(rows, filters, rules), sort.key, sort.dir, rules),
+    [rows, filters, sort, rules]
+  );
+
+  const inBatchCount = rows.filter((r) => r.included).length;
+  const shownIncluded = shown.filter((r) => r.included && r.newRent !== null);
+  const shownGain = shownIncluded.reduce((a, r) => a + (r.newRent! - r.c.tenant.rent), 0);
+  const sortLabel = COLUMNS.find((c) => c.key === sort.key)?.label ?? (sort.key === "included" ? "In batch" : "");
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Tenants</CardTitle>
         <CardDescription>
-          Sorted by how far each tenant is over street, lowest first. Tick or untick to adjust the batch; edit a new
-          rent to override the rule. {locked && "This batch is finalized and can't be changed."}
+          Click a column heading to sort; use the filters to narrow the list. Tick or untick to adjust the batch; edit a
+          new rent to override the rule. {locked && "This batch is finalized and can't be changed."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          {(["included", "excluded", "all"] as const).map((f) => (
-            <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => { setFilter(f); setLimit(PAGE); }}>
-              {f === "included" ? `In batch (${rows.filter((r) => r.included).length})` : f === "excluded" ? `Not in batch (${rows.filter((r) => !r.included).length})` : `All (${rows.length})`}
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          {(["included", "excluded", "all"] as StatusFilter[]).map((f) => (
+            <Button key={f} size="sm" variant={filters.status === f ? "default" : "outline"} onClick={() => change({ status: f })}>
+              {f === "included"
+                ? `In batch (${inBatchCount})`
+                : f === "excluded"
+                  ? `Not in batch (${rows.length - inBatchCount})`
+                  : `All (${rows.length})`}
             </Button>
           ))}
-          <Input className="w-56" placeholder="Search unit, type, size" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <Input
+            className="w-52"
+            placeholder="Search unit, type, size"
+            value={filters.query}
+            onChange={(e) => change({ query: e.target.value })}
+          />
         </div>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <select aria-label="Filter by unit type" className={selectClass} value={filters.unitType} onChange={(e) => change({ unitType: e.target.value })}>
+            <option value="">All unit types</option>
+            {options.types.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label} ({o.count})
+              </option>
+            ))}
+          </select>
+          <select aria-label="Filter by size" className={selectClass} value={filters.size} onChange={(e) => change({ size: e.target.value })}>
+            <option value="">All sizes</option>
+            {options.sizes.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label} ({o.count})
+              </option>
+            ))}
+          </select>
+          <select aria-label="Filter by street position" className={selectClass} value={filters.band} onChange={(e) => change({ band: e.target.value })}>
+            <option value="">Any street position</option>
+            {options.bands.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label} ({o.count})
+              </option>
+            ))}
+          </select>
+          <select aria-label="Filter by note" className={selectClass} value={filters.note} onChange={(e) => change({ note: e.target.value })}>
+            <option value="">Any note</option>
+            {options.notes.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label} ({o.count})
+              </option>
+            ))}
+          </select>
+          {hasExtraFilters(filters) && (
+            <Button size="sm" variant="ghost" onClick={() => change({ query: "", unitType: "", size: "", note: "", band: "" })}>
+              Clear filters
+            </Button>
+          )}
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Showing {shown.length} of {rows.length} tenants
+          {shownIncluded.length > 0 &&
+            ` · ${shownIncluded.length} in the batch here, adding ${fmtMoney(shownGain)}/mo`}
+          {` · sorted by ${sortLabel.toLowerCase()} (${sort.dir === "asc" ? "low to high" : "high to low"})`}
+        </p>
+
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-10" />
-                <TableHead>Unit</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead className="text-right">Rent</TableHead>
-                <TableHead className="text-right">Street</TableHead>
-                <TableHead className="text-right">Vs street</TableHead>
-                <TableHead>Last changed</TableHead>
-                <TableHead>Eligible from</TableHead>
-                <TableHead className="text-right">New rent</TableHead>
-                <TableHead className="text-right">After vs street</TableHead>
-                <TableHead className="text-right">Leave in 90d</TableHead>
-                <TableHead>Note</TableHead>
+                <TableHead className="w-10" aria-sort={sort.key === "included" ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
+                  <button
+                    type="button"
+                    title="Sort by in batch"
+                    aria-label="Sort by in batch"
+                    onClick={() => onSort("included")}
+                    className="inline-flex items-center"
+                  >
+                    {sort.key === "included" ? (
+                      sort.dir === "asc" ? (
+                        <ArrowUp className="h-3 w-3" />
+                      ) : (
+                        <ArrowDown className="h-3 w-3" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="h-3 w-3 opacity-40" />
+                    )}
+                  </button>
+                </TableHead>
+                {COLUMNS.map((col) => (
+                  <SortHeader key={col.key} col={col} sort={sort} onSort={onSort} />
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {shown.slice(0, limit).map((r) => {
                 const t = r.c.tenant;
                 const hard = r.c.reason !== null && HARD_REASONS.includes(r.c.reason);
-                const w = warn(r);
+                const note = noteOf(r, rules);
                 return (
                   <TableRow key={t.ledgerId} className={r.included ? "" : "text-muted-foreground"}>
                     <TableCell>
@@ -128,16 +255,16 @@ export function BatchCandidatesTable({ rows, rules, locked, onToggle, onRent }: 
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {r.included && r.newRent !== null ? fmtPct(r.newRent / t.standardRate - 1) : "—"}
+                      {r.included && r.newRent !== null && t.standardRate > 0 ? fmtPct(r.newRent / t.standardRate - 1) : "—"}
                     </TableCell>
                     <TableCell className="text-right">{fmtPct(t.exit90, 1)}</TableCell>
                     <TableCell>
-                      {w ? (
-                        <Badge variant="destructive">{w}</Badge>
-                      ) : r.c.reason && !r.included ? (
-                        <span className="text-xs">{REASON_LABEL[r.c.reason]}</span>
-                      ) : r.c.reason && r.included ? (
-                        <Badge variant="outline">Added by hand</Badge>
+                      {note.key === "warning" ? (
+                        <Badge variant="destructive">{note.label}</Badge>
+                      ) : note.key === "by-hand" ? (
+                        <Badge variant="outline">{note.label}</Badge>
+                      ) : note.key !== "suggested" ? (
+                        <span className="text-xs">{note.label}</span>
                       ) : null}
                     </TableCell>
                   </TableRow>
