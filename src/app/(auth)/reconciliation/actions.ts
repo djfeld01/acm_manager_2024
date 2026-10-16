@@ -732,6 +732,16 @@ export async function undoAutoMatchAction(pairs: MatchPair[]): Promise<{ removed
   return { removed };
 }
 
+// A facility's month has one row per bank account; status changes apply to all
+// of them so they can't drift apart (the page only ever loads one).
+function sameFacilityMonthAs(reconciliationId: number) {
+  return sql`(${monthlyReconciliation.facilityId}, ${monthlyReconciliation.reconciliationMonth}, ${monthlyReconciliation.reconciliationYear}) = (
+    select m.facility_id, m.reconciliation_month, m.reconciliation_year
+    from monthly_reconciliation m
+    where m.reconciliation_id = ${reconciliationId}
+  )`;
+}
+
 // ─── Finalization actions ──────────────────────────────────────────────────
 
 // Ashley (Office Manager / Manager): in_progress → pending_review
@@ -745,7 +755,7 @@ export async function submitForReviewAction(reconciliationId: number): Promise<v
       status: "pending_review",
       submittedForReviewAt: new Date(),
     })
-    .where(eq(monthlyReconciliation.reconciliationId, reconciliationId));
+    .where(sameFacilityMonthAs(reconciliationId));
 }
 
 // David (Accounting Manager / Admin / Owner): pending_review → completed
@@ -765,7 +775,7 @@ export async function markCompleteAction(
       completedAt: new Date(),
       ...(notes ? { reviewNotes: notes } : {}),
     })
-    .where(eq(monthlyReconciliation.reconciliationId, reconciliationId));
+    .where(sameFacilityMonthAs(reconciliationId));
 }
 
 // David: pending_review → in_progress (send back for changes)
@@ -784,7 +794,7 @@ export async function requestChangesAction(
       reviewedAt: new Date(),
       ...(notes ? { reviewNotes: notes } : {}),
     })
-    .where(eq(monthlyReconciliation.reconciliationId, reconciliationId));
+    .where(sameFacilityMonthAs(reconciliationId));
 }
 
 // David: approve a single discrepancy

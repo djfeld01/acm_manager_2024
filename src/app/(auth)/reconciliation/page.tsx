@@ -13,6 +13,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MonthNav } from "@/components/reconciliation/MonthNav";
 import { Building2, ArrowRight } from "lucide-react";
+import { pickFacilityReconciliation } from "./facilityReconciliation";
 
 interface PageProps {
   searchParams: Promise<{ month?: string; year?: string }>;
@@ -52,6 +53,8 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
     })
     .from(storageFacilities)
     .innerJoin(bankAccount, eq(storageFacilities.sitelinkId, bankAccount.sitelinkId))
+    // Match the facility page, which only opens current clients
+    .where(eq(storageFacilities.currentClient, true))
     .orderBy(storageFacilities.facilityName);
 
   // Group by facility
@@ -82,6 +85,7 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
   // Reconciliation records for this month/year
   const recs = await db
     .select({
+      reconciliationId: monthlyReconciliation.reconciliationId,
       facilityId: monthlyReconciliation.facilityId,
       status: monthlyReconciliation.status,
       totalTransactionsMatched: monthlyReconciliation.totalTransactionsMatched,
@@ -95,7 +99,14 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
       ),
     );
 
-  const recMap = new Map(recs.map((r) => [r.facilityId, r]));
+  // One row per bank account — pick the same representative as the facility page
+  const recsByFacility = new Map<string, typeof recs>();
+  for (const r of recs) {
+    recsByFacility.set(r.facilityId, [...(recsByFacility.get(r.facilityId) ?? []), r]);
+  }
+  const recMap = new Map(
+    [...recsByFacility].map(([id, rows]) => [id, pickFacilityReconciliation(rows)]),
+  );
 
   // Bank transaction counts grouped by account
   const allBankAccountIds = facilities.flatMap((f) => f.bankAccountIds);
