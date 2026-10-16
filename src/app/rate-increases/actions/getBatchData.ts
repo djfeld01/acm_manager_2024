@@ -1,4 +1,7 @@
 "use server";
+import { db } from "@/db";
+import { rateIncreaseBatch, rateIncreaseBatchItem } from "@/db/schema";
+import { and, eq, gt } from "drizzle-orm";
 import { assertAccess } from "../_lib/server/guard";
 import { loadLatestSnapshot, loadSpecialMonths, loadStayInputs } from "../_lib/server/loadData";
 import { buildDemandHealth } from "../_lib/server/demandData";
@@ -40,6 +43,24 @@ export async function getBatchData(sitelinkId: string): Promise<BatchData> {
     loadStayInputs(sitelinkId, snap.rows),
     loadSpecialMonths(sitelinkId, snap.rows),
   ]);
+  // Tenants already in a finalized batch whose new rent starts after this rent
+  // roll: the roll can't show it yet, so they must not be picked a second time.
+  const pending = new Set(
+    (
+      await db
+        .select({ ledgerId: rateIncreaseBatchItem.ledgerId })
+        .from(rateIncreaseBatchItem)
+        .innerJoin(rateIncreaseBatch, eq(rateIncreaseBatch.id, rateIncreaseBatchItem.batchId))
+        .where(
+          and(
+            eq(rateIncreaseBatch.sitelinkId, sitelinkId),
+            eq(rateIncreaseBatch.status, "final"),
+            gt(rateIncreaseBatch.effectiveDate, snap.date)
+          )
+        )
+    ).map((r) => r.ledgerId)
+  );
+
   const stay = analyzeStays(stays, {
     asOf: snap.date,
     windowStart: OBSERVATION_START,
@@ -68,6 +89,7 @@ export async function getBatchData(sitelinkId: string): Promise<BatchData> {
       schedRentStart: r.schedRentStart,
       schedOut: r.schedOut,
       chargeBalance: r.chargeBalance,
+      inOtherBatch: pending.has(r.ledgerId),
       exit30: risk.d30,
       exit60: risk.d60,
       exit90: risk.d90,
