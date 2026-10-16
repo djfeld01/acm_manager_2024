@@ -6,6 +6,7 @@ import {
   bankAccount,
   monthlyReconciliation,
   bankTransaction,
+  reconciliationDiscrepancies,
 } from "@/db/schema";
 import { eq, and, sql, count, inArray } from "drizzle-orm";
 import Link from "next/link";
@@ -13,6 +14,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MonthNav } from "@/components/reconciliation/MonthNav";
 import { Building2, ArrowRight } from "lucide-react";
+import { pickFacilityReconciliation } from "./facilityReconciliation";
 
 interface PageProps {
   searchParams: Promise<{ month?: string; year?: string }>;
@@ -52,6 +54,8 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
     })
     .from(storageFacilities)
     .innerJoin(bankAccount, eq(storageFacilities.sitelinkId, bankAccount.sitelinkId))
+    // Match the facility page, which only opens current clients
+    .where(eq(storageFacilities.currentClient, true))
     .orderBy(storageFacilities.facilityName);
 
   // Group by facility
@@ -82,10 +86,10 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
   // Reconciliation records for this month/year
   const recs = await db
     .select({
+      reconciliationId: monthlyReconciliation.reconciliationId,
       facilityId: monthlyReconciliation.facilityId,
       status: monthlyReconciliation.status,
       totalTransactionsMatched: monthlyReconciliation.totalTransactionsMatched,
-      totalDiscrepancies: monthlyReconciliation.totalDiscrepancies,
     })
     .from(monthlyReconciliation)
     .where(
@@ -95,7 +99,36 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
       ),
     );
 
-  const recMap = new Map(recs.map((r) => [r.facilityId, r]));
+  // One row per bank account — pick the same representative as the facility page
+  const recsByFacility = new Map<string, typeof recs>();
+  for (const r of recs) {
+    recsByFacility.set(r.facilityId, [...(recsByFacility.get(r.facilityId) ?? []), r]);
+  }
+  const recMap = new Map(
+    [...recsByFacility].map(([id, rows]) => [id, pickFacilityReconciliation(rows)]),
+  );
+
+  // Pending discrepancies per facility, across all of its bank-account rows.
+  // (monthly_reconciliation.total_discrepancies is never updated, so the badge
+  // never showed.)
+  const pendingDiscrepancies = await db
+    .select({ facilityId: monthlyReconciliation.facilityId, total: count() })
+    .from(reconciliationDiscrepancies)
+    .innerJoin(
+      monthlyReconciliation,
+      eq(reconciliationDiscrepancies.reconciliationId, monthlyReconciliation.reconciliationId),
+    )
+    .where(
+      and(
+        eq(reconciliationDiscrepancies.status, "pending_approval"),
+        eq(monthlyReconciliation.reconciliationMonth, month),
+        eq(monthlyReconciliation.reconciliationYear, year),
+      ),
+    )
+    .groupBy(monthlyReconciliation.facilityId);
+  const pendingByFacility = new Map(
+    pendingDiscrepancies.map((r) => [r.facilityId, Number(r.total)]),
+  );
 
   // Bank transaction counts grouped by account
   const allBankAccountIds = facilities.flatMap((f) => f.bankAccountIds);
@@ -127,7 +160,7 @@ export default async function ReconciliationPage({ searchParams }: PageProps) {
       ...f,
       status: (rec?.status ?? "not_started") as FacilityStatus,
       matched: rec?.totalTransactionsMatched ?? 0,
-      discrepancies: rec?.totalDiscrepancies ?? 0,
+      discrepancies: pendingByFacility.get(f.facilityId) ?? 0,
       bankTxnCount,
     };
   });

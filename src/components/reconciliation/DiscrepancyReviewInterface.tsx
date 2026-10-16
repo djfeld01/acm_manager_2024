@@ -108,6 +108,7 @@ export function DiscrepancyReviewInterface({
     Set<number>
   >(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [bulkNotes, setBulkNotes] = useState("");
@@ -125,6 +126,7 @@ export function DiscrepancyReviewInterface({
 
   const loadDiscrepancies = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const params = new URLSearchParams({
         status: statusFilter,
@@ -143,74 +145,20 @@ export function DiscrepancyReviewInterface({
         setDiscrepancies(data.discrepancies || []);
         setSummary(data.summary || null);
       } else {
-        console.error("Failed to load discrepancies");
-        // Fallback to mock data for development
-        setDiscrepancies([
-          {
-            discrepancyId: 1,
-            reconciliationId: 1,
-            discrepancyType: "multi_day_combination",
-            description:
-              "Bank deposit combines payments from March 15-16, 2024. Daily payments show $1,250.00 on 3/15 and $875.50 on 3/16, but bank shows single deposit of $2,125.50 on 3/16.",
-            amount: 2125.5,
-            status: "pending_approval",
-            createdBy: "user123",
-            createdAt: new Date().toISOString(),
-            notes:
-              "Verified with bank - this is their standard processing for weekend deposits",
-            isCritical: true,
-            facilityId: "FAC001",
-            facilityName: "Downtown Storage",
-            reconciliationMonth: monthFilter,
-            reconciliationYear: yearFilter,
-            reconciliationStatus: "in_progress",
-            creatorName: "Sarah Johnson",
-            creatorEmail: "sarah.johnson@company.com",
-          },
-          {
-            discrepancyId: 2,
-            reconciliationId: 2,
-            discrepancyType: "refund",
-            description:
-              "Credit card refund of $45.00 processed on 3/18 not reflected in daily payments. Customer John Smith, unit 205.",
-            amount: 45.0,
-            status: "pending_approval",
-            createdBy: "user456",
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            isCritical: false,
-            facilityId: "FAC002",
-            facilityName: "Westside Storage",
-            reconciliationMonth: monthFilter,
-            reconciliationYear: yearFilter,
-            reconciliationStatus: "in_progress",
-            creatorName: "Mike Chen",
-            creatorEmail: "mike.chen@company.com",
-          },
-        ]);
-        setSummary({
-          totalDiscrepancies: 2,
-          criticalCount: 1,
-          totalAmount: 2170.5,
-          facilitySummary: [
-            {
-              facilityId: "FAC001",
-              facilityName: "Downtown Storage",
-              count: 1,
-              amount: 2125.5,
-              criticalCount: 1,
-            },
-            {
-              facilityId: "FAC002",
-              facilityName: "Westside Storage",
-              count: 1,
-              amount: 45.0,
-              criticalCount: 0,
-            },
-          ],
-        });
+        // Never fall back to sample data — it looked like real discrepancies
+        const data = await response.json().catch(() => null);
+        setDiscrepancies([]);
+        setSummary(null);
+        setLoadError(
+          data?.error ??
+            `Couldn't load discrepancies (error ${response.status}).`,
+        );
       }
     } catch (error) {
       console.error("Failed to load discrepancies:", error);
+      setDiscrepancies([]);
+      setSummary(null);
+      setLoadError("Couldn't load discrepancies. Check your connection and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -266,10 +214,12 @@ export function DiscrepancyReviewInterface({
         setSelectedDiscrepancies(new Set());
         setBulkNotes("");
       } else {
-        console.error(`Failed to ${action} discrepancies`);
+        const data = await response.json().catch(() => null);
+        setLoadError(data?.error ?? `Failed to ${action} discrepancies.`);
       }
     } catch (error) {
       console.error(`Failed to ${action} discrepancies:`, error);
+      setLoadError(`Failed to ${action} discrepancies.`);
     } finally {
       setIsProcessing(false);
     }
@@ -290,6 +240,7 @@ export function DiscrepancyReviewInterface({
         await loadDiscrepancies();
       } catch (error) {
         console.error(`Failed to ${action} discrepancy:`, error);
+        setLoadError(`Failed to ${action} discrepancy.`);
       }
     });
   };
@@ -311,6 +262,12 @@ export function DiscrepancyReviewInterface({
 
   return (
     <div className="space-y-6">
+      {loadError && (
+        <div className="border border-destructive/50 bg-destructive/10 rounded-lg p-3 text-sm text-destructive">
+          {loadError}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

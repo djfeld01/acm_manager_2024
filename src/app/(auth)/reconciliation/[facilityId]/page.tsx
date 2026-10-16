@@ -14,6 +14,7 @@ import { eq, and, sql, inArray, ne, or } from "drizzle-orm";
 import { exactCents } from "@/app/(auth)/reconciliation/exactCents";
 import { ReconciliationWorkspace } from "@/components/reconciliation/ReconciliationWorkspace";
 import { MonthNav } from "@/components/reconciliation/MonthNav";
+import { pickFacilityReconciliation } from "../facilityReconciliation";
 
 interface PageProps {
   params: Promise<{ facilityId: string }>;
@@ -102,7 +103,8 @@ export default async function FacilityReconciliationPage({
         eq(monthlyReconciliation.reconciliationYear, year),
       ),
     );
-  const recRow = recRows[0] ?? null;
+  // One row per bank account — use the same representative as the overview
+  const recRow = pickFacilityReconciliation(recRows);
 
   // Bank transactions: fetch current month + 10-day buffer into next month
   // so late-clearing deposits are visible in this reconciliation period
