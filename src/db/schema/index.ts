@@ -200,3 +200,5 @@ export {
   ownershipGroupToOwnersRelations,
 } from "@/db/schema/ownershipGroupToOwners";
 export { default as rentRollSnapshot } from "@/db/schema/rentRollSnapshot";
+export { rateIncreaseBatch, rateIncreaseBatchItem } from "@/db/schema/rateIncreaseBatch";
+
