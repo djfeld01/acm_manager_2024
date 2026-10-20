@@ -34,6 +34,8 @@ export interface DemandSegment {
   /** Unit type or size, depending on the breakdown. */
   label: string;
   moveInsLast180: number;
+  /** Trailing 180-day move-ins per month, before any seasonal adjustment. */
+  baseMoveInsPerMonth: number;
   expectedMoveInsPerMonth: number;
   expectedMoveOutsPerMonth: number;
   /** Expected move-ins / expected move-outs. >= 1 means demand refills what leaves. */
@@ -86,6 +88,10 @@ export interface DemandHealth {
   /** Next-90-day demand relative to the 180 days the run-rate came from
    *  (below 1 = a seasonally slower stretch ahead). */
   seasonalFactor: number;
+  /** 12 values, index 0 = January; 1.0 = an average month. */
+  seasonalIndex: number[];
+  /** The seasonal weight of the 180 days the run-rate came from. */
+  trailingMix: number;
 }
 
 export function computeDemandHealth(input: DemandInput): DemandHealth {
@@ -106,7 +112,8 @@ export function computeDemandHealth(input: DemandInput): DemandHealth {
     const iq = input.inquiries.filter((r) => match(r));
 
     const moveInsLast180 = mi.filter((r) => r.date > start180 && r.date <= asOf).length;
-    const expectedMoveIns = (moveInsLast180 / (180 / DAYS_PER_MONTH)) * seasonalFactor;
+    const baseMoveIns = moveInsLast180 / (180 / DAYS_PER_MONTH);
+    const expectedMoveIns = baseMoveIns * seasonalFactor;
     const key = label === "All unit types" ? "All" : label;
     const expectedMoveOuts = input.expectedMoveOutsPerMonth[key] ?? 0;
     const coverage = expectedMoveOuts > 0 ? expectedMoveIns / expectedMoveOuts : null;
@@ -136,6 +143,7 @@ export function computeDemandHealth(input: DemandInput): DemandHealth {
     return {
       label,
       moveInsLast180,
+      baseMoveInsPerMonth: baseMoveIns,
       expectedMoveInsPerMonth: expectedMoveIns,
       expectedMoveOutsPerMonth: expectedMoveOuts,
       coverage,
@@ -157,6 +165,8 @@ export function computeDemandHealth(input: DemandInput): DemandHealth {
     byType: input.unitTypes.map((t) => build(t, (r) => r.unitType === t)),
     bySize: input.sizes.map((z) => build(z, (r) => r.size === z)),
     seasonalFactor,
+    seasonalIndex,
+    trailingMix,
   };
 }
 
