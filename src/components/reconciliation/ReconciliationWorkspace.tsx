@@ -1618,7 +1618,7 @@ function MatchRow({
             ? (row.diff > 0 ? "+" : "") + fmt$(row.diff)
             : "—"}
         </td>
-        <td className="p-3 text-center">
+        <td className="p-3 text-center whitespace-nowrap">
           <span className="inline-flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
             <CheckCircle2 className="h-3.5 w-3.5" />
             {row.matchType === "automatic" ? "Auto" : "Matched"}
