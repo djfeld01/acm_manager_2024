@@ -16,16 +16,30 @@ type ConnectionType = "cash" | "creditCard" | "ach";
 
 export type MatchPair = { bankTransactionId: number; dailyPaymentId: number };
 
-// Auto-match accepts a deposit up to this many days from the SiteLink date.
-// (The UI separately flags matches over LATE_DEPOSIT_DAYS — managers are
-// expected to get to the bank at least weekly.)
+// Auto-match accepts a deposit from 1 day before (date quirks) up to
+// MAX_DEPOSIT_DAYS after the SiteLink date. (The UI separately flags matches
+// over LATE_DEPOSIT_DAYS — managers are expected to get to the bank weekly.)
 const MAX_DEPOSIT_DAYS = 10;
+const MAX_EARLY_DEPOSIT_DAYS = 1;
 
 function daysBetween(a: string, b: string): number {
   return (
     Math.abs(new Date(a).getTime() - new Date(b).getTime()) /
     (1000 * 60 * 60 * 24)
   );
+}
+
+// Signed days from the SiteLink date to the bank date (negative = bank earlier)
+function depositLag(bankDate: string, sitelinkDate: string): number {
+  return (
+    (new Date(bankDate).getTime() - new Date(sitelinkDate).getTime()) /
+    (1000 * 60 * 60 * 24)
+  );
+}
+
+function depositInWindow(bankDate: string, sitelinkDate: string): boolean {
+  const lag = depositLag(bankDate, sitelinkDate);
+  return lag >= -MAX_EARLY_DEPOSIT_DAYS && lag <= MAX_DEPOSIT_DAYS;
 }
 
 function cardsAmt(p: {
@@ -65,8 +79,8 @@ function sitelinkAmt(
 
 // ─── Auto-match server action ──────────────────────────────────────────────
 // Replaces the broken /api/reconciliation/auto-match/run which requires
-// perfect same-day same-amount matches. This version allows ±MAX_DEPOSIT_DAYS
-// and also tries combining consecutive daily payments to match a single bank
+// perfect same-day same-amount matches. This version accepts deposits from 1
+// day before to MAX_DEPOSIT_DAYS after the SiteLink date, and also tries combining consecutive daily payments to match a single bank
 // deposit (multi-day rollup).
 
 export async function autoMatchAction(
@@ -224,18 +238,19 @@ export async function autoMatchAction(
         !usedPaymentIds.has(p.dailyPaymentId),
     );
 
-    // Phase 1: 1:1 exact amount, closest date within MAX_DEPOSIT_DAYS
+    // Phase 1: 1:1 exact amount, closest date in the deposit window
     for (const txn of unmatchedBank) {
       if (usedBankIds.has(txn.bankTransactionId)) continue;
 
       let bestPayment: (typeof payments)[0] | null = null;
-      let bestDays = MAX_DEPOSIT_DAYS + 1;
+      let bestDays = Infinity;
 
       for (const p of unmatchedPayments) {
         if (usedPaymentIds.has(p.dailyPaymentId)) continue;
         if (Math.abs(getAmt(p) - txn.amount) > 0.02) continue;
+        if (!depositInWindow(txn.transactionDate, p.date)) continue;
         const days = daysBetween(txn.transactionDate, p.date);
-        if (days <= MAX_DEPOSIT_DAYS && days < bestDays) {
+        if (days < bestDays) {
           bestPayment = p;
           bestDays = days;
         }
@@ -279,13 +294,13 @@ export async function autoMatchAction(
       for (let i = 0; i < sortedPayments.length && !found; i++) {
         const p1 = sortedPayments[i];
         if (usedPaymentIds.has(p1.dailyPaymentId)) continue;
-        if (daysBetween(txn.transactionDate, p1.date) > MAX_DEPOSIT_DAYS) continue;
+        if (!depositInWindow(txn.transactionDate, p1.date)) continue;
 
         for (let j = i + 1; j < sortedPayments.length && !found; j++) {
           const p2 = sortedPayments[j];
           if (usedPaymentIds.has(p2.dailyPaymentId)) continue;
           if (daysBetween(p1.date, p2.date) > 6) break; // too far apart
-          if (daysBetween(txn.transactionDate, p2.date) > MAX_DEPOSIT_DAYS) continue;
+          if (!depositInWindow(txn.transactionDate, p2.date)) continue;
 
           const pairSum = getAmt(p1) + getAmt(p2);
           if (Math.abs(pairSum - txn.amount) <= 0.02) {
@@ -315,7 +330,7 @@ export async function autoMatchAction(
               const p3 = sortedPayments[k];
               if (usedPaymentIds.has(p3.dailyPaymentId)) continue;
               if (daysBetween(p2.date, p3.date) > 6) break;
-              if (daysBetween(txn.transactionDate, p3.date) > MAX_DEPOSIT_DAYS) continue;
+              if (!depositInWindow(txn.transactionDate, p3.date)) continue;
 
               const tripleSum = getAmt(p1) + getAmt(p2) + getAmt(p3);
               if (Math.abs(tripleSum - txn.amount) <= 0.02) {
