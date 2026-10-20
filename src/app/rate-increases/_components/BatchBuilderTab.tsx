@@ -248,6 +248,7 @@ export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Br
                 ? `Eligible = here at least ${rules.minTenureMonths} months by the effective date and never raised since moving in. Run it each month to pick up tenants as they reach ${rules.minTenureMonths} months.`
                 : `Eligible = here at least ${rules.minTenureMonths} months by the effective date${rules.minMonthsSinceLastChange > 0 ? `, and not raised in the last ${rules.minMonthsSinceLastChange} months` : ", however recently they were last raised"}.`
               : `Eligible = the first increase comes ${rules.firstWaitMonths} months after the move-in special ends; after that, every ${rules.repeatWaitMonths} months from the last rent change.`}{" "}
+            {rules.raiseToStreet ? "Tenants below street are raised to street rate when that is more than the percentage. " : ""}
             Adjust anything below.
           </CardDescription>
         </CardHeader>

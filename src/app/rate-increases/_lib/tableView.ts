@@ -65,6 +65,12 @@ export function noteOf(r: Row, rules: BatchRules): { key: string; label: string 
   if (w) return { key: "warning", label: w };
   if (r.c.reason && r.included) return { key: "by-hand", label: "Added by hand" };
   if (r.c.reason) return { key: r.c.reason, label: REASON_LABEL[r.c.reason] };
+  // Only while the rent is still the one the rules chose (not hand-edited).
+  if (r.c.streetLift && r.newRent === r.c.newRent) {
+    return r.c.streetLift === "full"
+      ? { key: "to-street", label: "Raised to street rate" }
+      : { key: "to-street-capped", label: "Raised toward street (capped)" };
+  }
   return { key: "suggested", label: "" };
 }
 
