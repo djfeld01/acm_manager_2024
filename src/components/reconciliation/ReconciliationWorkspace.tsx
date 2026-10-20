@@ -26,6 +26,7 @@ import {
   Pencil,
   Undo2,
   Hourglass,
+  MessageSquareText,
 } from "lucide-react";
 import {
   autoMatchAction,
@@ -80,7 +81,28 @@ interface Match {
   connectionType: string;
   depositDifference: number;
   matchType: string;
+  reconciliationNotes?: string | null;
 }
+
+// A "Match with Note" discrepancy, with the transactions it covers
+interface DiscrepancyInfo {
+  discrepancyType: string;
+  description: string;
+  amount: number;
+  status: string;
+  createdByName: string | null;
+  bankTransactionIds: number[];
+  dailyPaymentIds: number[];
+}
+
+// What the reviewer sees when hovering a matched row that has a note
+type RowNote = {
+  text: string;
+  type?: string;
+  status?: string;
+  amount?: number;
+  by?: string | null;
+};
 
 interface ReconciliationRecord {
   reconciliationId: number;
@@ -110,6 +132,7 @@ export interface ReconciliationWorkspaceProps {
   bankTransactions: BankTransaction[];
   dailyPayments: DailyPayment[];
   matches: Match[];
+  discrepancies?: DiscrepancyInfo[];
   sundries: SundryRow[];
   userId: string;
   userRole: string;
@@ -134,6 +157,7 @@ type MatchedRow = {
   // Rows from the same split match share a groupKey and are unmatched together
   groupKey: string;
   groupSize: number;
+  note?: RowNote;
 };
 
 type SitelinkOnlyRow = {
@@ -371,6 +395,50 @@ function matchGroupKey(match: Match, allMatches: Match[]) {
     : `${family(match.connectionType)}-p${match.dailyPaymentId}`;
 }
 
+const DISCREPANCY_TYPE_LABELS: Record<string, string> = {
+  bank_fee: "Bank fee",
+  timing_difference: "Timing difference",
+  error: "Recording error",
+  refund: "Refund / chargeback",
+  multi_day_combination: "Multi-day combination",
+  other: "Other",
+};
+
+const DISCREPANCY_STATUS_LABELS: Record<string, string> = {
+  pending_approval: "Pending approval",
+  approved: "Approved",
+  rejected: "Rejected",
+  resolved: "Resolved",
+};
+
+// Attach the discrepancy note (or, failing that, the note saved on the match
+// link) to each matched row so the reviewer can read it on hover.
+function attachNotes(rows: TableRow[], matches: Match[], discrepancies: DiscrepancyInfo[]) {
+  for (const r of rows) {
+    if (r.type !== "matched") continue;
+    const d = discrepancies.find(
+      (x) =>
+        x.bankTransactionIds.includes(r.bankTransactionId) &&
+        x.dailyPaymentIds.includes(r.dailyPaymentId),
+    );
+    if (d) {
+      r.note = {
+        text: d.description,
+        type: DISCREPANCY_TYPE_LABELS[d.discrepancyType] ?? d.discrepancyType,
+        status: DISCREPANCY_STATUS_LABELS[d.status] ?? d.status,
+        amount: d.amount,
+        by: d.createdByName,
+      };
+      continue;
+    }
+    const link = matches.find(
+      (m) => m.bankTransactionId === r.bankTransactionId && m.dailyPaymentId === r.dailyPaymentId,
+    );
+    if (link?.reconciliationNotes?.trim()) r.note = { text: link.reconciliationNotes.trim() };
+  }
+  return rows;
+}
+
 function withGroupSizes(rows: TableRow[]) {
   const sizes = new Map<string, number>();
   for (const r of rows) if (r.type === "matched") sizes.set(r.groupKey, (sizes.get(r.groupKey) ?? 0) + 1);
@@ -404,6 +472,7 @@ export function ReconciliationWorkspace({
   bankTransactions,
   dailyPayments,
   matches,
+  discrepancies = [],
   sundries,
   userRole,
 }: ReconciliationWorkspaceProps) {
@@ -439,8 +508,16 @@ export function ReconciliationWorkspace({
   const thisMonthName = monthName(year, month);
   const prevMonthName = monthName(month === 1 ? year - 1 : year, month === 1 ? 12 : month - 1);
   const nextMonthName = monthName(month === 12 ? year + 1 : year, month === 12 ? 1 : month + 1);
-  const cashRows = buildRows(dailyPayments, bankTransactions, matches, "cash", monthStart, monthEnd);
-  const creditRows = buildRows(dailyPayments, bankTransactions, matches, "credit", monthStart, monthEnd);
+  const cashRows = attachNotes(
+    buildRows(dailyPayments, bankTransactions, matches, "cash", monthStart, monthEnd),
+    matches,
+    discrepancies,
+  );
+  const creditRows = attachNotes(
+    buildRows(dailyPayments, bankTransactions, matches, "credit", monthStart, monthEnd),
+    matches,
+    discrepancies,
+  );
   const truckRows = bankTransactions.filter((t) => t.transactionType === "truck");
   const otherRows = bankTransactions.filter((t) => t.transactionType === "other");
   const currentRows = tab === "cash" ? cashRows : tab === "credit" ? creditRows : [];
@@ -1534,6 +1611,28 @@ function txnTypeLabel(type: string) {
   }
 }
 
+function NoteDetails({ note, divider = false }: { note: RowNote; divider?: boolean }) {
+  const fmt$ = (n: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+  return (
+    <div
+      className={`space-y-0.5 whitespace-normal text-left ${
+        divider ? "mt-1.5 border-t border-current/20 pt-1.5" : ""
+      }`}
+    >
+      {(note.type || note.amount !== undefined) && (
+        <div className="font-semibold">
+          {note.type}
+          {note.amount !== undefined && ` · ${fmt$(note.amount)}`}
+          {note.status && ` · ${note.status}`}
+        </div>
+      )}
+      <div className="whitespace-pre-line">“{note.text}”</div>
+      {note.by && <div className="opacity-75">— {note.by}</div>}
+    </div>
+  );
+}
+
 function MatchRow({
   row,
   isEditable,
@@ -1606,8 +1705,9 @@ function MatchRow({
                 {fmt$(row.bankAmount)}
               </span>
             </TooltipTrigger>
-            <TooltipContent>
-              Bank transaction date: {fmtDateFull(row.bankDate)}
+            <TooltipContent className="max-w-xs">
+              <div>Bank transaction date: {fmtDateFull(row.bankDate)}</div>
+              {row.note && <NoteDetails note={row.note} divider />}
             </TooltipContent>
           </Tooltip>
         </td>
@@ -1623,6 +1723,21 @@ function MatchRow({
             <CheckCircle2 className="h-3.5 w-3.5" />
             {row.matchType === "automatic" ? "Auto" : "Matched"}
           </span>
+          {row.note && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className="ml-1.5 inline-flex align-middle text-sky-600 dark:text-sky-400"
+                  aria-label="Has a note"
+                >
+                  <MessageSquareText className="h-3.5 w-3.5" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <NoteDetails note={row.note} />
+              </TooltipContent>
+            </Tooltip>
+          )}
           {isLateDeposit && (
             <Tooltip>
               <TooltipTrigger asChild>

@@ -9,6 +9,8 @@ import {
   dailyPayments,
   transactionsToDailyPayments,
   dailyManagementPaymentReceipt,
+  reconciliationDiscrepancies,
+  users,
 } from "@/db/schema";
 import { eq, and, sql, inArray, ne, or } from "drizzle-orm";
 import { exactCents } from "@/app/(auth)/reconciliation/exactCents";
@@ -170,6 +172,7 @@ export default async function FacilityReconciliationPage({
             connectionType: transactionsToDailyPayments.connectionType,
             depositDifference: transactionsToDailyPayments.depositDifference,
             matchType: transactionsToDailyPayments.matchType,
+            reconciliationNotes: transactionsToDailyPayments.reconciliationNotes,
           })
           .from(transactionsToDailyPayments)
           .where(
@@ -237,6 +240,48 @@ export default async function FacilityReconciliationPage({
       : [];
 
   const allPayments = [...payments, ...extraPayments];
+
+  // Discrepancies ("Match with Note") for this facility, so the reviewer can
+  // read the note on the matched rows. They reference transactions only via
+  // JSON text, and a match can belong to a neighbouring month's row, so load
+  // the facility's discrepancies and keep the ones touching loaded matches.
+  const discrepancyRows = await db
+    .select({
+      discrepancyType: reconciliationDiscrepancies.discrepancyType,
+      description: reconciliationDiscrepancies.description,
+      amount: reconciliationDiscrepancies.amount,
+      status: reconciliationDiscrepancies.status,
+      createdByName: users.name,
+      referenceTransactionIds: reconciliationDiscrepancies.referenceTransactionIds,
+      referenceDailyPaymentIds: reconciliationDiscrepancies.referenceDailyPaymentIds,
+    })
+    .from(reconciliationDiscrepancies)
+    .innerJoin(
+      monthlyReconciliation,
+      eq(reconciliationDiscrepancies.reconciliationId, monthlyReconciliation.reconciliationId),
+    )
+    .leftJoin(users, eq(reconciliationDiscrepancies.createdBy, users.id))
+    .where(eq(monthlyReconciliation.facilityId, facilityId));
+
+  const parseIds = (raw: string | null) => {
+    try {
+      return (JSON.parse(raw ?? "[]") as unknown[]).map(Number);
+    } catch {
+      return [];
+    }
+  };
+  const matchedBankIds = new Set(matchRows.map((m) => m.bankTransactionId));
+  const serializedDiscrepancies = discrepancyRows
+    .map((d) => ({
+      discrepancyType: d.discrepancyType,
+      description: d.description,
+      amount: parseFloat(d.amount?.toString() ?? "0"),
+      status: d.status,
+      createdByName: d.createdByName,
+      bankTransactionIds: parseIds(d.referenceTransactionIds),
+      dailyPaymentIds: parseIds(d.referenceDailyPaymentIds),
+    }))
+    .filter((d) => d.bankTransactionIds.some((id) => matchedBankIds.has(id)));
 
   // Sundries: daily_management_payment_receipt rows on the last day of the month
   const sundriesRows = await db
@@ -343,6 +388,7 @@ export default async function FacilityReconciliationPage({
         bankTransactions={serializedBankTxns}
         dailyPayments={serializedPayments}
         matches={serializedMatches}
+        discrepancies={serializedDiscrepancies}
         sundries={serializedSundries}
         userId={session.user.id}
         userRole={userRole}
