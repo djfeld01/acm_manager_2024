@@ -2,6 +2,8 @@ export const UNIT_TYPE_GROUPS = [
   "Drive-Up",
   "Inside Non-Climate",
   "Climate Controlled",
+  "Climate - Convenience+",
+  "Climate - Economy",
   "Parking",
 ] as const;
 
@@ -19,7 +21,13 @@ export function normalizeUnitType(raw: string | null | undefined): UnitTypeGroup
   if (!t) return "Other";
   if (/parking|\brv\b|boat|trailer/.test(t)) return "Parking";
   if (/non[\s-]*climate/.test(t) || /\binside\b/.test(t)) return "Inside Non-Climate";
-  if (/climate/.test(t)) return "Climate Controlled";
+  if (/climate/.test(t)) {
+    // Some facilities sell climate units as separate products with their own
+    // prices (e.g. Sylvania's Convenience+ and Economy); keep those apart.
+    if (/convenience/.test(t)) return "Climate - Convenience+";
+    if (/economy/.test(t)) return "Climate - Economy";
+    return "Climate Controlled";
+  }
   if (/drive|self storage/.test(t)) return "Drive-Up";
   return "Other";
 }

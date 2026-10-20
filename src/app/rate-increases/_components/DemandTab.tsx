@@ -102,7 +102,7 @@ export function DemandTab({ sitelinkId, by }: { sitelinkId: string; by: Breakdow
 
       <LineChart
         title="Inquiries and move-ins by month"
-        description="All unit types, Columbus."
+        description="All unit types."
         data={series}
         xAxisKey="month"
         height={300}

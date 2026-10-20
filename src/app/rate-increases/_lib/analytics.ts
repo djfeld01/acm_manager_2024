@@ -134,7 +134,7 @@ export interface SegmentSurvival {
   nStays: number;
   nEvents: number;
   /** true when too few move-outs to fit this type alone, so the overall
-   *  Columbus curve is used for its numbers instead. */
+   *  facility-wide curve is used for its numbers instead. */
   usedFallback: boolean;
   curve: CurvePoint[];
   medianDays: number | null;

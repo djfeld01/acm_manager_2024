@@ -19,7 +19,9 @@ import type { Breakdown } from "./Breakdown";
 
 const STALE_AFTER_DAYS = 3;
 
-export function RateIncreasesClient({ sitelinkId }: { sitelinkId: string }) {
+/** One store's workspace. Keyed by store in the parent, so switching stores
+ *  starts everything fresh (no batch or filter carried over from the other store). */
+function FacilityWorkspace({ sitelinkId }: { sitelinkId: string }) {
   const [by, setBy] = useState<Breakdown>("type");
   const {
     data: status,
@@ -143,6 +145,45 @@ export function RateIncreasesClient({ sitelinkId }: { sitelinkId: string }) {
           of stay, and demand health for {status.facilityName}.
         </p>
       )}
+    </div>
+  );
+}
+
+export interface FacilityChoice {
+  id: string;
+  name: string;
+}
+
+export function RateIncreasesClient({
+  facilities,
+  initialSitelinkId,
+}: {
+  facilities: FacilityChoice[];
+  initialSitelinkId: string;
+}) {
+  const [site, setSite] = useState(initialSitelinkId);
+
+  function choose(id: string) {
+    setSite(id);
+    // Remember the store in the address so a reload or a shared link opens it.
+    const url = new URL(window.location.href);
+    url.searchParams.set("site", id);
+    window.history.replaceState(null, "", url);
+  }
+
+  return (
+    <div className="space-y-6">
+      {facilities.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Store</span>
+          {facilities.map((f) => (
+            <Button key={f.id} size="sm" variant={f.id === site ? "default" : "outline"} onClick={() => choose(f.id)}>
+              {f.name}
+            </Button>
+          ))}
+        </div>
+      )}
+      <FacilityWorkspace key={site} sitelinkId={site} />
     </div>
   );
 }
