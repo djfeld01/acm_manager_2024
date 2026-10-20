@@ -33,6 +33,8 @@ interface Props {
   locked: boolean;
   onToggle: (ledgerId: string, include: boolean) => void;
   onRent: (ledgerId: string, rent: number) => void;
+  /** What the rate treated as street is called, for the column heading. */
+  streetLabel?: string;
 }
 
 const PAGE = 100;
@@ -88,7 +90,7 @@ function SortHeader({
   );
 }
 
-export function BatchCandidatesTable({ rows, rules, locked, onToggle, onRent }: Props) {
+export function BatchCandidatesTable({ rows, rules, locked, onToggle, onRent, streetLabel = "Street" }: Props) {
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "vsStreet", dir: "asc" });
   const [limit, setLimit] = useState(PAGE);
@@ -211,7 +213,7 @@ export function BatchCandidatesTable({ rows, rules, locked, onToggle, onRent }: 
                   </button>
                 </TableHead>
                 {COLUMNS.map((col) => (
-                  <SortHeader key={col.key} col={col} sort={sort} onSort={onSort} />
+                  <SortHeader key={col.key} col={col.key === "street" ? { ...col, label: streetLabel } : col} sort={sort} onSort={onSort} />
                 ))}
               </TableRow>
             </TableHeader>

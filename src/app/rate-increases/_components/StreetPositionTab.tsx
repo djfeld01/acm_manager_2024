@@ -6,12 +6,13 @@ import { BarChart } from "@/components/charts";
 import { getStreetPosition } from "../actions/getStreetPosition";
 import { fmtMoney, fmtNum, fmtPct } from "./format";
 import { Stat, TabLoading } from "./Stat";
+import type { StreetBasis } from "../_lib/street";
 import { breakdownNoun, breakdownTitle, type Breakdown } from "./Breakdown";
 
-export function StreetPositionTab({ sitelinkId, by }: { sitelinkId: string; by: Breakdown }) {
+export function StreetPositionTab({ sitelinkId, by, street }: { sitelinkId: string; by: Breakdown; street: StreetBasis }) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ["rateInc", "street", sitelinkId],
-    queryFn: () => getStreetPosition(sitelinkId),
+    queryKey: ["rateInc", "street", sitelinkId, street],
+    queryFn: () => getStreetPosition(sitelinkId, street),
   });
   if (!data?.overall) return <TabLoading isLoading={isLoading} error={error} />;
   const { overall } = data;
@@ -36,7 +37,10 @@ export function StreetPositionTab({ sitelinkId, by }: { sitelinkId: string; by: 
   return (
     <>
       <p className="text-sm text-muted-foreground">
-        Street rate is each unit&apos;s standard (rate-card) rate. Tenants far above street are the
+        {street === "push"
+          ? "Street rate is each unit's push rate, the rate currently being asked of new tenants."
+          : "Street rate is each unit's standard (rate-card) rate."}{" "}
+        Tenants far above street are the
         likeliest to leave when raised again, because they can rent the same unit elsewhere (or new
         at our own street rate) for less.
       </p>

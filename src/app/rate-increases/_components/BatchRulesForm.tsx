@@ -64,6 +64,7 @@ export function BatchRulesForm({ rules, onChange, disabled, today }: Props) {
     onChange({
       ...POLICIES[key].rules,
       effectiveDate: rules.effectiveDate,
+      streetBasis: rules.streetBasis,
       excludedUnitTypes: rules.excludedUnitTypes,
       excludedSizes: rules.excludedSizes,
     });
@@ -71,6 +72,12 @@ export function BatchRulesForm({ rules, onChange, disabled, today }: Props) {
 
   return (
     <div className="space-y-5">
+      {rules.streetBasis === "push" && (
+        <p className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground">
+          &quot;Street&quot; here means each unit&apos;s <strong>push rate</strong>, not its standard rate — for raise-to-street, the
+          over-street cap, and the Vs street columns. Change it with the Street rate switch at the top of the page.
+        </p>
+      )}
       <div className="space-y-2">
         <div className="text-sm font-medium">Policy</div>
         <div className="flex flex-wrap gap-2">
