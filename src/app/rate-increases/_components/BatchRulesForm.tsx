@@ -108,7 +108,10 @@ export function BatchRulesForm({ rules, onChange, disabled, today }: Props) {
             className={lead < SCHEDULE.noticeDays ? "border-destructive" : ""}
           />
         </Field>
-        <Field label="Increase (%)" hint="Share of current rent, rounded to the dollar">
+        <Field
+          label="Increase (%)"
+          hint={rules.raiseToStreet ? "Or street rate, if that takes more" : "Share of current rent, rounded to the dollar"}
+        >
           <Input
             type="number"
             step="0.5"
@@ -177,7 +180,7 @@ export function BatchRulesForm({ rules, onChange, disabled, today }: Props) {
       )}
 
       <div className="space-y-2">
-        <div className="text-sm font-medium">Safeguards (all optional)</div>
+        <div className="text-sm font-medium">Safeguards &amp; options (all optional)</div>
         <div className="grid gap-2 sm:grid-cols-2">
           <Guard
             label="Cap the increase at"
@@ -258,6 +261,20 @@ export function BatchRulesForm({ rules, onChange, disabled, today }: Props) {
             disabled={disabled}
             onToggle={(on) => set({ excludeScheduledMoveOut: on })}
           />
+        </div>
+        <div className="space-y-1">
+          <Guard
+            label="Raise tenants who are below street all the way to street rate"
+            on={rules.raiseToStreet}
+            disabled={disabled}
+            onToggle={(on) => set({ raiseToStreet: on })}
+          />
+          <p className="pl-6 text-xs text-muted-foreground">
+            Each tenant gets the increase above, or whatever it takes to reach their unit&apos;s street rate if that is more.
+            Tenants already at or above street get just the percentage.
+            {rules.raiseToStreet && rules.maxIncreaseDollars !== null &&
+              ` The $${rules.maxIncreaseDollars} cap above still applies, so tenants more than that below street will stop short of it.`}
+          </p>
         </div>
         <p className="text-xs text-muted-foreground">
           Always skipped: tenants who already have a scheduled rent change in SiteLink, and tenants already in a finalized

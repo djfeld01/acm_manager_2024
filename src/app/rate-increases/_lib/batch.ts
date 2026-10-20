@@ -63,6 +63,9 @@ export interface BatchRules {
   maxIncreaseDollars: number | null;
   /** Smallest increase worth sending a notice for. */
   minIncreaseDollars: number;
+  /** Raise tenants who are below street all the way to street if that takes
+   *  more than the percentage. Tenants at or above street get the percentage. */
+  raiseToStreet: boolean;
   /** New rent may not exceed street x (1 + this). 0.25 = 25% over street. */
   maxOverStreetPct: number | null;
   excludeWithBalance: boolean;
@@ -86,6 +89,7 @@ export const SCHEDULE_RULES: RuleSet = {
   increasePct: 0.06,
   maxIncreaseDollars: 20,
   minIncreaseDollars: 3,
+  raiseToStreet: false,
   maxOverStreetPct: 0.25,
   excludeWithBalance: true,
   excludeScheduledMoveOut: true,
@@ -179,6 +183,9 @@ export interface Candidate {
   /** Rent / street rate, before the increase. */
   ratio: number | null;
   newRatio: number | null;
+  /** Set when the raise-to-street option decided the new rent: "full" if it
+   *  reached street, "capped" if a dollar cap stopped it short. */
+  streetLift: "full" | "capped" | null;
   /** Why this tenant is not in the suggested batch; null = suggested. */
   reason: ExclusionReason | null;
 }
@@ -246,26 +253,44 @@ export function eligibility(
 /** The new rent for a tenant under the guardrails, or why there is none. */
 export function suggestRent(
   t: Pick<BatchTenant, "rent" | "standardRate">,
-  rules: Pick<BatchRules, "increasePct" | "maxIncreaseDollars" | "minIncreaseDollars" | "maxOverStreetPct">
-): { newRent: number | null; reason: ExclusionReason | null } {
-  if (!(t.rent > 0)) return { newRent: null, reason: "missing-rate" };
-  // Street rate is only needed when there's a cap measured against it.
-  if (rules.maxOverStreetPct !== null && !(t.standardRate > 0)) return { newRent: null, reason: "missing-rate" };
+  rules: Pick<
+    BatchRules,
+    "increasePct" | "maxIncreaseDollars" | "minIncreaseDollars" | "maxOverStreetPct" | "raiseToStreet"
+  >
+): { newRent: number | null; reason: ExclusionReason | null; streetLift: "full" | "capped" | null } {
+  const none = (reason: ExclusionReason) => ({ newRent: null, reason, streetLift: null });
+  if (!(t.rent > 0)) return none("missing-rate");
+  // Street rate is only needed when something is measured against it.
+  if ((rules.maxOverStreetPct !== null || rules.raiseToStreet) && !(t.standardRate > 0)) return none("missing-rate");
 
   let inc = t.rent * rules.increasePct;
   if (rules.maxIncreaseDollars !== null) inc = Math.min(inc, rules.maxIncreaseDollars);
   const wanted = Math.round(t.rent + inc);
   let target = wanted;
+
+  // Street floor: the percentage, or whatever it takes to reach street if more.
+  // A dollar cap, if on, still limits it. Street is rounded up to a whole dollar.
+  let streetLift: "full" | "capped" | null = null;
+  if (rules.raiseToStreet) {
+    const street = Math.ceil(t.standardRate - 1e-9);
+    const reachable = rules.maxIncreaseDollars !== null ? Math.min(street, t.rent + rules.maxIncreaseDollars) : street;
+    if (reachable > target) {
+      target = reachable;
+      streetLift = reachable >= street ? "full" : "capped";
+    }
+  }
+
+  const beforeCap = target;
   if (rules.maxOverStreetPct !== null) {
     const ceiling = Math.floor(t.standardRate * (1 + rules.maxOverStreetPct));
-    if (ceiling <= t.rent) return { newRent: null, reason: "at-street-cap" };
+    if (ceiling <= t.rent) return none("at-street-cap");
     if (target > ceiling) target = ceiling;
   }
   // Always at least a dollar: a "0" increase is not an increase.
   if (target - t.rent < Math.max(1, rules.minIncreaseDollars)) {
-    return { newRent: null, reason: target < wanted ? "at-street-cap" : "increase-too-small" };
+    return none(target < beforeCap ? "at-street-cap" : "increase-too-small");
   }
-  return { newRent: target, reason: null };
+  return { newRent: target, reason: null, streetLift: target === beforeCap ? streetLift : null };
 }
 
 /**
@@ -287,6 +312,7 @@ export function evaluateCandidates(tenants: BatchTenant[], rules: BatchRules): C
       increase: 0,
       ratio,
       newRatio: null,
+      streetLift: null,
       reason: null,
     };
     const exclude = (reason: ExclusionReason): Candidate => ({ ...base, reason });
@@ -306,7 +332,8 @@ export function evaluateCandidates(tenants: BatchTenant[], rules: BatchRules): C
       ...base,
       newRent: s.newRent,
       increase: s.newRent - t.rent,
-      newRatio: s.newRent / t.standardRate,
+      newRatio: t.standardRate > 0 ? s.newRent / t.standardRate : null,
+      streetLift: s.streetLift,
     };
   });
 
