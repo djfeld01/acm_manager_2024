@@ -1,5 +1,6 @@
 import { dayNum, isoFromDayNum } from "./analytics";
 import { SCHEDULE } from "./config";
+import type { StreetBasis } from "./street";
 
 /** One current tenant, as the batch builder sees them. No name/email. */
 export interface BatchTenant {
@@ -11,6 +12,8 @@ export interface BatchTenant {
   size: string;
   rent: number;
   standardRate: number;
+  /** SiteLink's push rate for the unit; 0 when none is on file. */
+  pushRate: number;
   rentLastChanged: string | null;
   leaseDate: string | null;
   /** Months of move-in discount; null = no matching move-in record found. */
@@ -39,6 +42,8 @@ export type EligibilityMode = "schedule" | "tenure";
 export interface BatchRules {
   /** Date the new rent takes effect, YYYY-MM-DD. */
   effectiveDate: string;
+  /** Which rate counts as street: the standard rate or the push rate. */
+  streetBasis: StreetBasis;
   eligibility: EligibilityMode;
 
   // --- schedule mode
@@ -76,7 +81,7 @@ export interface BatchRules {
   targetCount: number | null;
 }
 
-type RuleSet = Omit<BatchRules, "effectiveDate">;
+type RuleSet = Omit<BatchRules, "effectiveDate" | "streetBasis">;
 
 /** The original plan: after the special ends, then every 9 months, with guardrails. */
 export const SCHEDULE_RULES: RuleSet = {
@@ -139,7 +144,7 @@ export const POLICIES: Record<PolicyKey, { label: string; description: string; r
 };
 
 /** What to fill in for any rule a saved batch predates. */
-export const LEGACY_RULES: RuleSet = SCHEDULE_RULES;
+export const LEGACY_RULES: Omit<BatchRules, "effectiveDate"> = { ...SCHEDULE_RULES, streetBasis: "standard" };
 
 export type ExclusionReason =
   | "not-yet-eligible"

@@ -82,6 +82,7 @@ export async function getBatchData(sitelinkId: string): Promise<BatchData> {
       size: normalizeSize(r.size),
       rent: r.rent ?? 0,
       standardRate: r.standardRate ?? 0,
+      pushRate: r.pushRate ?? 0,
       rentLastChanged: r.rentLastChanged,
       leaseDate: r.leaseDate,
       specialMonths: specials.get(r.ledgerId) ?? null,

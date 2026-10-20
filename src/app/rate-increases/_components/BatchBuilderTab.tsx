@@ -23,6 +23,7 @@ import { getBatchData } from "../actions/getBatchData";
 import { getWaveEvidence } from "../actions/pastIncreases";
 import { deleteBatch, finalizeBatch, getBatch, listBatches, saveBatch, type BatchDetail } from "../actions/batches";
 import type { Breakdown } from "./Breakdown";
+import { withStreetRate, type StreetBasis } from "../_lib/street";
 import { BatchCandidatesTable, type Row } from "./BatchCandidatesTable";
 import { BatchExportPanel } from "./BatchExportPanel";
 import { BatchRulesForm } from "./BatchRulesForm";
@@ -32,7 +33,18 @@ import { TabLoading } from "./Stat";
 
 type Manual = Record<string, { include?: boolean; newRent?: number }>;
 
-export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Breakdown }) {
+export function BatchBuilderTab({
+  sitelinkId,
+  by,
+  street,
+  onStreetChange,
+}: {
+  sitelinkId: string;
+  by: Breakdown;
+  /** Which rate counts as street; set by the switch at the top of the page. */
+  street: StreetBasis;
+  onStreetChange: (basis: StreetBasis) => void;
+}) {
   const qc = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
 
@@ -41,10 +53,13 @@ export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Br
   // Past increases, when reports have been imported; the what-if works without them.
   const evidenceQ = useQuery({ queryKey: ["rateInc", "waveEvidence"], queryFn: () => getWaveEvidence(), retry: false });
 
-  const [rules, setRules] = useState<BatchRules>(() => ({
+  const [ruleState, setRules] = useState<BatchRules>(() => ({
     ...ACROSS_THE_BOARD_RULES,
+    streetBasis: street,
     effectiveDate: firstOfMonthAtLeast(today, SCHEDULE.noticeDays + 5),
   }));
+  // The street-rate choice lives in the page switch, not the form; it is saved with the batch.
+  const rules = useMemo<BatchRules>(() => ({ ...ruleState, streetBasis: street }), [ruleState, street]);
   const [manual, setManual] = useState<Manual>({});
   const [batchId, setBatchId] = useState<number | undefined>();
   const [loaded, setLoaded] = useState<BatchDetail | null>(null);
@@ -55,7 +70,9 @@ export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Br
   const locked = loaded?.status === "final";
   const data = dataQ.data;
 
-  const candidates = useMemo(() => (data ? evaluateCandidates(data.tenants, rules) : []), [data, rules]);
+  // Tenants with the chosen street rate in place, so every comparison to "street" follows the switch.
+  const tenants = useMemo(() => (data ? withStreetRate(data.tenants, street) : []), [data, street]);
+  const candidates = useMemo(() => evaluateCandidates(tenants, rules), [tenants, rules]);
 
   const rows: Row[] = useMemo(
     () =>
@@ -107,7 +124,7 @@ export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Br
       // Batches saved before a rule existed fill it in with what the tool did then.
       const savedRules = { ...LEGACY_RULES, ...b.rules, effectiveDate: b.effectiveDate };
       // Recreate the saved selection as hand adjustments on top of the saved rules.
-      const base = evaluateCandidates(data.tenants, savedRules);
+      const base = evaluateCandidates(withStreetRate(data.tenants, savedRules.streetBasis), savedRules);
       const inBatch = new Map(b.items.map((i) => [i.ledgerId, i.newRent]));
       const next: Manual = {};
       for (const c of base) {
@@ -118,6 +135,8 @@ export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Br
           next[c.tenant.ledgerId] = { include: false };
         }
       }
+      // Open the batch on the street rate it was built with; the page switch follows.
+      onStreetChange(savedRules.streetBasis);
       setRules(asCopy ? { ...savedRules, effectiveDate: firstOfMonthAtLeast(today, SCHEDULE.noticeDays + 5) } : savedRules);
       setManual(next);
       setName(asCopy ? `${b.name} (copy)` : b.name);
@@ -285,6 +304,7 @@ export function BatchBuilderTab({ sitelinkId, by }: { sitelinkId: string; by: Br
         locked={!!locked}
         onToggle={(id, include) => setManual((m) => ({ ...m, [id]: { ...m[id], include } }))}
         onRent={(id, rent) => setManual((m) => ({ ...m, [id]: { ...m[id], include: true, newRent: rent } }))}
+        streetLabel={street === "push" ? "Street (push)" : "Street"}
       />
 
       {!locked && (

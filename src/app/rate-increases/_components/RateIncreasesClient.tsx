@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,9 @@ import { BatchBuilderTab } from "./BatchBuilderTab";
 import { TrackingTab } from "./TrackingTab";
 import { PastIncreasesTab } from "./PastIncreasesTab";
 import type { Breakdown } from "./Breakdown";
+import { STREET_BASIS_LABEL, type StreetBasis } from "../_lib/street";
+
+const STREET_KEY = "rateInc.streetBasis";
 
 const STALE_AFTER_DAYS = 3;
 
@@ -23,6 +26,24 @@ const STALE_AFTER_DAYS = 3;
  *  starts everything fresh (no batch or filter carried over from the other store). */
 function FacilityWorkspace({ sitelinkId }: { sitelinkId: string }) {
   const [by, setBy] = useState<Breakdown>("type");
+  // Which rate counts as street. Remembered in this browser as a convenience.
+  const [street, setStreetState] = useState<StreetBasis>("standard");
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(STREET_KEY) === "push")
+        setStreetState("push");
+    } catch {
+      /* storage can be unavailable; the default is fine */
+    }
+  }, []);
+  const setStreet = (basis: StreetBasis) => {
+    setStreetState(basis);
+    try {
+      window.localStorage.setItem(STREET_KEY, basis);
+    } catch {
+      /* ignore */
+    }
+  };
   const {
     data: status,
     isLoading,
@@ -96,29 +117,56 @@ function FacilityWorkspace({ sitelinkId }: { sitelinkId: string }) {
               </TabsTrigger>
               <TabsTrigger value="demand">Marketing &amp; Demand</TabsTrigger>
               <TabsTrigger value="batch">Batch Builder</TabsTrigger>
-            <TabsTrigger value="tracking">Tracking</TabsTrigger>
-            <TabsTrigger value="past">Past Increases</TabsTrigger>
+              <TabsTrigger value="tracking">Tracking</TabsTrigger>
+              <TabsTrigger value="past">Past Increases</TabsTrigger>
               <TabsTrigger value="specials">Specials (review)</TabsTrigger>
             </TabsList>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Break down by</span>
-              <div className="inline-flex rounded-md border p-0.5">
-                {(["type", "size"] as const).map((k) => (
-                  <Button
-                    key={k}
-                    size="sm"
-                    variant={by === k ? "default" : "ghost"}
-                    className="h-7 px-3"
-                    onClick={() => setBy(k)}
-                  >
-                    {k === "type" ? "Unit type" : "Size"}
-                  </Button>
-                ))}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-muted-foreground"
+                  title="Which rate counts as street when judging whether a tenant is above or below the market"
+                >
+                  Street rate
+                </span>
+                <div className="inline-flex rounded-md border p-0.5">
+                  {(["standard", "push"] as const).map((k) => (
+                    <Button
+                      key={k}
+                      size="sm"
+                      variant={street === k ? "default" : "ghost"}
+                      className="h-7 px-3"
+                      onClick={() => setStreet(k)}
+                    >
+                      {STREET_BASIS_LABEL[k]}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Break down by</span>
+                <div className="inline-flex rounded-md border p-0.5">
+                  {(["type", "size"] as const).map((k) => (
+                    <Button
+                      key={k}
+                      size="sm"
+                      variant={by === k ? "default" : "ghost"}
+                      className="h-7 px-3"
+                      onClick={() => setBy(k)}
+                    >
+                      {k === "type" ? "Unit type" : "Size"}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
           <TabsContent value="street" className="space-y-6 pt-4">
-            <StreetPositionTab sitelinkId={sitelinkId} by={by} />
+            <StreetPositionTab
+              sitelinkId={sitelinkId}
+              by={by}
+              street={street}
+            />
           </TabsContent>
           <TabsContent value="stay" className="space-y-6 pt-4">
             <StayAnalysisTab sitelinkId={sitelinkId} by={by} />
@@ -127,7 +175,12 @@ function FacilityWorkspace({ sitelinkId }: { sitelinkId: string }) {
             <DemandTab sitelinkId={sitelinkId} by={by} />
           </TabsContent>
           <TabsContent value="batch" className="space-y-6 pt-4">
-            <BatchBuilderTab sitelinkId={sitelinkId} by={by} />
+            <BatchBuilderTab
+              sitelinkId={sitelinkId}
+              by={by}
+              street={street}
+              onStreetChange={setStreet}
+            />
           </TabsContent>
           <TabsContent value="tracking" className="space-y-6 pt-4">
             <TrackingTab sitelinkId={sitelinkId} by={by} />
@@ -177,7 +230,12 @@ export function RateIncreasesClient({
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-muted-foreground">Store</span>
           {facilities.map((f) => (
-            <Button key={f.id} size="sm" variant={f.id === site ? "default" : "outline"} onClick={() => choose(f.id)}>
+            <Button
+              key={f.id}
+              size="sm"
+              variant={f.id === site ? "default" : "outline"}
+              onClick={() => choose(f.id)}
+            >
               {f.name}
             </Button>
           ))}
