@@ -16,6 +16,11 @@ type ConnectionType = "cash" | "creditCard" | "ach";
 
 export type MatchPair = { bankTransactionId: number; dailyPaymentId: number };
 
+// Auto-match accepts a deposit up to this many days from the SiteLink date.
+// (The UI separately flags matches over LATE_DEPOSIT_DAYS — managers are
+// expected to get to the bank at least weekly.)
+const MAX_DEPOSIT_DAYS = 10;
+
 function daysBetween(a: string, b: string): number {
   return (
     Math.abs(new Date(a).getTime() - new Date(b).getTime()) /
@@ -60,7 +65,7 @@ function sitelinkAmt(
 
 // ─── Auto-match server action ──────────────────────────────────────────────
 // Replaces the broken /api/reconciliation/auto-match/run which requires
-// perfect same-day same-amount matches. This version allows ±5 day tolerance
+// perfect same-day same-amount matches. This version allows ±MAX_DEPOSIT_DAYS
 // and also tries combining consecutive daily payments to match a single bank
 // deposit (multi-day rollup).
 
@@ -219,18 +224,18 @@ export async function autoMatchAction(
         !usedPaymentIds.has(p.dailyPaymentId),
     );
 
-    // Phase 1: 1:1 exact amount, closest date within ±5 days
+    // Phase 1: 1:1 exact amount, closest date within MAX_DEPOSIT_DAYS
     for (const txn of unmatchedBank) {
       if (usedBankIds.has(txn.bankTransactionId)) continue;
 
       let bestPayment: (typeof payments)[0] | null = null;
-      let bestDays = 6;
+      let bestDays = MAX_DEPOSIT_DAYS + 1;
 
       for (const p of unmatchedPayments) {
         if (usedPaymentIds.has(p.dailyPaymentId)) continue;
         if (Math.abs(getAmt(p) - txn.amount) > 0.02) continue;
         const days = daysBetween(txn.transactionDate, p.date);
-        if (days <= 5 && days < bestDays) {
+        if (days <= MAX_DEPOSIT_DAYS && days < bestDays) {
           bestPayment = p;
           bestDays = days;
         }
@@ -274,13 +279,13 @@ export async function autoMatchAction(
       for (let i = 0; i < sortedPayments.length && !found; i++) {
         const p1 = sortedPayments[i];
         if (usedPaymentIds.has(p1.dailyPaymentId)) continue;
-        if (daysBetween(txn.transactionDate, p1.date) > 8) continue;
+        if (daysBetween(txn.transactionDate, p1.date) > MAX_DEPOSIT_DAYS) continue;
 
         for (let j = i + 1; j < sortedPayments.length && !found; j++) {
           const p2 = sortedPayments[j];
           if (usedPaymentIds.has(p2.dailyPaymentId)) continue;
           if (daysBetween(p1.date, p2.date) > 6) break; // too far apart
-          if (daysBetween(txn.transactionDate, p2.date) > 8) continue;
+          if (daysBetween(txn.transactionDate, p2.date) > MAX_DEPOSIT_DAYS) continue;
 
           const pairSum = getAmt(p1) + getAmt(p2);
           if (Math.abs(pairSum - txn.amount) <= 0.02) {
@@ -310,7 +315,7 @@ export async function autoMatchAction(
               const p3 = sortedPayments[k];
               if (usedPaymentIds.has(p3.dailyPaymentId)) continue;
               if (daysBetween(p2.date, p3.date) > 6) break;
-              if (daysBetween(txn.transactionDate, p3.date) > 10) continue;
+              if (daysBetween(txn.transactionDate, p3.date) > MAX_DEPOSIT_DAYS) continue;
 
               const tripleSum = getAmt(p1) + getAmt(p2) + getAmt(p3);
               if (Math.abs(tripleSum - txn.amount) <= 0.02) {
