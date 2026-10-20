@@ -25,6 +25,7 @@ import {
   CheckCheck,
   Pencil,
   Undo2,
+  Hourglass,
 } from "lucide-react";
 import {
   autoMatchAction,
@@ -177,6 +178,19 @@ function fmtDateFull(d: string) {
     "en-US",
     { month: "short", day: "numeric", year: "numeric" },
   );
+}
+
+// Managers are expected to get to the bank at least weekly; matches where the
+// deposit landed more than this many days after the SiteLink date get flagged.
+const LATE_DEPOSIT_DAYS = 6;
+
+// Calendar days from SiteLink date `from` to bank date `to` (YYYY-MM-DD)
+function daysAfter(from: string, to: string) {
+  const utc = (d: string) => {
+    const [y, m, day] = d.split("-").map(Number);
+    return Date.UTC(y, m - 1, day);
+  };
+  return Math.round((utc(to) - utc(from)) / 86_400_000);
 }
 
 function cardsTotal(p: DailyPayment) {
@@ -1552,6 +1566,8 @@ function MatchRow({
 
   if (row.type === "matched") {
     const hasDiff = Math.abs(row.diff) > 0.01;
+    const depositDays = daysAfter(row.date, row.bankDate);
+    const isLateDeposit = depositDays > LATE_DEPOSIT_DAYS;
     const isAch = row.subType === "ach";
     return (
       <tr
@@ -1607,6 +1623,22 @@ function MatchRow({
             <CheckCircle2 className="h-3.5 w-3.5" />
             {row.matchType === "automatic" ? "Auto" : "Matched"}
           </span>
+          {isLateDeposit && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className="ml-1.5 inline-flex align-middle text-amber-600 dark:text-amber-400"
+                  aria-label={`Late deposit: ${depositDays} days`}
+                >
+                  <Hourglass className="h-3.5 w-3.5" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                Late deposit: hit the bank {depositDays} days after the SiteLink date
+                (target: within {LATE_DEPOSIT_DAYS})
+              </TooltipContent>
+            </Tooltip>
+          )}
         </td>
         {isEditable && (
           <td className="p-3 text-right whitespace-nowrap">
