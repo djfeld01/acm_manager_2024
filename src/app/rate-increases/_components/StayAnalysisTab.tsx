@@ -96,7 +96,7 @@ export function StayAnalysisTab({ sitelinkId, by }: { sitelinkId: string; by: Br
                   <TableCell>
                     {s === o ? "All" : s.label}
                     {s.usedFallback && (
-                      <Badge variant="outline" className="ml-2" title="Too few move-outs to fit alone; using the overall Columbus curve">
+                      <Badge variant="outline" className="ml-2" title="Too few move-outs to fit alone; using the facility's overall curve">
                         shared curve
                       </Badge>
                     )}

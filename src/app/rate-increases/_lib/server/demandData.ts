@@ -97,7 +97,8 @@ export async function buildDemandHealth(
     seasonalIndex: seasonalIndexFromLeases(seasonRows, Number(asOf.slice(0, 4))),
     expectedMoveOutsPerMonth,
     vacantUnits,
-    unitTypes: [...UNIT_TYPE_GROUPS],
+    // Only the types this facility has, so a store without drive-ups shows no empty drive-up row.
+    unitTypes: UNIT_TYPE_GROUPS.filter((t) => units.some((u) => u.unitType === t)),
     sizes,
   });
 }

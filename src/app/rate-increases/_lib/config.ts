@@ -1,11 +1,12 @@
 /**
- * Facilities on (or piloting) the faster rate-increase schedule. Columbus is
- * the pilot. Kept as a list so adding a facility later is a one-line change.
+ * Facilities the rate-increase tools are switched on for. Columbus was the
+ * pilot; Sylvania was added next. Adding a store is one line here (its
+ * SiteLink ID), plus uploading that store's rent roll on the page.
  */
-export const PILOT_FACILITY_IDS = ["33884"] as const;
+export const RATE_INCREASE_FACILITY_IDS = ["33884", "50552"] as const;
 
-export function isPilotFacility(sitelinkId: string): boolean {
-  return (PILOT_FACILITY_IDS as readonly string[]).includes(sitelinkId);
+export function isRateIncreaseFacility(sitelinkId: string): boolean {
+  return (RATE_INCREASE_FACILITY_IDS as readonly string[]).includes(sitelinkId);
 }
 
 /** Our move-out records begin here; stays that ended earlier are invisible
