@@ -14,6 +14,7 @@ import { DemandTab } from "./DemandTab";
 import { SpecialsTab } from "./SpecialsTab";
 import { BatchBuilderTab } from "./BatchBuilderTab";
 import { TrackingTab } from "./TrackingTab";
+import { IncomeOutlookTab } from "./IncomeOutlookTab";
 import { PastIncreasesTab } from "./PastIncreasesTab";
 import type { Breakdown } from "./Breakdown";
 import { STREET_BASIS_LABEL, type StreetBasis } from "../_lib/street";
@@ -117,6 +118,7 @@ function FacilityWorkspace({ sitelinkId }: { sitelinkId: string }) {
               </TabsTrigger>
               <TabsTrigger value="demand">Marketing &amp; Demand</TabsTrigger>
               <TabsTrigger value="batch">Batch Builder</TabsTrigger>
+              <TabsTrigger value="outlook">Income Outlook</TabsTrigger>
               <TabsTrigger value="tracking">Tracking</TabsTrigger>
               <TabsTrigger value="past">Past Increases</TabsTrigger>
               <TabsTrigger value="specials">Specials (review)</TabsTrigger>
@@ -181,6 +183,9 @@ function FacilityWorkspace({ sitelinkId }: { sitelinkId: string }) {
               street={street}
               onStreetChange={setStreet}
             />
+          </TabsContent>
+          <TabsContent value="outlook" className="space-y-6 pt-4">
+            <IncomeOutlookTab sitelinkId={sitelinkId} street={street} />
           </TabsContent>
           <TabsContent value="tracking" className="space-y-6 pt-4">
             <TrackingTab sitelinkId={sitelinkId} by={by} />
