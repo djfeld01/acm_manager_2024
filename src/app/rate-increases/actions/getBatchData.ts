@@ -25,9 +25,22 @@ export interface SegmentContext {
   expectedMoveOutsPerMonth: number;
 }
 
+/** A unit with no tenant in the rent roll, for the review spreadsheet. */
+export interface VacantUnit {
+  unitId: string;
+  unitName: string | null;
+  unitType: string;
+  size: string;
+  standardRate: number;
+  pushRate: number;
+  isRentable: boolean;
+  daysVacant: number | null;
+}
+
 export interface BatchData {
   snapshotDate: string | null;
   tenants: BatchTenant[];
+  vacantUnits: VacantUnit[];
   overall: SegmentContext | null;
   byType: SegmentContext[];
   bySize: SegmentContext[];
@@ -37,7 +50,7 @@ export interface BatchData {
 export async function getBatchData(sitelinkId: string): Promise<BatchData> {
   await assertAccess(sitelinkId);
   const snap = await loadLatestSnapshot(sitelinkId);
-  if (!snap.date) return { snapshotDate: null, tenants: [], overall: null, byType: [], bySize: [] };
+  if (!snap.date) return { snapshotDate: null, tenants: [], vacantUnits: [], overall: null, byType: [], bySize: [] };
 
   const [stays, specials] = await Promise.all([
     loadStayInputs(sitelinkId, snap.rows),
@@ -70,8 +83,21 @@ export async function getBatchData(sitelinkId: string): Promise<BatchData> {
   const health = await buildDemandHealth(sitelinkId, today, snap.rows, stay);
 
   const tenants: BatchTenant[] = [];
+  const vacantUnits: VacantUnit[] = [];
   for (const r of snap.rows) {
-    if (!r.isRented || !r.ledgerId) continue;
+    if (!r.isRented || !r.ledgerId) {
+      vacantUnits.push({
+        unitId: r.unitId,
+        unitName: r.unitName,
+        unitType: r.unitType,
+        size: normalizeSize(r.size),
+        standardRate: r.standardRate ?? 0,
+        pushRate: r.pushRate ?? 0,
+        isRentable: r.isRentable,
+        daysVacant: r.daysVacant,
+      });
+      continue;
+    }
     const risk = stay.tenantRisk?.[r.ledgerId] ?? { d30: 0, d60: 0, d90: 0 };
     tenants.push({
       ledgerId: r.ledgerId,
@@ -118,6 +144,7 @@ export async function getBatchData(sitelinkId: string): Promise<BatchData> {
   return {
     snapshotDate: snap.date,
     tenants,
+    vacantUnits,
     overall: {
       label: "All",
       tenants: tenants.length,

@@ -179,6 +179,7 @@ function FacilityWorkspace({ sitelinkId }: { sitelinkId: string }) {
           <TabsContent value="batch" className="space-y-6 pt-4">
             <BatchBuilderTab
               sitelinkId={sitelinkId}
+              facilityName={status.facilityName}
               by={by}
               street={street}
               onStreetChange={setStreet}
