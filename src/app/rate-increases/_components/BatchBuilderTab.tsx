@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Lock } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileSpreadsheet, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,7 @@ import { getWaveEvidence } from "../actions/pastIncreases";
 import { deleteBatch, finalizeBatch, getBatch, listBatches, saveBatch, type BatchDetail } from "../actions/batches";
 import type { Breakdown } from "./Breakdown";
 import { withStreetRate, type StreetBasis } from "../_lib/street";
+import { buildBatchSpreadsheet } from "../_lib/batchSpreadsheet";
 import { BatchCandidatesTable, type Row } from "./BatchCandidatesTable";
 import { BatchExportPanel } from "./BatchExportPanel";
 import { BatchRulesForm } from "./BatchRulesForm";
@@ -35,11 +36,13 @@ type Manual = Record<string, { include?: boolean; newRent?: number }>;
 
 export function BatchBuilderTab({
   sitelinkId,
+  facilityName,
   by,
   street,
   onStreetChange,
 }: {
   sitelinkId: string;
+  facilityName: string;
   by: Breakdown;
   /** Which rate counts as street; set by the switch at the top of the page. */
   street: StreetBasis;
@@ -202,6 +205,32 @@ export function BatchBuilderTab({
     }
   }
 
+  async function downloadSpreadsheet() {
+    if (!data?.snapshotDate) return;
+    setBusy(true);
+    try {
+      const bytes = await buildBatchSpreadsheet(rows, data.vacantUnits, rules, {
+        facilityName,
+        batchName: name.trim(),
+        status: locked ? "final" : batchId ? "draft" : "unsaved",
+        snapshotDate: data.snapshotDate,
+      });
+      const url = URL.createObjectURL(
+        new Blob([bytes as BlobPart], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+      );
+      const a = document.createElement("a");
+      a.href = url;
+      const label = (name.trim() || "draft").replace(/[^\w-]+/g, "_");
+      a.download = `RateIncreases_${facilityName.replace(/[^\w-]+/g, "_")}_${label}_${rules.effectiveDate}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setMessage({ kind: "error", text: err instanceof Error ? err.message : "Could not build the spreadsheet" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function remove(id: number) {
     if (!window.confirm("Delete this draft?")) return;
     try {
@@ -317,6 +346,10 @@ export function BatchBuilderTab({
             <Button variant="outline" disabled={busy || !name.trim() || selected.length === 0} onClick={finalize}>
               Finalize…
             </Button>
+            <Button variant="outline" disabled={busy} onClick={() => void downloadSpreadsheet()}>
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Download spreadsheet
+            </Button>
             {batchId && (
               <Button variant="ghost" onClick={reset} disabled={busy}>
                 Start a new batch
@@ -326,9 +359,15 @@ export function BatchBuilderTab({
         </Card>
       )}
       {locked && (
-        <Button variant="outline" onClick={reset}>
-          Start a new batch
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          <Button variant="outline" disabled={busy} onClick={() => void downloadSpreadsheet()}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Download spreadsheet
+          </Button>
+          <Button variant="outline" onClick={reset}>
+            Start a new batch
+          </Button>
+        </div>
       )}
 
       {message && (
