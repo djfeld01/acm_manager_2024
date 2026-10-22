@@ -1,0 +1,166 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rate erosion prototype</title>
+<style>
+:root{--bg:#fcfcfb;--ink:#0b0b0b;--sub:#52514e;--mut:#898781;--line:#e1e0d9;--card:#f3f2ee}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,system-ui,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:20px 16px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}.note{color:var(--sub);font-size:13px;margin:0 0 16px}
+.row{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin:6px 0;font-size:13px;color:var(--sub)}
+.row b{font-weight:500;color:var(--ink);min-width:70px}
+.fbar{position:sticky;top:0;z-index:5;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:10px 0 4px}
+.fhead{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--sub);cursor:pointer;user-select:none}
+.fhead .tog{font-weight:500;color:var(--ink);white-space:nowrap}.fhead .sum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbody{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin-top:8px;font-size:13px;color:var(--sub)}
+.fbar.closed .fbody{display:none}
+.dd{position:relative}
+.ddb{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:5px 10px;font:inherit;font-size:13px;color:var(--ink);cursor:pointer;max-width:340px}
+.ddb small{color:var(--mut);font-size:12px}.ddb span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ddb:after{content:"\25BE";color:var(--mut)}
+.ddp{position:absolute;top:calc(100% + 4px);left:0;z-index:10;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:10px 12px;min-width:280px;max-width:min(420px,calc(100vw - 32px));max-height:70vh;overflow:auto}
+.qp{display:flex;flex-wrap:wrap;gap:4px;padding-bottom:8px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+.qp button{border:1px solid var(--line);border-radius:6px;background:#fff;padding:2px 8px;font:inherit;font-size:12px;cursor:pointer}
+.qp button.on{background:#2a78d6;border-color:#2a78d6;color:#fff}
+.grp{margin:6px 0 2px;font-weight:500;color:var(--ink)}.it{padding-left:20px}
+.ddp label{display:flex;align-items:baseline;gap:6px;padding:2px 0;cursor:pointer;color:var(--ink)}.ddp label small{color:var(--mut)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:14px 0}
+.k{background:var(--card);border-radius:8px;padding:10px 12px}.k small{color:var(--sub);font-size:12px}.k div{font-size:20px;font-weight:500}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--sub);margin:16px 0 4px}
+.legend span{display:flex;align-items:center;gap:5px}.sw{width:16px}
+.box{position:relative;height:340px}.box.s{height:170px}
+h2{font-size:15px;font-weight:500;margin:22px 0 2px}
+</style></head><body><main>
+<h1>Street rate vs. what tenants pay</h1>
+<p class="note">Built from SiteLink Move-Ins &amp; Move-Outs (2000–2026), Rent Change History and month-end rent rolls (May 2025–Sep 2026). Per square foot, month-end. Street = standard rate recorded at each move-in for that store, unit type and size, carried forward. Current tenants are exact; departed tenants are exact on each month-end rent roll, otherwise their rent between move-in and move-out is estimated (raises at anniversaries).</p>
+<div class="fbar" id="fbar">
+<div class="fhead" id="fhead"><span class="tog" id="ftog">Filters ▾</span><span class="sum" id="fsum"></span></div>
+<div class="fbody">
+<div class="dd" id="dd-stores"></div><div class="dd" id="dd-types"></div><div class="dd" id="dd-sizes"></div>
+<label>From <select id="from"></select></label>
+<label title="Only include stores that already had tenants at the start date, so acquisitions don't shift the average"><input type="checkbox" id="mix"> Same stores throughout</label>
+</div></div>
+<div class="kpis" id="kpis"></div>
+<div class="legend"><span><span class="sw" style="border-top:2px dashed #888780"></span>Street $/sf</span><span><span class="sw" style="border-top:2.5px solid #2a78d6"></span>In-place $/sf (what tenants pay)</span><span><span class="sw" style="border-top:2px dotted #eb6834"></span>Move-in rate $/sf (3-mo avg)</span></div>
+<div class="box"><canvas id="c1"></canvas></div>
+<h2>In-place rent vs. street</h2><p class="note">How current tenants' rent compares with the street rate for the same units, as a percentage. Above 0 (blue): tenants pay more than street, so when they move out and the unit re-rents at street, rent drops by about this much. Below 0 (orange): tenants pay less than street, so turnover raises rent. New tenants often start below street because of specials, so the real drop is usually a little bigger.</p>
+<div class="box s"><canvas id="c2"></canvas></div>
+<h2>Occupancy</h2><p class="note">Share of units occupied each month for your selection, from SiteLink's Occupied History reports (available from Sep 2012).</p>
+<div class="box s"><canvas id="c3"></canvas></div>
+<h2 id="dottitle">Where each tenant sits</h2>
+<p class="note">Pick any store. One dot per tenant in place at month-end, placed by move-in date and rent per square foot. Uses the unit type and size filters above. Hollow dots moved out within the following 12 months.</p>
+<div class="row"><b>Store</b><select id="dotstore"></select><span id="dotstatus"></span></div>
+<div class="row"><b>As of</b><input type="range" id="asof" step="1" style="flex:1;min-width:200px"><span id="asofl" style="font-weight:500;color:var(--ink);min-width:70px"></span></div>
+<div class="kpis" id="kpis4"></div>
+<div class="legend"><span><span class="sw" style="border-top:2px dashed #888780"></span>Street $/sf (this store, filtered mix)</span><span><span style="width:8px;height:8px;border-radius:50%;background:#2a78d6"></span>Paying above their unit's street rate</span><span><span style="width:8px;height:8px;background:#eb6834"></span>At or below street</span><span><span style="width:8px;height:8px;border-radius:50%;border:1.5px solid #5f5e5a"></span>Moved out within 12 months</span></div>
+<div class="box" style="height:460px"><canvas id="c4"></canvas></div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const D=__DATA__;
+for(const k in D.series){const[off,...arrs]=D.series[k];D.series[k]=arrs.map(a=>{const f=new Array(D.months.length).fill(0);a.forEach((v,i)=>f[off+i]=v);return f})}
+let DT={t:[],street:{}};const cache={};
+const M=D.months,keys=Object.keys(D.series);
+const stores=[...new Set(keys.map(k=>k.split('|')[0]))].sort(),types=['Climate','Drive-up','Inside non-climate','Parking','Other'];
+const NAMES={L006:'Advantage Miamisburg',L007:'A+ Toledo',L008:'Fort Security',L011:'Advantage Hamilton',L012:'Cove Point',L014:'A+ Maumee',L015:'Springfield Storage Depot',L016:'A+ Columbus',L017:'Beach',L020:'Stealth',L021:'Stealth Clearcreek',L022:'Maryland Self Storage',L023:'Beach South',L024:'Triskett Road',L025:'Breakwater',L027:'A+ Sylvania'};
+const st=new Set(stores),ty=new Set(['Climate','Drive-up','Inside non-climate']),szOff=new Set();const szOn=z=>!szOff.has(z);
+const REGIONS=[['Maryland','MD',['L012','L022','L023','L017']],['Columbus','OH',['L016']],['Toledo','OH',['L014','L007','L027']],['Cleveland','OH',['L025','L024']],['Dayton / Cincinnati','OH',['L011','L006','L020','L021','L015']],['Fort Wayne','IN',['L008']]];
+const ZIP={L012:'Lusby MD',L022:'Lusby MD',L023:'Prince Frederick MD',L017:'Owings MD',L016:'Columbus OH',L014:'Maumee OH',L007:'Toledo OH',L027:'Toledo OH',L025:'Cleveland OH',L024:'Cleveland OH',L011:'Hamilton OH',L006:'Miamisburg OH',L020:'Beavercreek OH',L021:'Centerville OH',L015:'Springfield OH',L008:'Fort Wayne IN'};
+const listed=REGIONS.flatMap(r=>r[2]),extra=stores.filter(s=>!listed.includes(s));if(extra.length)REGIONS.push(['Other','',extra]);
+REGIONS.forEach(r=>r[2]=r[2].filter(s=>stores.includes(s)));
+const STATES=[['Ohio','OH'],['Maryland','MD'],['Indiana','IN']].map(([l,c])=>[l,REGIONS.filter(r=>r[1]===c).flatMap(r=>r[2])]);
+const area=z=>z.split('x').reduce((a,b)=>a*b,1),BUCKETS=[['≤50 sf',a=>a<=50],['51–150 sf',a=>a>50&&a<=150],['>150 sf',a=>a>150]];
+const ALLDIMS=[...new Set(keys.map(k=>k.split('|')[2]))].sort((a,b)=>area(a)-area(b)||a.localeCompare(b));
+const eqSet=(set,list,univ)=>{const sel=univ.filter(x=>set(x));return sel.length===list.length&&list.every(x=>set(x))};
+function sizeInfo(){const i0=M.indexOf(fr.value+'-01'),last=M.length-1,now={},seen=new Set();
+ keys.forEach(k=>{const[s,g,z]=k.split('|');if(!st.has(s)||!ty.has(g))return;const v=D.series[k];if(v[1].slice(i0).some(x=>x))seen.add(z);now[z]=(now[z]||0)+v[4][last]});
+ const vis=ALLDIMS.filter(z=>seen.has(z));
+ const groups=BUCKETS.map(([l,f])=>{const ds=vis.filter(z=>f(area(z)));return{l,ds,common:ds.filter(z=>(now[z]||0)>=5),rare:ds.filter(z=>(now[z]||0)<5)}}).filter(g=>g.ds.length);
+ return{vis,now,groups}}
+const names=(list,f)=>list.map(f).join(', ');
+function storeLabel(){const has=s=>st.has(s);if(st.size===stores.length)return'All stores';if(!st.size)return'None';
+ for(const[l,list]of[...STATES,...REGIONS.map(r=>[r[0],r[2]])])if(list.length&&eqSet(has,list,stores))return l;
+ return st.size<=2?names([...st],s=>NAMES[s]||s):st.size+' stores'}
+function typeLabel(){if(ty.size===types.length)return'All types';if(!ty.size)return'None';return ty.size<=3?names(types.filter(t=>ty.has(t)),t=>t):ty.size+' types'}
+function sizeLabel(I){const sel=I.vis.filter(szOn);if(sel.length===I.vis.length)return'All sizes';if(!sel.length)return'None';
+ const parts=[];let rest=sel.slice();I.groups.forEach(g=>{if(g.ds.every(szOn)){parts.push(g.l);rest=rest.filter(z=>!g.ds.includes(z))}});
+ if(rest.length>3)return sel.length+' sizes';return parts.concat(rest).join(' + ')}
+let openDD=null;
+function ddRender(id,title,label,build){const host=document.getElementById(id);const open=openDD===id;
+ host.innerHTML='';const b=document.createElement('button');b.className='ddb';b.innerHTML='<small>'+title+'</small><span></span>';b.querySelector('span').textContent=label;
+ b.onclick=e=>{e.stopPropagation();openDD=open?null:id;renderFilters()};host.appendChild(b);
+ if(open){const p=document.createElement('div');p.className='ddp';p.onclick=e=>e.stopPropagation();build(p);host.appendChild(p);const r=p.getBoundingClientRect();if(r.right>innerWidth-8){p.style.left='auto';p.style.right='0'}}}
+function quickRow(p,items){const q=document.createElement('div');q.className='qp';items.forEach(([l,on,fn])=>{const b=document.createElement('button');b.textContent=l;if(on)b.className='on';b.onclick=fn;q.appendChild(b)});p.appendChild(q)}
+function cb(p,text,hint,state,fn,cls){const l=document.createElement('label');if(cls)l.className=cls;const c=document.createElement('input');c.type='checkbox';c.checked=state===true;c.indeterminate=state==='mixed';c.onchange=fn;l.appendChild(c);const tx=document.createElement('span');tx.style.whiteSpace='nowrap';tx.textContent=text;l.appendChild(tx);if(hint){const s=document.createElement('small');s.textContent=hint;l.appendChild(s)}p.appendChild(l)}
+const tri=(list,on)=>{const n=list.filter(on).length;return n===0?false:n===list.length?true:'mixed'};
+function renderFilters(){
+ const I=sizeInfo();
+ const setStores=list=>{st.clear();list.forEach(s=>st.add(s));drawAll()},has=s=>st.has(s);
+ ddRender('dd-stores','Stores',storeLabel(),p=>{
+  quickRow(p,[['All',st.size===stores.length,()=>setStores(stores)],...STATES.filter(s=>s[1].length).map(([l,list])=>[l,eqSet(has,list,stores),()=>setStores(list)]),['None',!st.size,()=>setStores([])]]);
+  REGIONS.forEach(([name,,list])=>{if(!list.length)return;const s=tri(list,has);
+   cb(p,name,'',s,()=>{list.forEach(x=>s===true?st.delete(x):st.add(x));drawAll()},'grp');
+   list.forEach(x=>cb(p,NAMES[x]||x,ZIP[x]||'',st.has(x),()=>{st.has(x)?st.delete(x):st.add(x);drawAll()},'it'))})});
+ ddRender('dd-types','Unit types',typeLabel(),p=>{
+  quickRow(p,[['All',ty.size===types.length,()=>{types.forEach(t=>ty.add(t));drawAll()}],['Storage (no parking)',eqSet(t=>ty.has(t),['Climate','Drive-up','Inside non-climate'],types),()=>{ty.clear();['Climate','Drive-up','Inside non-climate'].forEach(t=>ty.add(t));drawAll()}],['None',!ty.size,()=>{ty.clear();drawAll()}]]);
+  types.forEach(t=>cb(p,t,'',ty.has(t),()=>{ty.has(t)?ty.delete(t):ty.add(t);drawAll()}))});
+ const onlyDims=list=>{szOff.clear();ALLDIMS.forEach(z=>{if(!list.includes(z))szOff.add(z)});drawAll()};
+ ddRender('dd-sizes','Sizes',sizeLabel(I),p=>{
+  quickRow(p,[['All',eqSet(szOn,I.vis,I.vis),()=>onlyDims(I.vis)],...I.groups.map(g=>[g.l,eqSet(szOn,g.ds,I.vis),()=>onlyDims(g.ds)]),['None',!I.vis.some(szOn),()=>onlyDims([])]]);
+  I.groups.forEach(g=>{const s=tri(g.ds,szOn);cb(p,g.l,'',s,()=>{g.ds.forEach(z=>s===true?szOff.add(z):szOff.delete(z));drawAll()},'grp');
+   g.common.forEach(z=>cb(p,z,(I.now[z]||0).toLocaleString()+' occupied',szOn(z),()=>{szOff.has(z)?szOff.delete(z):szOff.add(z);drawAll()},'it'));
+   if(g.rare.length){const r=tri(g.rare,szOn);cb(p,g.rare.length+' uncommon sizes',g.rare.join(', '),r,()=>{g.rare.forEach(z=>r===true?szOff.add(z):szOff.delete(z));drawAll()},'it')}})});
+ fsum.textContent='Stores: '+storeLabel()+'  ·  Unit types: '+typeLabel()+'  ·  Sizes: '+sizeLabel(I)+'  ·  From '+fr.value+(mix.checked?'  ·  Same stores':'')}
+let fClosed=false;fhead.onclick=()=>{fClosed=!fClosed;fbar.classList.toggle('closed',fClosed);ftog.textContent='Filters '+(fClosed?'▸':'▾');fsum.style.display=''};
+document.addEventListener('click',()=>{if(openDD){openDD=null;renderFilters()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&openDD){openDD=null;renderFilters()}});
+const fr=document.getElementById('from');for(let y=2012;y<=2025;y++)fr.add(new Option(y,y));fr.value=2018;fr.onchange=drawAll;mix.onchange=drawAll;
+const ax={grid:{color:'#e1e0d9'},ticks:{color:'#898781',font:{size:11}},border:{color:'#e1e0d9'}};
+const mk=(id,y)=>new Chart(document.getElementById(id),{type:'line',data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},elements:{point:{radius:0}},plugins:{legend:{display:false}},scales:{x:{...ax,grid:{display:false},ticks:{...ax.ticks,maxTicksLimit:12}},y:{...ax,ticks:{...ax.ticks,callback:y}}}}});
+const usd=v=>'$'+v.toFixed(2),pct=v=>(v>0?'+':'')+v.toFixed(0)+'%';
+const c1=mk('c1',usd),c2=mk('c2',pct),c3=mk('c3',v=>v.toFixed(0)+'%');
+c3.options.plugins.tooltip={callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y==null?'—':c.parsed.y.toFixed(1)+'%')}};
+c1.options.plugins.tooltip={callbacks:{label:c=>c.dataset.label+': '+(c.parsed.y==null?'—':usd(c.parsed.y))}};
+c2.options.plugins.tooltip={callbacks:{label:c=>c.dataset.label+': '+pct(c.parsed.y)}};
+function draw(){
+ const i0=M.indexOf(fr.value+'-01'),n=M.length;let ks=keys.filter(k=>{const[s,g,z]=k.split('|');return st.has(s)&&ty.has(g)&&szOn(z)});
+ if(mix.checked)ks=ks.filter(k=>{const s=k.split('|')[0];return keys.some(k2=>k2.startsWith(s+'|')&&D.series[k2][1][i0]>0)});
+ const T=[...Array(9)].map(()=>new Array(n).fill(0));ks.forEach(k=>D.series[k].forEach((a,j)=>a.forEach((v,i)=>T[j][i]+=v)));
+ const L=M.slice(i0),ip=[],sv=[],mi=[],gap=[],units=[],mod=[],oc=[];
+ for(let i=i0;i<n;i++){const A=T[1][i];ip.push(A?T[0][i]/A:null);sv.push(A?T[2][i]/A:null);gap.push(A?100*(T[0][i]/T[2][i]-1):null);units.push(T[4][i]);mod.push(T[0][i]?100*T[3][i]/T[0][i]:null);oc.push(T[8][i]?100*T[7][i]/T[8][i]:null);
+  let r=0,a=0;for(let j=Math.max(0,i-2);j<=i;j++){r+=T[5][j];a+=T[6][j]}mi.push(a?r/a:null)}
+ c1.data.labels=c2.data.labels=c3.data.labels=L;
+ c1.data.datasets=[{label:'Street',data:sv,borderColor:'#888780',borderDash:[6,4],borderWidth:2},{label:'In-place',data:ip,borderColor:'#2a78d6',borderWidth:2.5},{label:'Move-in',data:mi,borderColor:'#eb6834',borderDash:[2,3],borderWidth:2}];
+ c2.data.datasets=[{label:'In-place vs street',data:gap,borderColor:'#2a78d6',borderWidth:2,fill:{target:{value:0},above:'rgba(42,120,214,.12)',below:'rgba(235,104,52,.12)'}}];
+ c3.data.datasets=[{label:'Occupancy',data:oc,borderColor:'#1baf7a',borderWidth:2,spanGaps:false}];
+ c1.update();c2.update();c3.update();
+ const last=ip.length-1,j3=Math.max(0,last-36),pk=sv.reduce((b,v,i)=>v!=null&&v>(sv[b]??-1)?i:b,0);
+ const K=[['Street $/sf now',usd(sv[last]||0)],['Street peak',usd(sv[pk]||0)+' ('+L[pk]+')'],['In-place $/sf now',usd(ip[last]||0)],['In-place vs 3 yrs ago',(ip[last]-ip[j3]>=0?'+':'-')+usd(Math.abs(ip[last]-ip[j3]))],['Paying above street',pct(gap[last]||0)]];
+ if(oc[last]!=null)K.push(['Occupancy now',oc[last].toFixed(1)+'%'+(oc[j3]!=null?' ('+(oc[last]-oc[j3]>=0?'+':'')+(oc[last]-oc[j3]).toFixed(1)+' pts vs 3 yrs ago)':'')]);
+ let er=0,rt=0;for(let i=i0;i<n;i++){er+=T[3][i];rt+=T[0][i]}
+ K.push(['Estimated share of rent, '+fr.value+'–now',(rt?Math.round(100*er/rt):0)+'%','Rent we estimated rather than read from SiteLink. Current tenants are always exact, and every month from May 2025 on is exact (month-end rent rolls). Estimates checked against those rent rolls came out within 0.4% in total.']);
+ kpis.innerHTML=K.map(([a,b,t])=>`<div class="k"${t?` title="${t}"`:''}><small>${a}${t?' ⓘ':''}</small><div>${b}</div></div>`).join('')}
+const asof=document.getElementById('asof');asof.min=0;asof.max=M.length-1;asof.value=M.length-13;asof.oninput=draw4;
+const c4=new Chart(document.getElementById('c4'),{type:'scatter',data:{datasets:[]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{filter:c=>c.datasetIndex>0,callbacks:{label:c=>c.raw.l}}},scales:{x:{...ax,type:'linear',grid:{display:false},ticks:{...ax.ticks,stepSize:1,callback:v=>Number.isInteger(v)?v:''}},y:{...ax,ticks:{...ax.ticks,callback:usd}}}}});
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],ym=y=>{const yy=Math.floor(y);return MON[Math.floor((y-yy)*12)]+' '+yy};
+function draw4(){
+ const code=dotstore.value,A=+asof.value,aEnd=2012+(A+1)/12;asofl.textContent=M[A];
+ const above=[],below=[],gone=[];let gr=0,ga=0,gs=0,n=0,na=0;
+ for(const[din,out,a,g,z,sk,steps,ex,dim]of DT.t){
+  if(!ty.has(g)||!szOn(dim)||din>=aEnd||(out!=null&&out<=A))continue;
+  let r=steps[0][1];for(const[i,v]of steps){if(i<=A)r=v;else break}
+  const sv=DT.street[sk]?DT.street[sk][A]:null,y=r/a,isAbove=sv!=null&&r>sv+0.5;n++;if(isAbove)na++;
+  const p={x:din,y,l:dim+' · moved in '+ym(din)+' · $'+r.toFixed(0)+'/mo ($'+y.toFixed(2)+'/sf)'+(sv?' · street $'+sv.toFixed(0):'')};
+  if(out!=null&&out<=A+12){gone.push(p);gr+=r;ga+=a;gs+=sv||r}else(isAbove?above:below).push(p)}
+ const line=[];for(let i=0;i<=A;i++){let ar=0,s=0;keys.forEach(k=>{const[st_,g,z]=k.split('|');if(st_===code&&ty.has(g)&&szOn(z)){ar+=D.series[k][1][i];s+=D.series[k][2][i]}});if(ar)line.push({x:2012+(i+0.5)/12,y:s/ar})}
+ c4.data.datasets=[{type:'line',data:line,borderColor:'#888780',borderDash:[6,4],borderWidth:2,pointRadius:0},
+  {data:above,backgroundColor:'rgba(42,120,214,.55)',pointRadius:2.5},{data:below,backgroundColor:'rgba(235,104,52,.6)',pointStyle:'rect',pointRadius:2.5},
+  {data:gone,backgroundColor:'transparent',borderColor:'#5f5e5a',borderWidth:1.1,pointRadius:3.2}];
+ c4.update();
+ const K=[['Tenants in place',n.toLocaleString()],['Paying above street',n?Math.round(100*na/n)+'%':'—'],['Left within 12 mo',gone.length.toLocaleString()]];
+ if(ga)K.push(['Leavers paid vs street',usd(gr/ga)+' vs '+usd(gs/ga)+' /sf']);
+ kpis4.innerHTML=K.map(([a,b])=>`<div class="k"><small>${a}</small><div>${b}</div></div>`).join('')}
+function drawAll(){renderFilters();draw();draw4()}
+REGIONS.flatMap(r=>r[2]).forEach(s=>dotstore.add(new Option(s+(NAMES[s]?' · '+NAMES[s]:''),s)));dotstore.value=stores.includes('L016')?'L016':stores[0];
+async function loadStore(){const code=dotstore.value;dottitle.textContent=code+(NAMES[code]?' ('+NAMES[code]+')':'')+': where each tenant sits';
+ if(!cache[code]){dotstatus.textContent='Loading…';try{cache[code]=await (await fetch('__DETAIL_DIR__/'+code+'.json')).json();dotstatus.textContent=''}catch(e){dotstatus.textContent="Couldn't load this store's tenants. Open the page through the local server, not as a file.";return}}
+ if(dotstore.value!==code)return;DT=cache[code];draw4()}
+dotstore.onchange=loadStore;renderFilters();draw();loadStore();
+</script></body></html>
