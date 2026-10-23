@@ -56,6 +56,7 @@ const vsStreet = (rent: number, street: number) => (street > 0 ? rent / street -
 /** The Note column: why a tenant is or isn't in the batch, including hand changes. */
 function noteFor(r: Row, rules: BatchRules): string {
   const c = r.c;
+  if (r.fileNote) return noteOf(r, rules).label;
   if (c.reason === null && !r.included) return "Taken out by hand";
   if (c.reason === null && r.included && r.newRent !== c.newRent) return "Rent changed by hand";
   return noteOf(r, rules).label;

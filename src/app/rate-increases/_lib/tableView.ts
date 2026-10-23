@@ -8,6 +8,8 @@ export interface Row {
   included: boolean;
   /** Rent that will be sent if included; null when no rent can be worked out. */
   newRent: number | null;
+  /** A note carried over from an imported spreadsheet (e.g. "Hold?"). */
+  fileNote?: string | null;
 }
 
 export type SortKey =
@@ -63,6 +65,7 @@ export function rowWarning(r: Row, rules: BatchRules): string | null {
 export function noteOf(r: Row, rules: BatchRules): { key: string; label: string } {
   const w = rowWarning(r, rules);
   if (w) return { key: "warning", label: w };
+  if (r.fileNote) return { key: "file-note", label: `Spreadsheet note: ${r.fileNote}` };
   if (r.c.reason && r.included) return { key: "by-hand", label: "Added by hand" };
   if (r.c.reason) return { key: r.c.reason, label: REASON_LABEL[r.c.reason] };
   // Only while the rent is still the one the rules chose (not hand-edited).
