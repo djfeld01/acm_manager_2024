@@ -27,12 +27,14 @@ import { withStreetRate, type StreetBasis } from "../_lib/street";
 import { buildBatchSpreadsheet } from "../_lib/batchSpreadsheet";
 import { BatchCandidatesTable, type Row } from "./BatchCandidatesTable";
 import { BatchExportPanel } from "./BatchExportPanel";
+import { BatchImportPanel } from "./BatchImportPanel";
+import type { ImportPlan, ImportSheet } from "../_lib/importBatch";
 import { BatchRulesForm } from "./BatchRulesForm";
 import { BatchSummary } from "./BatchSummary";
 import { fmtMoney } from "./format";
 import { TabLoading } from "./Stat";
 
-type Manual = Record<string, { include?: boolean; newRent?: number }>;
+type Manual = Record<string, { include?: boolean; newRent?: number; note?: string }>;
 
 export function BatchBuilderTab({
   sitelinkId,
@@ -83,7 +85,7 @@ export function BatchBuilderTab({
         const m = manual[c.tenant.ledgerId];
         const included = m?.include ?? c.reason === null;
         const newRent = m?.newRent ?? c.newRent ?? (included ? suggestRent(c.tenant, rules).newRent : null);
-        return { c, included: included && newRent !== null, newRent };
+        return { c, included: included && newRent !== null, newRent, fileNote: m?.note ?? null };
       }),
     [candidates, manual, rules]
   );
@@ -231,6 +233,26 @@ export function BatchBuilderTab({
     }
   }
 
+  /** Replace the batch with an imported spreadsheet: its tenants in, at its rents; everyone else out. */
+  function applyImport(sheet: ImportSheet, plan: ImportPlan) {
+    const include = new Map(plan.include.map((i) => [i.ledgerId, i]));
+    const held = new Map(plan.held.map((h) => [h.ledgerId, h.flag]));
+    const flagOf = new Map(sheet.rows.filter((r) => r.flag).map((r) => [r.ledgerId, r.flag!]));
+    const next: Manual = {};
+    for (const c of candidates) {
+      const id = c.tenant.ledgerId;
+      const inc = include.get(id);
+      next[id] = inc ? { include: true, newRent: inc.newRent, note: flagOf.get(id) } : { include: false, note: held.get(id) };
+    }
+    setManual(next);
+    if (sheet.effectiveDate) setRules({ ...ruleState, effectiveDate: sheet.effectiveDate });
+    if (!name.trim()) setName(`${facilityName} – ${sheet.name.trim()}`);
+    setMessage({
+      kind: "ok",
+      text: `Loaded "${sheet.name.trim()}": ${plan.include.length} tenants in the batch${plan.held.length ? `, ${plan.held.length} held` : ""}. Review below, then save or finalize.`,
+    });
+  }
+
   async function remove(id: number) {
     if (!window.confirm("Delete this draft?")) return;
     try {
@@ -314,6 +336,8 @@ export function BatchBuilderTab({
           </div>
         </CardContent>
       </Card>
+
+      {!locked && <BatchImportPanel tenants={tenants} disabled={busy} onApply={applyImport} />}
 
       <BatchSummary
         summary={summary}

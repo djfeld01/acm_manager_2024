@@ -63,7 +63,7 @@ const unescapeXml = (s: string) =>
     .replace(/&apos;/g, "'")
     .replace(/&amp;/g, "&");
 
-function colIndex(letters: string): number {
+export function colIndex(letters: string): number {
   let n = 0;
   for (const ch of letters) n = n * 26 + ch.charCodeAt(0) - 64;
   return n;
@@ -75,7 +75,7 @@ export function excelSerial(iso: string): number {
   return Math.round(Date.UTC(y, m - 1, d) / 86400000) + 25569;
 }
 
-function sharedStringsOf(xml: string): string[] {
+export function sharedStringsOf(xml: string): string[] {
   const out: string[] = [];
   const re = /<si\b[^>]*>([\s\S]*?)<\/si>|<si\b[^>]*\/>/g;
   let m: RegExpExecArray | null;
@@ -94,7 +94,7 @@ function findCell(rowXml: string, ref: string): RegExpExecArray | null {
   return new RegExp(`<c r="${ref}"(?:\\s[^>]*?)?(?:/>|>[\\s\\S]*?</c>)`).exec(rowXml);
 }
 
-function readCell(cell: string | null, strings: string[]): string {
+export function readCell(cell: string | null, strings: string[]): string {
   if (!cell) return "";
   const type = /\bt="(\w+)"/.exec(cell)?.[1];
   if (type === "inlineStr") {
