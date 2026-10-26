@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import type { PayPeriod } from "@/db/schema/payPeriod";
 import {
   parseTimecardCsv,
+  paycorDateToIso,
   type EarlyClockIn,
   type MissedPunch,
 } from "@/lib/parseTimecardCsv";
@@ -111,7 +112,13 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
     setEarlyClockIns(null);
     setMissedPunches(null);
     try {
-      const parsed = await parseTimecardCsv(file);
+      const period = payPeriods.find(
+        (p) => p.payPeriodId === selectedPayPeriodId
+      );
+      const parsed = await parseTimecardCsv(
+        file,
+        period ? { start: period.startDate, end: period.endDate } : undefined
+      );
       const reconciled = await reconcileTimecard(
         selectedPayPeriodId,
         parsed.employees,
@@ -206,6 +213,22 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
         )
       )
     : [];
+  // The export usually covers a rolling window, so just summarize the
+  // ignored dates rather than listing each one.
+  const outOfRangeIso = (result?.outOfRangeDates ?? [])
+    .map((d) => paycorDateToIso(d))
+    .filter((d): d is string => d != null)
+    .sort();
+  const outOfRangeSpan =
+    outOfRangeIso.length > 0
+      ? outOfRangeIso.length === 1
+        ? format(parseAsLocalDate(outOfRangeIso[0]), "MM/dd/yyyy")
+        : `${format(parseAsLocalDate(outOfRangeIso[0]), "MM/dd/yyyy")} – ${format(
+            parseAsLocalDate(outOfRangeIso[outOfRangeIso.length - 1]),
+            "MM/dd/yyyy"
+          )}`
+      : null;
+
   // Gross/Net only ever come from the Pre-Post Employee Export — show the
   // columns only when at least one row actually has them.
   const showPayColumns = sortedEmployees.some((e) => e.grossPay != null || e.netPay != null);
@@ -278,21 +301,11 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
       {result && (
         <>
           {result.outOfRangeDates.length > 0 && (
-            <Card className="border-destructive/50">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-2 text-sm">
-                  <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-                  <div>
-                    <span className="font-medium">
-                      {result.outOfRangeDates.length} punch date
-                      {result.outOfRangeDates.length !== 1 ? "s" : ""} outside this pay
-                      period&apos;s range:
-                    </span>{" "}
-                    {result.outOfRangeDates.join(", ")}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="text-sm text-muted-foreground">
+              Ignored {result.outOfRangeDates.length} date
+              {result.outOfRangeDates.length !== 1 ? "s" : ""} outside this pay period
+              {outOfRangeSpan && ` (${outOfRangeSpan})`}.
+            </div>
           )}
 
           {result.unmappedDepartments.length > 0 && (

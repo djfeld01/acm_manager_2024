@@ -65,7 +65,8 @@ export interface MissedPunch {
 export interface ParsedTimecard {
   employees: EmployeeTimecardSummary[];
   /** Every distinct punch date seen in the file (MM/DD/YYYY, as Paycor
-   *  writes it), for validating against the selected pay period's range. */
+   *  writes it), including dates outside `range` — so the page can say which
+   *  were ignored. */
   allDates: string[];
   /** Punches with an "In Punch" before the store opens, in file order. */
   earlyClockIns: EarlyClockIn[];
@@ -73,6 +74,14 @@ export interface ParsedTimecard {
    *  order. Paycor's "Missed Punch" exception isn't used — it flags the
    *  same rows, so it only duplicated these. */
   missedPunches: MissedPunch[];
+}
+
+/** "10/08/2026" or "10/8/26" → "2026-10-08". */
+export function paycorDateToIso(value: string): string | null {
+  const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  if (!m) return null;
+  const year = m[3].length === 2 ? `20${m[3]}` : m[3];
+  return `${year}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
 }
 
 /** "8:42 AM" / "08:42:00 PM" / "20:42" → minutes after midnight. */
@@ -129,7 +138,13 @@ function emptySummary(
  * Reg/OT have no counterpart in the app (it doesn't track worked hours) and
  * pass straight through; everything else feeds the reconciliation compare.
  */
-export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
+export async function parseTimecardCsv(
+  file: File,
+  /** Pay period bounds (YYYY-MM-DD, inclusive). The export is usually pulled
+   *  for a rolling window wider than the pay period, so rows dated outside
+   *  it are left out of every summary. */
+  range?: { start: string; end: string | null },
+): Promise<ParsedTimecard> {
   const text = await file.text();
   const { data } = Papa.parse<Record<string, string>>(text, {
     header: true,
@@ -152,6 +167,15 @@ export async function parseTimecardCsv(file: File): Promise<ParsedTimecard> {
 
     const date = (row["Date"] ?? "").trim();
     if (date) allDatesSet.add(date);
+
+    const iso = paycorDateToIso(date);
+    if (
+      range &&
+      iso &&
+      (iso < range.start || (range.end != null && iso > range.end))
+    ) {
+      continue;
+    }
 
     const workedDepartment = (row["Worked Department"] ?? "").trim();
 
