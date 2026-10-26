@@ -92,17 +92,6 @@ function buildGroups(
 ): ChecklistGroup[] {
   const groups: ChecklistGroup[] = [];
 
-  if (result.outOfRangeDates.length > 0) {
-    groups.push({
-      id: "out-of-range",
-      title: "Punch dates outside the pay period",
-      items: result.outOfRangeDates.map((d) => ({
-        id: d,
-        instruction: `Review or remove punches on ${d}`,
-      })),
-    });
-  }
-
   if (result.unmappedDepartments.length > 0) {
     groups.push({
       id: "unmapped",
