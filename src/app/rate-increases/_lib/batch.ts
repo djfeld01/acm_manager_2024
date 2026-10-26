@@ -405,3 +405,36 @@ export function firstOfMonthAtLeast(fromIso: string, minDays: number): string {
   const [y, m, d] = earliest.split("-").map(Number);
   return d === 1 ? earliest : addMonthsIso(`${y}-${String(m).padStart(2, "0")}-01`, 1);
 }
+
+/** A saved batch line, as much of it as the reopen check needs. */
+export interface SavedLine {
+  ledgerId: string;
+  unitName: string | null;
+  oldRent: number;
+  newRent: number;
+}
+
+/** What changed for a saved batch's tenants in a newer rent roll. */
+export interface ReopenChanges {
+  /** No longer a tenant in the rent roll; dropped from the batch. */
+  movedOut: SavedLine[];
+  /** Rent differs from when the batch was saved, but the saved new rent is still an increase. */
+  rentChanged: { line: SavedLine; rent: number }[];
+  /** Rent is now at or above the saved new rent, so it is no longer an increase. */
+  noLongerIncrease: { line: SavedLine; rent: number }[];
+}
+
+export function reopenChanges(lines: SavedLine[], tenants: BatchTenant[]): ReopenChanges {
+  const byLedger = new Map(tenants.map((t) => [t.ledgerId, t]));
+  const out: ReopenChanges = { movedOut: [], rentChanged: [], noLongerIncrease: [] };
+  for (const line of lines) {
+    const t = byLedger.get(line.ledgerId);
+    if (!t) out.movedOut.push(line);
+    else if (line.newRent <= t.rent) out.noLongerIncrease.push({ line, rent: t.rent });
+    else if (Math.abs(t.rent - line.oldRent) > 0.005) out.rentChanged.push({ line, rent: t.rent });
+  }
+  return out;
+}
+
+export const hasReopenChanges = (c: ReopenChanges) =>
+  c.movedOut.length + c.rentChanged.length + c.noLongerIncrease.length > 0;
