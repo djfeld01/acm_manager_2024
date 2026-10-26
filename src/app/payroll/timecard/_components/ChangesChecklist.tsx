@@ -18,6 +18,7 @@ import type {
 } from "../../actions/reconcileTimecard";
 import type { EarlyClockIn, MissedPunch } from "@/lib/parseTimecardCsv";
 import { groupEarlyClockIns } from "./EarlyClockIns";
+import type { ShopCardCheck } from "./shopCardChecks";
 
 type CategoryKey = "vacation" | "holiday" | "commission" | "mileage" | "bonus";
 
@@ -89,6 +90,7 @@ function buildGroups(
   result: ReconcileResult,
   earlyClockIns: EarlyClockIn[],
   missedPunches: MissedPunch[],
+  shopCardChecks: ShopCardCheck[],
 ): ChecklistGroup[] {
   const groups: ChecklistGroup[] = [];
 
@@ -174,6 +176,37 @@ function buildGroups(
           ? `Add missing out punch on ${p.date} (in at ${p.inPunch})`
           : `Add missing in punch on ${p.date} (out at ${p.outPunch})`,
     });
+  }
+
+  // Shop cards are paid outside payroll and keyed in Paycor only for taxes,
+  // so each one should match the employee's committed shop bonus.
+  for (const s of shopCardChecks) {
+    if (s.paycorShopCoded > 0) {
+      addEmployeeItem(s, "", {
+        id: "shop-coded",
+        instruction: `Move ${fmt(s.paycorShopCoded, "$")} from "Shop" to "Monthly In" in Paycor`,
+        detail: "Shop bonuses go under Monthly In",
+      });
+    }
+    if (Math.abs(s.appShopBonus - s.paycorShopCards) > 0.01) {
+      addEmployeeItem(s, "", {
+        id: "shop-cards",
+        ...(s.paycorShopCards === 0
+          ? {
+              instruction: `Add ${fmt(s.appShopBonus, "$")} shop card in Paycor`,
+              detail: "Shop bonus committed in app, no matching Shop Cards entry",
+            }
+          : s.appShopBonus === 0
+            ? {
+                instruction: `Shop cards: Paycor has ${fmt(s.paycorShopCards, "$")} but no shop bonus is committed in the app`,
+                detail: "Commit the shop bonus in the app, or remove the shop card from Paycor",
+              }
+            : {
+                instruction: `Shop cards: change Paycor from ${fmt(s.paycorShopCards, "$")} to ${fmt(s.appShopBonus, "$")}`,
+                detail: "Should match the committed shop bonus",
+              }),
+      });
+    }
   }
 
   // One line per employee for early punches.
@@ -271,17 +304,19 @@ export function ChangesChecklist({
   result,
   earlyClockIns = [],
   missedPunches = [],
+  shopCardChecks = [],
 }: {
   result: ReconcileResult;
   earlyClockIns?: EarlyClockIn[];
   missedPunches?: MissedPunch[];
+  shopCardChecks?: ShopCardCheck[];
 }) {
   // Not persisted — a fresh upload remounts this and clears the checks.
   const [done, setDone] = useState<Set<string>>(new Set());
   const [hideDone, setHideDone] = useState(false);
   const [open, setOpen] = useState(true);
 
-  const groups = buildGroups(result, earlyClockIns, missedPunches);
+  const groups = buildGroups(result, earlyClockIns, missedPunches, shopCardChecks);
   const total = groups.reduce((n, g) => n + g.items.length, 0);
   const doneCount = done.size;
 

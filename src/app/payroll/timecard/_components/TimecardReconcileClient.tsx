@@ -36,6 +36,8 @@ import {
 import { ChangesChecklist } from "./ChangesChecklist";
 import { EarlyClockIns } from "./EarlyClockIns";
 import { MissedPunches } from "./MissedPunches";
+import { buildShopCardChecks, type ShopCardCheck } from "./shopCardChecks";
+import { getShopBonusTotals } from "../actions";
 
 function parseAsLocalDate(dateString: string) {
   const [year, month, day] = dateString.split("T")[0].split("-");
@@ -102,6 +104,7 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
   // Only the Time Card export has punch times — null after a Pre-Post upload.
   const [earlyClockIns, setEarlyClockIns] = useState<EarlyClockIn[] | null>(null);
   const [missedPunches, setMissedPunches] = useState<MissedPunch[] | null>(null);
+  const [shopCardChecks, setShopCardChecks] = useState<ShopCardCheck[]>([]);
 
   async function handleTimecardUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -111,6 +114,7 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
     setResult(null);
     setEarlyClockIns(null);
     setMissedPunches(null);
+    setShopCardChecks([]);
     try {
       const period = payPeriods.find(
         (p) => p.payPeriodId === selectedPayPeriodId
@@ -124,6 +128,8 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
         parsed.employees,
         parsed.allDates
       );
+      const shopBonuses = await getShopBonusTotals(selectedPayPeriodId);
+      setShopCardChecks(buildShopCardChecks(reconciled, parsed.employees, shopBonuses));
       setResult(reconciled);
       setEarlyClockIns(parsed.earlyClockIns);
       setMissedPunches(parsed.missedPunches);
@@ -144,10 +150,13 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
     setResult(null);
     setEarlyClockIns(null);
     setMissedPunches(null);
+    setShopCardChecks([]);
     try {
       const parsed = await parsePrePostExport(file);
       // No Date column in this report — nothing to range-check.
       const reconciled = await reconcileTimecard(selectedPayPeriodId, parsed.employees, []);
+      const shopBonuses = await getShopBonusTotals(selectedPayPeriodId);
+      setShopCardChecks(buildShopCardChecks(reconciled, parsed.employees, shopBonuses));
       setResult(reconciled);
       setSourceLabel("Pre-Post Employee Export (final check)");
     } catch (err) {
@@ -339,6 +348,7 @@ export function TimecardReconcileClient({ payPeriods, defaultPayPeriodId }: Prop
             result={result}
             earlyClockIns={earlyClockIns ?? []}
             missedPunches={missedPunches ?? []}
+            shopCardChecks={shopCardChecks}
           />
 
           {missedPunches && <MissedPunches punches={missedPunches} />}
