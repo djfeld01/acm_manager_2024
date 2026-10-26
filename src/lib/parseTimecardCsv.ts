@@ -66,7 +66,16 @@ export interface MissedPunch {
   outPunch: string;
   /** Which side of the pair is blank. */
   missing: "in" | "out";
+  /** Set when the employee already has complete shifts that day and this
+   *  punch falls outside all of them — usually the original punch left
+   *  behind when the day was re-entered (e.g. a mid-day transfer). It
+   *  should be deleted, not completed. Spans the day's shifts. */
+  leftover: { shiftsStart: string; shiftsEnd: string } | null;
 }
+
+/** How close to a complete shift an unpaired punch must be to count as a
+ *  leftover rather than a real missed punch. */
+const LEFTOVER_WINDOW_MINUTES = 15;
 
 export interface ParsedTimecard {
   employees: EmployeeTimecardSummary[];
@@ -178,6 +187,12 @@ export async function parseTimecardCsv(
   const seenPunches = new Set<string>();
   const missedPunches: MissedPunch[] = [];
   const seenMissed = new Set<string>();
+  // Complete in/out shifts per employee/date, to tell a leftover punch from
+  // a real missed one once the whole file has been read.
+  const shiftsByDay = new Map<
+    string,
+    { start: number; end: number; inPunch: string; outPunch: string }[]
+  >();
 
   for (const row of data) {
     const employeeNumber = (row["Employee Number"] ?? "").trim();
@@ -219,6 +234,17 @@ export async function parseTimecardCsv(
 
     const outPunch = (row["Out Punch"] ?? "").trim();
     const missing = inPunch && !outPunch ? "out" : !inPunch && outPunch ? "in" : null;
+    const dayKey = `${employeeNumber}|${date}`;
+    if (inPunch && outPunch) {
+      const start = parsePunchMinutes(inPunch);
+      let end = parsePunchMinutes(outPunch);
+      if (start != null && end != null) {
+        if (end < start) end += 24 * 60; // shift past midnight
+        const shifts = shiftsByDay.get(dayKey) ?? [];
+        shifts.push({ start, end, inPunch, outPunch });
+        shiftsByDay.set(dayKey, shifts);
+      }
+    }
     const missedKey = `${employeeNumber}|${date}|${inPunch}|${outPunch}`;
     if (missing && !seenMissed.has(missedKey)) {
       seenMissed.add(missedKey);
@@ -231,6 +257,7 @@ export async function parseTimecardCsv(
         inPunch,
         outPunch,
         missing,
+        leftover: null,
       });
     }
 
@@ -292,6 +319,25 @@ export async function parseTimecardCsv(
         emp.otherEarningsTotalCsv += payItem;
       }
     }
+  }
+
+  for (const p of missedPunches) {
+    const shifts = shiftsByDay.get(`${p.employeeNumber}|${p.date}`);
+    const t = parsePunchMinutes(p.inPunch || p.outPunch);
+    if (!shifts?.length || t == null) continue;
+    if (shifts.some((s) => t > s.start && t < s.end)) continue;
+    // Leftovers sit right beside a shift (8:56 next to a 9:00 start). A
+    // lone punch further away — say an afternoon in punch after a complete
+    // morning shift — is a real missed punch.
+    const nearShift = shifts.some(
+      (s) =>
+        Math.abs(t - s.start) <= LEFTOVER_WINDOW_MINUTES ||
+        Math.abs(t - s.end) <= LEFTOVER_WINDOW_MINUTES
+    );
+    if (!nearShift) continue;
+    const first = shifts.reduce((a, b) => (b.start < a.start ? b : a));
+    const last = shifts.reduce((a, b) => (b.end > a.end ? b : a));
+    p.leftover = { shiftsStart: first.inPunch, shiftsEnd: last.outPunch };
   }
 
   return {
