@@ -1,5 +1,9 @@
 import Papa from "papaparse";
-import type { EmployeeTimecardSummary } from "./parseTimecardCsv";
+import {
+  isShopCardsCode,
+  isShopCode,
+  type EmployeeTimecardSummary,
+} from "./parseTimecardCsv";
 
 export interface ParsedPrePostExport {
   employees: EmployeeTimecardSummary[];
@@ -28,6 +32,8 @@ function emptySummary(
     mileageCsv: 0,
     otherEarningsCsv: [],
     otherEarningsTotalCsv: 0,
+    shopCodedCsv: 0,
+    shopCardsCsv: 0,
     grossPay: null,
     netPay: null,
   };
@@ -89,7 +95,9 @@ export async function parsePrePostExport(file: File): Promise<ParsedPrePostExpor
     else if (/^hol/i.test(code)) emp.holidayHoursCsv += hours;
     else if (code === "Storage") emp.commissionCsv += amount;
     else if (code === "Mileage") emp.mileageCsv += amount;
+    else if (isShopCardsCode(code)) emp.shopCardsCsv += amount;
     else if (code) {
+      if (isShopCode(code)) emp.shopCodedCsv += amount;
       const existing = emp.otherEarningsCsv.find((o) => o.code === code);
       if (existing) existing.amount += amount;
       else emp.otherEarningsCsv.push({ code, amount });

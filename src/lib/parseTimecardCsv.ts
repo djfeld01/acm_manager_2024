@@ -26,6 +26,12 @@ export interface EmployeeTimecardSummary {
   mileageCsv: number;
   otherEarningsCsv: { code: string; amount: number }[];
   otherEarningsTotalCsv: number;
+  /** Amount keyed under the "Shop" earnings code. It's a monthly bonus and
+   *  still counts toward the bonus total, but belongs under "Monthly In". */
+  shopCodedCsv: number;
+  /** "Shop Cards" — gift cards paid outside payroll, entered only so they're
+   *  taxed. Kept out of the bonus total. */
+  shopCardsCsv: number;
   /** Only populated when parsed from the Pre-Post Employee Export — Paycor's
    *  own final computed gross/net pay for this employee at this department.
    *  Purely informational (nothing in the app computes taxes to compare
@@ -76,6 +82,16 @@ export interface ParsedTimecard {
   missedPunches: MissedPunch[];
 }
 
+/** Paycor's gift-card earnings code — taxed, but not paid on the check. */
+export function isShopCardsCode(code: string) {
+  return /^shop ?cards?$/i.test(code.trim());
+}
+
+/** A shop bonus keyed under "Shop" instead of "Monthly In". */
+export function isShopCode(code: string) {
+  return /^shop$/i.test(code.trim());
+}
+
 /** "10/08/2026" or "10/8/26" → "2026-10-08". */
 export function paycorDateToIso(value: string): string | null {
   const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
@@ -122,6 +138,8 @@ function emptySummary(
     mileageCsv: 0,
     otherEarningsCsv: [],
     otherEarningsTotalCsv: 0,
+    shopCodedCsv: 0,
+    shopCardsCsv: 0,
     grossPay: null,
     netPay: null,
   };
@@ -265,7 +283,9 @@ export async function parseTimecardCsv(
     if (payItem != null && !Number.isNaN(payItem)) {
       if (code === "Storage") emp.commissionCsv += payItem;
       else if (code === "Mileage") emp.mileageCsv += payItem;
+      else if (isShopCardsCode(code)) emp.shopCardsCsv += payItem;
       else {
+        if (isShopCode(code)) emp.shopCodedCsv += payItem;
         const existing = emp.otherEarningsCsv.find((o) => o.code === code);
         if (existing) existing.amount += payItem;
         else emp.otherEarningsCsv.push({ code, amount: payItem });
