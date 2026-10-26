@@ -168,13 +168,23 @@ function buildGroups(
   }
 
   // One line per missed punch — each one needs correcting in Paycor.
+  // Leftovers need deleting rather than completing.
   for (const p of missedPunches) {
+    const side = p.missing === "out" ? "in" : "out";
+    const time = p.inPunch || p.outPunch;
     addEmployeeItem(p, p.workedDepartment, {
       id: `missed-${p.date}-${p.inPunch}-${p.outPunch}`,
-      instruction:
-        p.missing === "out"
-          ? `Add missing out punch on ${p.date} (in at ${p.inPunch})`
-          : `Add missing in punch on ${p.date} (out at ${p.outPunch})`,
+      ...(p.leftover
+        ? {
+            instruction: `Leftover ${side} punch at ${time} on ${p.date} — the day already has complete shifts (${p.leftover.shiftsStart}–${p.leftover.shiftsEnd})`,
+            detail: "Delete it in Paycor if those shifts are right",
+          }
+        : {
+            instruction:
+              p.missing === "out"
+                ? `Add missing out punch on ${p.date} (in at ${p.inPunch})`
+                : `Add missing in punch on ${p.date} (out at ${p.outPunch})`,
+          }),
     });
   }
 

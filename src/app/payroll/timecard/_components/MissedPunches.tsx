@@ -19,6 +19,8 @@ import type { MissedPunch } from "@/lib/parseTimecardCsv";
 
 export function MissedPunches({ punches }: { punches: MissedPunch[] }) {
   const [open, setOpen] = useState(true);
+  const leftoverCount = punches.filter((p) => p.leftover).length;
+  const missedCount = punches.length - leftoverCount;
 
   const sorted = [...punches].sort((a, b) =>
     `${a.lastName}, ${a.firstName}`.localeCompare(
@@ -38,7 +40,9 @@ export function MissedPunches({ punches }: { punches: MissedPunch[] }) {
               />
               Missed punches
               <span className="text-sm font-normal text-muted-foreground">
-                {punches.length}
+                {leftoverCount > 0
+                  ? `${missedCount} missed, ${leftoverCount} leftover`
+                  : punches.length}
               </span>
             </CardTitle>
           </CollapsibleTrigger>
@@ -73,9 +77,19 @@ export function MissedPunches({ punches }: { punches: MissedPunch[] }) {
                       <TableCell>{p.date}</TableCell>
                       <TableCell>{p.inPunch || "—"}</TableCell>
                       <TableCell>{p.outPunch || "—"}</TableCell>
-                      <TableCell className="text-destructive">
-                        {p.missing === "out" ? "No out punch" : "No in punch"}
-                      </TableCell>
+                      {p.leftover ? (
+                        <TableCell className="text-amber-600 dark:text-amber-400">
+                          Leftover punch
+                          <div className="text-xs text-muted-foreground">
+                            Day already has shifts {p.leftover.shiftsStart}–
+                            {p.leftover.shiftsEnd}
+                          </div>
+                        </TableCell>
+                      ) : (
+                        <TableCell className="text-destructive">
+                          {p.missing === "out" ? "No out punch" : "No in punch"}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
