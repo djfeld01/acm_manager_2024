@@ -34,12 +34,12 @@ const COLUMNS: Column[] = [
   { header: "Move-in date", format: "date", width: 13 },
   { header: "Months here", format: "int", width: 12 },
   { header: "Last rent change", format: "date", width: 16 },
-  { header: "Current rent", format: "money2", width: 13 },
-  { header: "Street rate", format: "money2", width: 12 },
+  { header: "Current rent", format: "money2", width: 13, highlight: true },
+  { header: "Street rate", format: "money2", width: 12, highlight: true },
   { header: "Current vs street", format: "pct", width: 16 },
   { header: "In this batch", format: "text", width: 13 },
-  { header: "New rent", format: "money2", width: 11 },
-  { header: "Increase $", format: "money2", width: 11 },
+  { header: "New rent", format: "money2", width: 11, highlight: true },
+  { header: "Increase $", format: "money2", width: 11, highlight: true },
   { header: "Increase %", format: "pct", width: 10 },
   { header: "New rent vs street", format: "pct", width: 17 },
   { header: "Note", format: "text", width: 34 },
@@ -194,7 +194,13 @@ export async function buildBatchSpreadsheet(
       formats: pairs.map(([k, v, f]) => [k && v === null ? "heading" : "text", f]),
       widths: [40, 60],
     },
-    { name: "All units", columns: COLUMNS, rows: unitRows },
+    {
+      name: "All units",
+      columns: COLUMNS,
+      rows: unitRows,
+      // Vacant units are in the file but filtered out on open; clear the Occupied filter to see them.
+      filter: { column: COLUMNS.findIndex((c) => c.header === "Occupied"), show: ["Yes"] },
+    },
     {
       name: "By unit type",
       columns: [

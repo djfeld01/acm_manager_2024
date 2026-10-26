@@ -3,8 +3,10 @@ import { excelSerial } from "./exportTenantRates";
 
 /**
  * A minimal .xlsx writer: a few sheets of plain values with a bold, frozen,
- * filterable header row, column widths and number formats. Enough for a
- * review spreadsheet without pulling in a full spreadsheet library.
+ * filterable header row, 12pt text with light borders on every cell, column
+ * widths, number formats, highlighted columns
+ * and an optional filter that is already applied when the file opens. Enough
+ * for a review spreadsheet without pulling in a full spreadsheet library.
  */
 
 /** "heading" is bold text on a shaded background, like the header row. */
@@ -15,6 +17,8 @@ export interface Column {
   format: CellFormat;
   /** Approximate width in characters. */
   width: number;
+  /** Shade the whole column (header and cells) so it stands out. */
+  highlight?: boolean;
 }
 
 /** A cell value: text, a number, an ISO date (for "date" columns) or empty. */
@@ -28,9 +32,11 @@ export interface Sheet {
   /** Per-column formats for sheets without a header (e.g. label/value pairs). */
   formats?: CellFormat[][];
   widths?: number[];
+  /** Filter already applied on open: only rows whose value in `column` is one of `show` are visible. */
+  filter?: { column: number; show: string[] };
 }
 
-// Style indexes into cellXfs below.
+// Style indexes into cellXfs below; the highlighted version of each is HIGHLIGHT higher.
 const STYLE: Record<CellFormat | "header", number> = {
   text: 0,
   header: 1,
@@ -41,22 +47,30 @@ const STYLE: Record<CellFormat | "header", number> = {
   pct: 5,
   date: 6,
 };
+const HIGHLIGHT = 7;
 
 const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <numFmts count="3"><numFmt numFmtId="164" formatCode="&quot;$&quot;#,##0"/><numFmt numFmtId="165" formatCode="&quot;$&quot;#,##0.00"/><numFmt numFmtId="166" formatCode="yyyy-mm-dd"/></numFmts>
-<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>
-<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF3F2EE"/><bgColor indexed="64"/></patternFill></fill></fills>
-<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<fonts count="2"><font><sz val="12"/><name val="Calibri"/></font><font><b/><sz val="12"/><name val="Calibri"/></font></fonts>
+<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF3F2EE"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFF2CC"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFE699"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="7">
-<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
-<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
-<xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
-<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
-<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
-<xf numFmtId="10" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
-<xf numFmtId="166" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<cellXfs count="14">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyBorder="1" applyFont="1" applyFill="1"/>
+<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1"/>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1"/>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1"/>
+<xf numFmtId="10" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1"/>
+<xf numFmtId="166" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1"/>
+<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyBorder="1" applyFill="1"/>
+<xf numFmtId="0" fontId="1" fillId="4" borderId="1" xfId="0" applyBorder="1" applyFont="1" applyFill="1"/>
+<xf numFmtId="3" fontId="0" fillId="3" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1" applyFill="1"/>
+<xf numFmtId="164" fontId="0" fillId="3" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1" applyFill="1"/>
+<xf numFmtId="165" fontId="0" fillId="3" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1" applyFill="1"/>
+<xf numFmtId="10" fontId="0" fillId="3" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1" applyFill="1"/>
+<xf numFmtId="166" fontId="0" fillId="3" borderId="1" xfId="0" applyBorder="1" applyNumberFormat="1" applyFill="1"/>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
@@ -70,10 +84,12 @@ function colLetters(i: number): string {
   return s;
 }
 
-function cellXml(ref: string, v: Cell, format: CellFormat, header = false): string {
-  if (v === null || v === "") return "";
-  const s = header ? STYLE.header : STYLE[format];
-  const textStyle = header || format === "heading" ? STYLE.header : STYLE.text;
+function cellXml(ref: string, v: Cell, format: CellFormat, header = false, highlight = false): string {
+  const shift = highlight ? HIGHLIGHT : 0;
+  const s = (header ? STYLE.header : STYLE[format]) + shift;
+  const textStyle = (header || format === "heading" ? STYLE.header : STYLE.text) + shift;
+  // Empty cells are still written so they keep their border (and shading, in a highlighted column).
+  if (v === null || v === "") return `<c r="${ref}" s="${s}"/>`;
   if (format === "date" && typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
     return `<c r="${ref}" s="${s}"><v>${excelSerial(v)}</v></c>`;
   }
@@ -87,24 +103,35 @@ function sheetXml(sheet: Sheet): string {
   const lines: string[] = [];
   let r = 1;
   if (cols) {
-    lines.push(`<row r="1">${cols.map((c, i) => cellXml(`${colLetters(i)}1`, c.header, "text", true)).join("")}</row>`);
+    lines.push(`<row r="1">${cols.map((c, i) => cellXml(`${colLetters(i)}1`, c.header, "text", true, c.highlight)).join("")}</row>`);
     r = 2;
   }
+  const filter = sheet.filter;
   sheet.rows.forEach((row, ri) => {
     const cells = row
-      .map((v, i) => cellXml(`${colLetters(i)}${r}`, v, cols ? cols[i]?.format ?? "text" : sheet.formats?.[ri]?.[i] ?? "text"))
+      .map((v, i) =>
+        cellXml(`${colLetters(i)}${r}`, v, cols ? cols[i]?.format ?? "text" : sheet.formats?.[ri]?.[i] ?? "text", false, !!cols?.[i]?.highlight)
+      )
       .join("");
-    lines.push(`<row r="${r}">${cells}</row>`);
+    // Excel doesn't re-run a saved filter on open, so rows it would hide are written hidden.
+    const hidden = filter && !filter.show.includes(String(row[filter.column] ?? ""));
+    lines.push(`<row r="${r}"${hidden ? ' hidden="1"' : ""}>${cells}</row>`);
     r++;
   });
   const lastCol = colLetters(Math.max(0, (cols?.length ?? 1) - 1));
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
 ${cols ? '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' : ""}
-${widths.length ? `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>` : ""}
+${widths.length ? `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${Math.round(w * 1.1 * 10) / 10}" customWidth="1"/>`).join("")}</cols>` : ""}
 <sheetData>${lines.join("")}</sheetData>
-${cols && sheet.rows.length ? `<autoFilter ref="A1:${lastCol}${sheet.rows.length + 1}"/>` : ""}
+${cols && sheet.rows.length ? autoFilterXml(`A1:${lastCol}${sheet.rows.length + 1}`, filter) : ""}
 </worksheet>`;
+}
+
+function autoFilterXml(ref: string, filter: Sheet["filter"]): string {
+  if (!filter) return `<autoFilter ref="${ref}"/>`;
+  const values = filter.show.map((v) => `<filter val="${escapeXml(v)}"/>`).join("");
+  return `<autoFilter ref="${ref}"><filterColumn colId="${filter.column}"><filters>${values}</filters></filterColumn></autoFilter>`;
 }
 
 /** Build an .xlsx workbook from the given sheets. */
