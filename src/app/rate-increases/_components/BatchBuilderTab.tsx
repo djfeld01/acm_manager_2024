@@ -12,10 +12,13 @@ import {
   REASON_LABEL,
   evaluateCandidates,
   firstOfMonthAtLeast,
+  hasReopenChanges,
+  reopenChanges,
   suggestRent,
   summarizeBatch,
   type BatchRules,
   type ExclusionReason,
+  type ReopenChanges,
 } from "../_lib/batch";
 import { SCHEDULE } from "../_lib/config";
 import { STAGE_LABEL, batchStage } from "../_lib/cohort";
@@ -71,6 +74,8 @@ export function BatchBuilderTab({
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  // What changed for a reopened draft's tenants since it was saved on an older rent roll.
+  const [reopened, setReopened] = useState<{ from: string; to: string; changes: ReopenChanges } | null>(null);
 
   const locked = loaded?.status === "final";
   const data = dataQ.data;
@@ -118,12 +123,14 @@ export function BatchBuilderTab({
     setManual({});
     setName("");
     setMessage(null);
+    setReopened(null);
   }
 
   async function open(id: number, asCopy = false) {
     if (!data) return;
     setBusy(true);
     setMessage(null);
+    setReopened(null);
     try {
       const b = await getBatch(sitelinkId, id);
       // Batches saved before a rule existed fill it in with what the tool did then.
@@ -148,10 +155,19 @@ export function BatchBuilderTab({
       setBatchId(asCopy ? undefined : b.id);
       setLoaded(asCopy ? null : b);
       if (!asCopy && b.snapshotDate !== data.snapshotDate) {
-        setMessage({
-          kind: "error",
-          text: `This batch was built from the ${b.snapshotDate} rent roll; the current one is ${data.snapshotDate}.`,
-        });
+        // A finalized batch's rents show up in later rent rolls on purpose, so only drafts are checked.
+        const changes = b.status === "draft" ? reopenChanges(b.items, data.tenants) : null;
+        if (changes && hasReopenChanges(changes)) {
+          setReopened({ from: b.snapshotDate, to: data.snapshotDate!, changes });
+        } else {
+          setMessage({
+            kind: b.status === "draft" ? "ok" : "error",
+            text:
+              b.status === "draft"
+                ? `This draft was built from the ${b.snapshotDate} rent roll. Checked against the ${data.snapshotDate} rent roll: no tenants moved out and no rents changed.`
+                : `This batch was built from the ${b.snapshotDate} rent roll; the current one is ${data.snapshotDate}.`,
+          });
+        }
       }
     } catch (err) {
       setMessage({ kind: "error", text: err instanceof Error ? err.message : "Could not open the batch" });
@@ -245,6 +261,7 @@ export function BatchBuilderTab({
       next[id] = inc ? { include: true, newRent: inc.newRent, note: flagOf.get(id) } : { include: false, note: held.get(id) };
     }
     setManual(next);
+    setReopened(null);
     if (sheet.effectiveDate) setRules({ ...ruleState, effectiveDate: sheet.effectiveDate });
     if (!name.trim()) setName(`${facilityName} – ${sheet.name.trim()}`);
     setMessage({
@@ -394,6 +411,8 @@ export function BatchBuilderTab({
         </div>
       )}
 
+      {reopened && <ReopenNotice {...reopened} />}
+
       {message && (
         <div className={`flex items-start gap-2 text-sm ${message.kind === "ok" ? "text-green-700 dark:text-green-400" : "text-destructive"}`}>
           {message.kind === "ok" ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
@@ -416,5 +435,60 @@ export function BatchBuilderTab({
         />
       )}
     </div>
+  );
+}
+
+/** Lists what changed for a reopened draft's tenants in the newer rent roll. */
+function ReopenNotice({ from, to, changes }: { from: string; to: string; changes: ReopenChanges }) {
+  const unit = (n: string | null) => `Unit ${n ?? "?"}`;
+  return (
+    <Card className="border-amber-300 dark:border-amber-700">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          This draft was saved on the {from} rent roll. Since then ({to}):
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {changes.movedOut.length > 0 && (
+          <div>
+            <div className="font-medium">
+              {changes.movedOut.length} moved out, so they were dropped from the batch
+            </div>
+            <div className="text-muted-foreground">
+              {changes.movedOut.map((l) => `${unit(l.unitName)} (was ${fmtMoney(l.oldRent)} → ${fmtMoney(l.newRent)})`).join(", ")}
+            </div>
+          </div>
+        )}
+        {changes.noLongerIncrease.length > 0 && (
+          <div>
+            <div className="font-medium">
+              {changes.noLongerIncrease.length} now pay as much as the planned new rent, so it is no longer an increase. Change their
+              new rent or take them out before saving.
+            </div>
+            <div className="text-muted-foreground">
+              {changes.noLongerIncrease
+                .map(({ line, rent }) => `${unit(line.unitName)}: rent now ${fmtMoney(rent)}, planned ${fmtMoney(line.newRent)}`)
+                .join(", ")}
+            </div>
+          </div>
+        )}
+        {changes.rentChanged.length > 0 && (
+          <div>
+            <div className="font-medium">
+              {changes.rentChanged.length} had their rent change. The planned new rent is kept, so the increase is different now.
+            </div>
+            <div className="text-muted-foreground">
+              {changes.rentChanged
+                .map(
+                  ({ line, rent }) =>
+                    `${unit(line.unitName)}: ${fmtMoney(line.oldRent)} → ${fmtMoney(rent)}, planned ${fmtMoney(line.newRent)} (now +${fmtMoney(line.newRent - rent)})`
+                )
+                .join(", ")}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
