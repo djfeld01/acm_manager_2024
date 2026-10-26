@@ -2,7 +2,7 @@ import { dayNum } from "./analytics";
 import { summarizeBatch, type BatchRules } from "./batch";
 import { STREET_BASIS_LABEL, streetRateOf } from "./street";
 import { noteOf, type Row } from "./tableView";
-import { buildWorkbook, type Cell, type CellFormat, type Column } from "./xlsxWriter";
+import { buildWorkbook, colLetters, isFormula, type Cell, type CellFormat, type Column, type Formula } from "./xlsxWriter";
 import type { VacantUnit } from "../actions/getBatchData";
 
 /**
@@ -47,6 +47,33 @@ const COLUMNS: Column[] = [
   { header: "Balance owed", format: "money2", width: 13 },
   { header: "Scheduled move-out", format: "date", width: 18 },
 ];
+
+/** Column letter on the All units sheet, by header. */
+const L = (header: string) => colLetters(COLUMNS.findIndex((c) => c.header === header));
+const UNITS = "'All units'";
+/** A whole column of the All units sheet, e.g. 'All units'!$L:$L. */
+const ALL = (header: string) => `${UNITS}!$${L(header)}:$${L(header)}`;
+/** Text as a COUNTIFS criterion: quoted, with Excel's wildcards (* ? ~) taken literally. */
+const crit = (text: string) => `"${text.replace(/[~*?]/g, (c) => `~${c}`).replace(/"/g, '""')}"`;
+const cached = (v: Cell) => (isFormula(v) ? v.v : v);
+
+/**
+ * Turn the derived columns of an All units row into formulas, so editing a
+ * rent or "In this batch" in Excel updates the row and the totals.
+ */
+function withRowFormulas(cells: Cell[], r: number): Cell[] {
+  const at = (h: string) => `${L(h)}${r}`;
+  const set = (h: string, f: string) => {
+    const i = COLUMNS.findIndex((c) => c.header === h);
+    cells[i] = { f, v: cached(cells[i]) ?? "" } satisfies Formula;
+  };
+  const [cur, street, inBatch, newRent, inc] = [at("Current rent"), at("Street rate"), at("In this batch"), at("New rent"), at("Increase $")];
+  set("Current vs street", `IF(AND(ISNUMBER(${cur}),ISNUMBER(${street}),${street}>0),${cur}/${street}-1,"")`);
+  set("Increase $", `IF(AND(${inBatch}="Yes",ISNUMBER(${newRent}),ISNUMBER(${cur})),${newRent}-${cur},"")`);
+  set("Increase %", `IF(AND(ISNUMBER(${inc}),${cur}>0),${inc}/${cur},"")`);
+  set("New rent vs street", `IF(AND(ISNUMBER(${inc}),ISNUMBER(${street}),${street}>0),${newRent}/${street}-1,"")`);
+  return cells;
+}
 
 const unitSort = (a: string | null, b: string | null) =>
   (a ?? "").localeCompare(b ?? "", undefined, { numeric: true, sensitivity: "base" });
@@ -119,7 +146,7 @@ export async function buildBatchSpreadsheet(
     ...vacant.map((u) => ({ unit: u.unitName, cells: vacantRow(u, rules) })),
   ]
     .sort((a, b) => unitSort(a.unit, b.unit))
-    .map((x) => x.cells);
+    .map((x, i) => withRowFormulas(x.cells, i + 2));
 
   const selected = rows.filter((r) => r.included && r.newRent !== null).map((r) => ({ tenant: r.c.tenant, newRent: r.newRent! }));
   const s = summarizeBatch(selected);
@@ -168,24 +195,51 @@ export async function buildBatchSpreadsheet(
     ["Sizes left out", rules.excludedSizes.join(", ") || "None", "text"],
     ["Batch size limit", rules.targetCount ?? "None", rules.targetCount === null ? "text" : "int"],
     ["", null, "text"],
-    ["Totals", null, "text"],
-    ["Units in rent roll", rows.length + vacant.length, "int"],
-    ["Occupied units", rows.length, "int"],
-    ["Tenants in this batch", s.count, "int"],
-    ["Occupied, not in this batch", rows.length - s.count, "int"],
-    ["Vacant or not rentable", vacant.length, "int"],
-    ["Added rent per month", s.monthlyGain, "money"],
-    ["Added rent per year", s.annualGain, "money"],
-    ["Average increase", s.avgIncreaseDollars, "money2"],
-    ["Average increase %", s.avgIncreasePct, "pct"],
-    ["", null, "text"],
-    ["Why occupied units are not in the batch", null, "text"],
-    ...[...notes.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]): [string, Cell, CellFormat] => [k, n, "int"]),
+    ["Totals (update as the All units sheet is edited)", null, "text"],
   ];
+  // Summary rows are numbered from 1 (no header); totals refer to each other by row.
+  const at = (label: string) => `B${pairs.findIndex(([k]) => k === label) + 1}`;
+  const [occ, inB, cur, inc] = [ALL("Occupied"), ALL("In this batch"), ALL("Current rent"), ALL("Increase $")];
+  const add = (label: string, f: string, v: number, format: CellFormat) => pairs.push([label, { f, v }, format]);
+  add("Units in rent roll", `COUNTIF(${occ},"Yes")+COUNTIF(${occ},"No")`, rows.length + vacant.length, "int");
+  add("Occupied units", `COUNTIF(${occ},"Yes")`, rows.length, "int");
+  add("Tenants in this batch", `COUNTIF(${inB},"Yes")`, s.count, "int");
+  add("Occupied, not in this batch", `COUNTIFS(${occ},"Yes",${inB},"No")`, rows.length - s.count, "int");
+  add("Vacant or not rentable", `COUNTIF(${occ},"No")`, vacant.length, "int");
+  add("Added rent per month", `SUMIFS(${inc},${inB},"Yes")`, s.monthlyGain, "money");
+  add("Added rent per year", `${at("Added rent per month")}*12`, s.annualGain, "money");
+  add("Average increase", `IFERROR(${at("Added rent per month")}/${at("Tenants in this batch")},0)`, s.avgIncreaseDollars, "money2");
+  add("Average increase %", `IFERROR(SUMIFS(${inc},${inB},"Yes")/SUMIFS(${cur},${inB},"Yes"),0)`, s.avgIncreasePct, "pct");
+  pairs.push(["", null, "text"], ["Why occupied units are not in the batch", null, "text"]);
+  for (const [k, n] of [...notes.entries()].sort((a, b) => b[1] - a[1])) {
+    // "Not in batch" stands for an empty Note cell.
+    const note = k === "Not in batch" ? '""' : crit(k);
+    add(k, `COUNTIFS(${occ},"Yes",${inB},"No",${ALL("Note")},${note})`, n, "int");
+  }
+  // Tenants taken out in the spreadsheet keep their old note, so they land here.
+  const firstReason = pairs.length - notes.size + 1;
+  add(
+    "Other (changed in this spreadsheet)",
+    notes.size
+      ? `${at("Occupied, not in this batch")}-SUM(B${firstReason}:B${pairs.length})`
+      : at("Occupied, not in this batch"),
+    0,
+    "int"
+  );
 
-  const typeRows = [...byType.entries()]
+  const type = ALL("Unit type");
+  const typeRows: Cell[][] = [...byType.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([t, g]) => [t, g.units, g.occupied, g.inBatch, g.gain]);
+    .map(([t, g], i) => {
+      const a = `$A${i + 2}`;
+      return [
+        t,
+        { f: `COUNTIF(${type},${a})`, v: g.units },
+        { f: `COUNTIFS(${type},${a},${occ},"Yes")`, v: g.occupied },
+        { f: `COUNTIFS(${type},${a},${inB},"Yes")`, v: g.inBatch },
+        { f: `SUMIFS(${inc},${type},${a},${inB},"Yes")`, v: g.gain },
+      ];
+    });
 
   return buildWorkbook([
     {

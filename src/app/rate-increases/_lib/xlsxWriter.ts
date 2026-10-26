@@ -21,8 +21,16 @@ export interface Column {
   highlight?: boolean;
 }
 
-/** A cell value: text, a number, an ISO date (for "date" columns) or empty. */
-export type Cell = string | number | null;
+/** A formula (without the leading "=") and the value to show until the spreadsheet recalculates. */
+export interface Formula {
+  f: string;
+  v: string | number | null;
+}
+
+/** A cell value: text, a number, an ISO date (for "date" columns), a formula, or empty. */
+export type Cell = string | number | null | Formula;
+
+export const isFormula = (v: Cell): v is Formula => typeof v === "object" && v !== null;
 
 export interface Sheet {
   name: string;
@@ -78,7 +86,8 @@ const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 const escapeXml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function colLetters(i: number): string {
+/** Column letters for a 0-based index: 0 -> A, 26 -> AA. */
+export function colLetters(i: number): string {
   let s = "";
   for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
   return s;
@@ -88,6 +97,12 @@ function cellXml(ref: string, v: Cell, format: CellFormat, header = false, highl
   const shift = highlight ? HIGHLIGHT : 0;
   const s = (header ? STYLE.header : STYLE[format]) + shift;
   const textStyle = (header || format === "heading" ? STYLE.header : STYLE.text) + shift;
+  if (isFormula(v)) {
+    // The cached value keeps the file readable before Excel recalculates (previews, our own import).
+    const f = `<f>${escapeXml(v.f)}</f>`;
+    if (typeof v.v === "number" && Number.isFinite(v.v)) return `<c r="${ref}" s="${s}">${f}<v>${v.v}</v></c>`;
+    return `<c r="${ref}" s="${typeof v.v === "string" && v.v !== "" ? textStyle : s}" t="str">${f}<v>${escapeXml(String(v.v ?? ""))}</v></c>`;
+  }
   // Empty cells are still written so they keep their border (and shading, in a highlighted column).
   if (v === null || v === "") return `<c r="${ref}" s="${s}"/>`;
   if (format === "date" && typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
@@ -165,7 +180,7 @@ ${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" Co
           : ""
       )
       .join("")
-      .replace(/<\/definedNames><definedNames>/g, "")}</workbook>`
+      .replace(/<\/definedNames><definedNames>/g, "")}<calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`
   );
   zip.file(
     "xl/_rels/workbook.xml.rels",
