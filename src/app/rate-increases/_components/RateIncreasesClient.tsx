@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getSnapshotStatus } from "../actions/getSnapshotStatus";
 import { RentRollUpload } from "./RentRollUpload";
 import { StreetPositionTab } from "./StreetPositionTab";
@@ -25,7 +26,7 @@ const STALE_AFTER_DAYS = 3;
 
 /** One store's workspace. Keyed by store in the parent, so switching stores
  *  starts everything fresh (no batch or filter carried over from the other store). */
-function FacilityWorkspace({ sitelinkId }: { sitelinkId: string }) {
+function FacilityWorkspace({ sitelinkId, facilities }: { sitelinkId: string; facilities: FacilityChoice[] }) {
   const [by, setBy] = useState<Breakdown>("type");
   // Which rate counts as street. Remembered in this browser as a convenience.
   const [street, setStreetState] = useState<StreetBasis>("standard");
@@ -104,6 +105,7 @@ function FacilityWorkspace({ sitelinkId }: { sitelinkId: string }) {
           <RentRollUpload
             sitelinkId={sitelinkId}
             facilityName={status.facilityName}
+            facilities={facilities}
           />
         </CardContent>
       </Card>
@@ -211,7 +213,14 @@ function FacilityWorkspace({ sitelinkId }: { sitelinkId: string }) {
 export interface FacilityChoice {
   id: string;
   name: string;
+  /** SiteLink site code, e.g. L016. */
+  code: string;
+  /** "Columbus, OH" */
+  place: string;
+  state: string;
 }
+
+const STATE_NAME: Record<string, string> = { OH: "Ohio", MD: "Maryland", IN: "Indiana" };
 
 export function RateIncreasesClient({
   facilities,
@@ -235,19 +244,29 @@ export function RateIncreasesClient({
       {facilities.length > 1 && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-muted-foreground">Store</span>
-          {facilities.map((f) => (
-            <Button
-              key={f.id}
-              size="sm"
-              variant={f.id === site ? "default" : "outline"}
-              onClick={() => choose(f.id)}
-            >
-              {f.name}
-            </Button>
-          ))}
+          <Select value={site} onValueChange={choose}>
+            <SelectTrigger className="w-80">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {/* Grouped by state; within a state the stores are in zip-code order. */}
+              {[...new Set(facilities.map((f) => f.state))].map((state) => (
+                <SelectGroup key={state}>
+                  <SelectLabel>{STATE_NAME[state] ?? state}</SelectLabel>
+                  {facilities
+                    .filter((f) => f.state === state)
+                    .map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name} <span className="text-muted-foreground">· {f.place}</span>
+                      </SelectItem>
+                    ))}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
-      <FacilityWorkspace key={site} sitelinkId={site} />
+      <FacilityWorkspace key={site} sitelinkId={site} facilities={facilities} />
     </div>
   );
 }

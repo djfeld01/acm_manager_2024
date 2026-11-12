@@ -1,13 +1,5 @@
-/**
- * Facilities the rate-increase tools are switched on for. Columbus was the
- * pilot; Sylvania was added next. Adding a store is one line here (its
- * SiteLink ID), plus uploading that store's rent roll on the page.
- */
-export const RATE_INCREASE_FACILITY_IDS = ["33884", "50552"] as const;
-
-export function isRateIncreaseFacility(sitelinkId: string): boolean {
-  return (RATE_INCREASE_FACILITY_IDS as readonly string[]).includes(sitelinkId);
-}
+// Which stores the tools are on for (every current client store) lives in
+// server/facilities.ts, since it comes from the facility table.
 
 /** Our move-out records begin here; stays that ended earlier are invisible
  *  to us, which the survival math accounts for (left-truncation). */
