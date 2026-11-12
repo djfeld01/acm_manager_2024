@@ -30,7 +30,7 @@ export interface RentRollRow {
 }
 
 export interface ParsedRentRoll {
-  /** Rows for the requested site only. */
+  /** Rows for the requested site, or for every site when none was requested. */
   rows: RentRollRow[];
   /** Units per SiteID found in the whole file (for sanity-checking). */
   siteCounts: Record<string, number>;
@@ -74,9 +74,9 @@ function str(raw: string | undefined): string | null {
  * Parses a SiteLink rent roll export (tab-delimited, usually UTF-16). Only the
  * columns needed for rate analysis are read — `sTenant`, `sCompany` and
  * `sEmail` are never touched, so nothing personally identifying can leave the
- * browser.
+ * browser. With no `sitelinkId`, rows for every site in the file are kept.
  */
-export async function parseRentRoll(file: File, sitelinkId: string): Promise<ParsedRentRoll> {
+export async function parseRentRoll(file: File, sitelinkId?: string): Promise<ParsedRentRoll> {
   const text = decode(await file.arrayBuffer());
   const { data } = Papa.parse<Record<string, string>>(text, {
     header: true,
@@ -92,7 +92,7 @@ export async function parseRentRoll(file: File, sitelinkId: string): Promise<Par
     const site = (r["SiteID"] ?? "").trim();
     if (!site) continue;
     siteCounts[site] = (siteCounts[site] ?? 0) + 1;
-    if (site !== sitelinkId) continue;
+    if (sitelinkId && site !== sitelinkId) continue;
 
     const unitId = (r["UnitID"] ?? "").trim();
     // The export includes a facility header line carrying the site's ID; real units have numeric IDs.

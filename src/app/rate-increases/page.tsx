@@ -1,24 +1,22 @@
 import { PageAuthWrapper } from "@/lib/auth/PageAuthWrapper";
 import { Role } from "@/db/schema/user";
-import { db } from "@/db";
-import { storageFacilities } from "@/db/schema";
-import { inArray } from "drizzle-orm";
 import { RateIncreasesClient } from "./_components/RateIncreasesClient";
-import { RATE_INCREASE_FACILITY_IDS } from "./_lib/config";
+import { loadRateIncreaseFacilities } from "./_lib/server/facilities";
 
 /** Looks up store names. A separate component so it only runs once the
  *  wrapper above has let the visitor in. */
 async function Workspace({ searchParams }: { searchParams: Promise<{ site?: string }> }) {
   const { site } = await searchParams;
-  const rows = await db
-    .select({ id: storageFacilities.sitelinkId, name: storageFacilities.facilityName })
-    .from(storageFacilities)
-    .where(inArray(storageFacilities.sitelinkId, [...RATE_INCREASE_FACILITY_IDS]));
-  const facilities = RATE_INCREASE_FACILITY_IDS.map((id) => ({
-    id,
-    name: rows.find((r) => r.id === id)?.name ?? id,
+  const facilities = (await loadRateIncreaseFacilities()).map((f) => ({
+    id: f.id,
+    name: f.name,
+    code: f.code,
+    place: `${f.city}, ${f.state}`,
+    state: f.state,
   }));
-  const initial = facilities.find((f) => f.id === site)?.id ?? facilities[0]!.id;
+  if (!facilities.length) return <p className="text-sm text-muted-foreground">No stores found.</p>;
+  // Without a ?site= in the address, open on Columbus (where the first batch was built), else the first store.
+  const initial = (facilities.find((f) => f.id === site) ?? facilities.find((f) => f.id === "33884") ?? facilities[0]!).id;
   return <RateIncreasesClient facilities={facilities} initialSitelinkId={initial} />;
 }
 
