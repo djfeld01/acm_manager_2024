@@ -5,7 +5,7 @@ import {
   userDetails,
   usersToFacilities,
 } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, isNull } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export type SitelinkLogonType = {
@@ -81,7 +81,19 @@ export async function POST(req: NextRequest) {
             usersToFacilities.userId,
           ],
           set: { sitelinkEmployeeId: employeeId },
+          // Only fill in a NULL sitelinkEmployeeId — never overwrite an existing
+          // one. If we unconditionally update, the in-memory array keeps the old
+          // value and a later logon in this batch for the old ID passes the
+          // array check but fails the FK constraint on sitelink_logon.
+          setWhere: isNull(usersToFacilities.sitelinkEmployeeId),
         });
+
+      // result is empty when the conflict fired but setWhere was false (the row
+      // already had a different sitelinkEmployeeId). Skip both the array push
+      // and the logon insert in that case — we have no valid FK target.
+      if (insertedUsertoFacility.length === 0) {
+        continue;
+      }
 
       usersToFacilitiesArray.push({
         userId: users[employeeIndex]?.id || "",
