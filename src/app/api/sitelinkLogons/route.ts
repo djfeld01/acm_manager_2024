@@ -30,15 +30,21 @@ export async function POST(req: NextRequest) {
 
   // Use for...of instead of map
   for (const sitelinkLogon of body) {
+    // Coerce to string — the external system sends sitelinkEmployeeId as a JSON
+    // number, but the DB column is varchar. Without this, the strict-equality
+    // check below (number 1112 vs string "1112") always misses and the INSERT
+    // path hits the UNIQUE constraint on sitelink_employee_id.
+    const employeeId = String(sitelinkLogon.sitelinkEmployeeId);
+
     //check to see if the employeeId is already in UserToFacility
     const userToFacility = usersToFacilitiesArray.some(
       (userToFacility) =>
-        sitelinkLogon.sitelinkEmployeeId === userToFacility.sitelinkEmployeeId
+        employeeId === userToFacility.sitelinkEmployeeId
     );
 
     if (userToFacility) {
       toInsert.push({
-        sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
+        sitelinkEmployeeId: employeeId,
         dateTime: new Date(sitelinkLogon.dateTime),
         computerName: sitelinkLogon.computerName,
         computerIP: sitelinkLogon.computerIP,
@@ -64,7 +70,7 @@ export async function POST(req: NextRequest) {
         .insert(usersToFacilities)
         .values({
           userId: users[employeeIndex].id,
-          sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
+          sitelinkEmployeeId: employeeId,
           storageFacilityId: sitelinkLogon.sitelinkId,
         })
         .returning({ insertedSitelinkEmployeeId: usersToFacilities.userId })
@@ -74,12 +80,12 @@ export async function POST(req: NextRequest) {
             usersToFacilities.storageFacilityId,
             usersToFacilities.userId,
           ],
-          set: { sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId },
+          set: { sitelinkEmployeeId: employeeId },
         });
 
       usersToFacilitiesArray.push({
         userId: users[employeeIndex]?.id || "",
-        sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
+        sitelinkEmployeeId: employeeId,
         storageFacilityId: sitelinkLogon.sitelinkId,
         primarySite: null,
         rentsUnits: null,
@@ -88,7 +94,7 @@ export async function POST(req: NextRequest) {
       });
 
       toInsert.push({
-        sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
+        sitelinkEmployeeId: employeeId,
         dateTime: new Date(sitelinkLogon.dateTime),
         computerName: sitelinkLogon.computerName,
         computerIP: sitelinkLogon.computerIP,
@@ -118,14 +124,14 @@ export async function POST(req: NextRequest) {
       .values({
         userId: insertedEmployee[0].insertedId,
         storageFacilityId: sitelinkLogon.sitelinkId,
-        sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
+        sitelinkEmployeeId: employeeId,
       })
       .returning({ insertedUserId: usersToFacilities.userId })
       .onConflictDoNothing();
 
     usersToFacilitiesArray.push({
       userId: insertedUserConnection[0].insertedUserId,
-      sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
+      sitelinkEmployeeId: employeeId,
       storageFacilityId: sitelinkLogon.sitelinkId,
       primarySite: null,
       rentsUnits: null,
@@ -134,7 +140,7 @@ export async function POST(req: NextRequest) {
     });
 
     toInsert.push({
-      sitelinkEmployeeId: sitelinkLogon.sitelinkEmployeeId,
+      sitelinkEmployeeId: employeeId,
       dateTime: new Date(sitelinkLogon.dateTime),
       computerName: sitelinkLogon.computerName,
       computerIP: sitelinkLogon.computerIP,
